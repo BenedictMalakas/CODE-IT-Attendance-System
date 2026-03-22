@@ -1,6 +1,7 @@
 def greet_user():
     first_name = input("Enter your first name: ")
-    print(f"Hello, {first_name}!")
+    last_name = input("Enter your last name: ")
+    print(f"Hello, {first_name} {last_name}!")
 
-if __name__ == "__main__":
+if _name_ == "__main__":
     greet_user()
