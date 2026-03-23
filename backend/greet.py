@@ -4,4 +4,4 @@ def greet_user():
     print(f"Hello, {first_name} {last_name}!")
 
 if _name_ == "__main__":
-    greet_user() #borat? etlog ajshdjahsdkdww Elape MABAHO sss
+    greet_user() #borat? etlog ajshdjahsdkdww Elape MABAHO pati si Bayon
