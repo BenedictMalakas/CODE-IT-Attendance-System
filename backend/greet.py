@@ -3,5 +3,5 @@ def greet_user():
     last_name = input("Enter your last name: ")
     print(f"Hello, {first_name} {last_name}!")
 
-if _name_ == "__main__":
-    greet_user()
+if __name__ == "__main__":
+    greet_user() #change
