@@ -4,4 +4,4 @@ def greet_user():
     print(f"Hello, {first_name} {last_name}!")
 
 if __name__ == "__main__":
-    greet_user() #change thsi shetsss
+    greet_user() #change thsi shetssss
