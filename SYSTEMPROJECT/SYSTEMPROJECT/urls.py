@@ -1,8 +1,7 @@
 from django.contrib import admin
-from django.urls import path
-from myapp.views import ProductList  # <-- make sure your app name is correct
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/products/', ProductList.as_view(), name='product-list'),  # endpoint
+    path('api/', include('myapp.urls')),
 ]
