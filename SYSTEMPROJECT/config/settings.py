@@ -53,7 +53,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'SYSTEMPROJECT.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -70,27 +70,39 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'SYSTEMPROJECT.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 import os
+import logging
 from dotenv import load_dotenv
 import dj_database_url
 
 # Load the exact same .env file used by your SQLAlchemy setup
 env_path = BASE_DIR.parent / 'Data base proj' / '.env'
-load_dotenv(env_path)
+load_dotenv(env_path, override=True)  # override=True ensures it always loads
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL'),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if not DATABASE_URL:
+    logging.warning("No DATABASE_URL environment variable set, and so no databases setup")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
 
 
 # Password validation
