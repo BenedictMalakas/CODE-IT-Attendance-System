@@ -12,6 +12,13 @@ class StudentSerializer(serializers.ModelSerializer):
         model = Student
         fields = ['id', 'name', 'section', 'student_id', 'id_photo_path', 'status', 'rejection_note', 'created_at', 'updated_at']
 
+
+# Lightweight serializer — returns only id, name, and student_id
+class StudentBasicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Student
+        fields = ['id', 'name', 'student_id']
+
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
