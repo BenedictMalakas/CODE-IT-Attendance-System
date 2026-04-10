@@ -87,8 +87,11 @@ def register_view(request):
                     name=form.cleaned_data['name'],
                     student_id=sid,
                     section=form.cleaned_data['section'],
+                    email=form.cleaned_data['email'],
                     password_hash=hash_password(form.cleaned_data['password']),
+                    id_photo_path='',
                     status='pending',
+                    rejection_note='',
                 )
                 messages.success(
                     request,

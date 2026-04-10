@@ -44,6 +44,13 @@ class StudentRegisterForm(forms.Form):
             'placeholder': 'e.g. BSIT-3A',
         }),
     )
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g. juan@gmail.com',
+        }),
+        label='Email Address',
+    )
     password = forms.CharField(
         min_length=6,
         widget=forms.PasswordInput(attrs={

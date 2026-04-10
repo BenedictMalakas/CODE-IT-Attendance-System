@@ -14,7 +14,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
 from myapp.models import Admin, Student, Event, QRToken, AttendanceLog
-from .forms import LoginForm, EventForm
+from .forms import LoginForm, EventForm, AdminRegisterForm
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +73,31 @@ def login_view(request):
 def logout_view(request):
     request.session.flush()
     return redirect('admin_panel:login')
+
+
+def register_view(request):
+    if request.session.get('admin_id'):
+        return redirect('admin_panel:dashboard')
+
+    form = AdminRegisterForm()
+    if request.method == 'POST':
+        form = AdminRegisterForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            if Admin.objects.filter(email=email).exists():
+                messages.error(request, 'An admin with that email already exists.')
+            else:
+                Admin.objects.create(
+                    id=uuid.uuid4(),
+                    name=form.cleaned_data['name'],
+                    email=email,
+                    password_hash=hash_password(form.cleaned_data['password']),
+                    is_active=True,
+                )
+                messages.success(request, 'Account created! You can now log in.')
+                return redirect('admin_panel:login')
+
+    return render(request, 'admin_panel/register.html', {'form': form})
 
 
 # ---------------------------------------------------------------------------
@@ -349,9 +374,64 @@ def students_view(request):
 def student_approve_view(request, pk):
     student                = get_object_or_404(Student, id=pk)
     student.status         = 'active'
-    student.rejection_note = None
+    student.rejection_note = ''
     student.save()
-    messages.success(request, f'{student.name} approved.')
+
+    # --- Auto-generate QR token if none exists ---
+    qr_token = None
+    if not QRToken.objects.filter(student=student).exists():
+        import secrets
+        token_value = secrets.token_urlsafe(32)
+        qr_token = QRToken.objects.create(
+            id=uuid.uuid4(),
+            student=student,
+            token=token_value,
+            qr_path='',
+        )
+    else:
+        qr_token = QRToken.objects.get(student=student)
+
+    # --- Send QR code via email ---
+    if student.email:
+        try:
+            import qrcode
+            from io import BytesIO
+            from django.core.mail import EmailMessage
+            from django.conf import settings
+
+            # Generate QR image
+            qr_img = qrcode.make(qr_token.token, box_size=10, border=2)
+            buf = BytesIO()
+            qr_img.save(buf, format='PNG')
+            buf.seek(0)
+
+            # Build email
+            subject = f'Your CODE-IT QR Code — {student.name}'
+            body = (
+                f'Hi {student.name},\n\n'
+                f'Your account has been approved! 🎉\n\n'
+                f'Your QR code is attached to this email. '
+                f'Show it at events to record your attendance.\n\n'
+                f'Student ID: {student.student_id}\n'
+                f'Section: {student.section}\n\n'
+                f'— CODE-IT Attendance System'
+            )
+            email = EmailMessage(
+                subject=subject,
+                body=body,
+                from_email=settings.EMAIL_HOST_USER,
+                to=[student.email],
+            )
+            email.attach('qr_code.png', buf.getvalue(), 'image/png')
+            email.send(fail_silently=False)
+
+            messages.success(request, f'{student.name} approved — QR code emailed to {student.email}.')
+        except Exception as e:
+            import traceback
+            messages.error(request, f'{student.name} approved BUT Email failed: {e}. Trace: {traceback.format_exc()}')
+    else:
+        messages.success(request, f'{student.name} approved — no email on file, QR generated only.')
+
     return redirect('admin_panel:students')
 
 
