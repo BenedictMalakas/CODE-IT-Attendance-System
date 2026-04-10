@@ -23,6 +23,7 @@ class Student(models.Model):
     name = models.CharField(max_length=100)
     section = models.CharField(max_length=50)
     student_id = models.CharField(max_length=50, unique=True)
+    email = models.CharField(max_length=150, default='', blank=True)
     password_hash = models.CharField(max_length=255, null=True, blank=True)
     id_photo_path = models.CharField(max_length=500, null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
