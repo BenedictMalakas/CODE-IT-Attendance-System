@@ -1,0 +1,89 @@
+{% extends "student_portal/base.html" %}
+
+{% block title %}My Attendance{% endblock %}
+{% block nav_attendance %}active{% endblock %}
+{% block page_title %}Attendance History{% endblock %}
+
+{% block content %}
+<!-- Summary row -->
+<div class="row g-3 mb-4">
+  <div class="col-4 col-lg-2">
+    <div class="stat-card text-center py-3">
+      <div class="stat-value" style="color:#22c55e; font-size:1.5rem;">{{ present }}</div>
+      <div class="stat-label">Present</div>
+    </div>
+  </div>
+  <div class="col-4 col-lg-2">
+    <div class="stat-card text-center py-3">
+      <div class="stat-value" style="color:#f59e0b; font-size:1.5rem;">{{ late }}</div>
+      <div class="stat-label">Late</div>
+    </div>
+  </div>
+  <div class="col-4 col-lg-2">
+    <div class="stat-card text-center py-3">
+      <div class="stat-value" style="color:#ef4444; font-size:1.5rem;">{{ absent }}</div>
+      <div class="stat-label">Absent</div>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance table -->
+<div class="card-panel">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fa fa-clipboard-list me-2" style="color:#ff6a3d;"></i> All Records</span>
+    <span class="text-muted" style="font-size:.82rem;">{{ logs|length }} total</span>
+  </div>
+  <div class="card-body p-0">
+    {% if logs %}
+      <div class="table-responsive">
+        <table class="table-modern">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Scanned At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+            <tr>
+              <td style="font-weight:600;">{{ log.event.name }}</td>
+              <td>{{ log.event.date|date:"M d, Y" }}</td>
+              <td>
+                <span class="badge badge-{{ log.status }} px-3 py-1"
+                      style="border-radius:20px; font-size:.78rem;">
+                  {% if log.status == 'present' %}
+                    <i class="fa fa-circle-check me-1"></i>
+                  {% elif log.status == 'late' %}
+                    <i class="fa fa-clock me-1"></i>
+                  {% else %}
+                    <i class="fa fa-circle-xmark me-1"></i>
+                  {% endif %}
+                  {{ log.status|upper }}
+                </span>
+              </td>
+              <td>
+                {% if log.scanned_at %}
+                  {{ log.scanned_at|date:"g:i:s A" }}
+                {% else %}
+                  <span class="text-muted">&mdash;</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <i class="fa fa-inbox"></i>
+        <p>No attendance records yet.</p>
+        <p class="text-muted" style="font-size:.82rem;">
+          Records will appear here after your QR is scanned at events.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
