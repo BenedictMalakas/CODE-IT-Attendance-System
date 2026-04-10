@@ -20,10 +20,16 @@ class Student(models.Model):
         REJECTED = 'rejected', 'Rejected'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    
+    @property
+    def name(self):
+        return f"{self.first_name} {self.last_name}"
+    
     section = models.CharField(max_length=50)
     student_id = models.CharField(max_length=50, unique=True)
-    email = models.CharField(max_length=150, default='', blank=True)
+    email = models.CharField(max_length=150, unique=True, blank=True)
     password_hash = models.CharField(max_length=255, null=True, blank=True)
     id_photo_path = models.CharField(max_length=500, null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)

@@ -84,7 +84,8 @@ def register_view(request):
             else:
                 Student.objects.create(
                     id=uuid.uuid4(),
-                    name=form.cleaned_data['name'],
+                    first_name=form.cleaned_data['first_name'],
+                    last_name=form.cleaned_data['last_name'],
                     student_id=sid,
                     section=form.cleaned_data['section'],
                     email=form.cleaned_data['email'],
@@ -195,11 +196,35 @@ def profile_view(request):
         return redirect('student_portal:login')
 
     if request.method == 'POST':
+        # Handle file upload if present
+        if 'profile_picture' in request.FILES:
+            import os
+            from django.conf import settings
+            from django.core.files.storage import default_storage
+            
+            pic = request.FILES['profile_picture']
+            ext = pic.name.split('.')[-1]
+            filename = f"profile_{student.id}.{ext}"
+            
+            filepath = os.path.join(settings.MEDIA_ROOT, filename)
+            # Remove old if exists
+            if default_storage.exists(filepath):
+                default_storage.delete(filepath)
+                
+            saved_path = default_storage.save(filename, pic)
+            student.id_photo_path = default_storage.url(saved_path)
+            student.save()
+            messages.success(request, 'Profile picture updated successfully.')
+            return redirect('student_portal:profile')
+
         new_pw  = request.POST.get('new_password', '').strip()
         confirm = request.POST.get('confirm_password', '').strip()
         if new_pw:
-            if len(new_pw) < 6:
-                messages.error(request, 'Password must be at least 6 characters.')
+            import re
+            if len(new_pw) < 8:
+                messages.error(request, 'Password must be at least 8 characters.')
+            elif not re.search(r'[!@#$%^&*(),.?":{}|<>]', new_pw):
+                messages.error(request, 'Password must contain at least one special character.')
             elif new_pw != confirm:
                 messages.error(request, 'Passwords do not match.')
             else:

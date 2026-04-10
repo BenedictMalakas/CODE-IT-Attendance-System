@@ -247,7 +247,7 @@ def scan_qr_api(request, event_id):
 
     # Determine PRESENT or LATE
     now         = dj_timezone.now()
-    event_start = datetime.combine(event.date, event.start_time, tzinfo=dt_timezone.utc)
+    event_start = dj_timezone.make_aware(datetime.combine(event.date, event.start_time))
     cutoff      = event_start + timedelta(minutes=event.late_cutoff_mins)
     status      = 'present' if now <= cutoff else 'late'
 
@@ -372,7 +372,12 @@ def students_view(request):
 @admin_required
 @require_POST
 def student_approve_view(request, pk):
-    student                = get_object_or_404(Student, id=pk)
+    student = get_object_or_404(Student, id=pk)
+    
+    if student.status == 'active':
+        messages.info(request, f'{student.name} is already active.')
+        return redirect('admin_panel:students')
+
     student.status         = 'active'
     student.rejection_note = ''
     student.save()
@@ -391,20 +396,39 @@ def student_approve_view(request, pk):
     else:
         qr_token = QRToken.objects.get(student=student)
 
+    # --- Save QR code image to disk ---
+    import qrcode
+    from io import BytesIO
+    from django.core.files.storage import default_storage
+    from django.conf import settings
+    import os
+
+    try:
+        # Generate QR image
+        qr_img = qrcode.make(qr_token.token, box_size=10, border=2)
+        buf = BytesIO()
+        qr_img.save(buf, format='PNG')
+        buf.seek(0)
+        
+        filename = f"qr_{student.id}.png"
+        filepath = os.path.join(settings.MEDIA_ROOT, filename)
+        if default_storage.exists(filepath):
+            default_storage.delete(filepath)
+            
+        saved_path = default_storage.save(filename, buf)
+        qr_token.qr_path = default_storage.url(saved_path)
+        qr_token.save()
+    except Exception as e:
+        import traceback
+        messages.error(request, f'Failed to save QR Image for {student.name}: {e}')
+
     # --- Send QR code via email ---
     if student.email:
         try:
-            import qrcode
-            from io import BytesIO
             from django.core.mail import EmailMessage
-            from django.conf import settings
-
-            # Generate QR image
-            qr_img = qrcode.make(qr_token.token, box_size=10, border=2)
-            buf = BytesIO()
-            qr_img.save(buf, format='PNG')
+            
             buf.seek(0)
-
+            
             # Build email
             subject = f'Your CODE-IT QR Code — {student.name}'
             body = (

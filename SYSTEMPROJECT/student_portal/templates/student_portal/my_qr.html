@@ -16,7 +16,13 @@
           <!-- QR Code display using an inline SVG generator via JS -->
           <div id="qr-container" style="display:inline-block; padding:1.5rem; background:#fff;
                border-radius:16px; box-shadow: 0 4px 20px rgba(0,0,0,.08); margin-bottom:1.5rem;">
-            <canvas id="qr-canvas"></canvas>
+            {% if qr_token.qr_path %}
+              <img src="{{ qr_token.qr_path }}" alt="QR Code" style="max-width:240px; display:block; margin:0 auto;" id="qr-img">
+            {% else %}
+              <div style="width:240px; height:240px; display:flex; align-items:center; justify-content:center; background:#f8f9fb; border-radius:10px;">
+                <span style="color:#a0a8ba; font-size:.85rem;">QR not generated yet</span>
+              </div>
+            {% endif %}
           </div>
 
           <div style="margin-top:.5rem;">
@@ -72,23 +78,15 @@
 {% endblock %}
 
 {% block extra_js %}
-{% if qr_token %}
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+{% if qr_token.qr_path %}
 <script>
-  const token = "{{ qr_token.token|escapejs }}";
-  const canvas = document.getElementById('qr-canvas');
-
-  QRCode.toCanvas(canvas, token, {
-    width: 240,
-    margin: 1,
-    color: { dark: '#1a2238', light: '#ffffff' }
-  });
-
   function downloadQR() {
     const link = document.createElement('a');
     link.download = 'my_qr_code.png';
-    link.href = canvas.toDataURL('image/png');
+    link.href = document.getElementById('qr-img').src;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   }
 </script>
 {% endif %}
