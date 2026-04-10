@@ -1,0 +1,105 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Events{% endblock %}
+{% block page_title %}Event Scheduling{% endblock %}
+{% block nav_events %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0 fw-semibold">All Events</h5>
+  <a href="{% url 'admin_panel:event_create' %}" class="btn btn-sm" style="background:#ff6a3d;color:#fff;">
+    <i class="fa fa-plus me-1"></i> New Event
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Event Name</th>
+            <th>Date</th>
+            <th>Start Time</th>
+            <th>Late Cutoff</th>
+            <th>Created By</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for event in events %}
+          <tr>
+            <td class="fw-semibold">{{ event.name }}</td>
+            <td>{{ event.date }}</td>
+            <td>{{ event.start_time|time:"g:i A" }}</td>
+            <td>{{ event.late_cutoff_mins }} mins</td>
+            <td>{{ event.created_by.name }}</td>
+            <td class="text-center">
+              <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success me-1" title="Open QR Scanner">
+                <i class="fa fa-qrcode"></i>
+              </a>
+              <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-sm btn-outline-primary me-1" title="View Attendance">
+                <i class="fa fa-list-check"></i>
+              </a>
+              <a href="{% url 'admin_panel:export' event.id %}" class="btn btn-sm btn-outline-success me-1" title="Export to Excel">
+                <i class="fa fa-file-excel"></i>
+              </a>
+              <a href="{% url 'admin_panel:event_edit' event.id %}" class="btn btn-sm btn-outline-secondary me-1" title="Edit">
+                <i class="fa fa-pen"></i>
+              </a>
+              <button type="button" class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#deleteModal"
+                      data-event-id="{{ event.id }}" data-event-name="{{ event.name }}"
+                      title="Delete">
+                <i class="fa fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">
+              No events yet. <a href="{% url 'admin_panel:event_create' %}">Create one</a>.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-semibold">Delete Event</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete <strong id="modalEventName"></strong>?
+        This will also remove all related attendance logs.
+      </div>
+      <div class="modal-footer border-0">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteForm" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const deleteModal = document.getElementById('deleteModal');
+  deleteModal.addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    document.getElementById('modalEventName').textContent = btn.dataset.eventName;
+    document.getElementById('deleteForm').action =
+      `/admin-panel/events/${btn.dataset.eventId}/delete/`;
+  });
+</script>
+{% endblock %}
