@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'myapp',
     'admin_panel',
+    'student_portal',
 ]
 
 MIDDLEWARE = [

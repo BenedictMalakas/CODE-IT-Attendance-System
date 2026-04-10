@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register | CODE-IT</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      background: linear-gradient(135deg, #1a2238 0%, #2d3a55 50%, #1a2238 100%);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      position: relative; overflow: hidden;
+      padding: 2rem 1rem;
+    }
+    body::before, body::after {
+      content: ''; position: absolute; border-radius: 50%;
+      background: rgba(255,106,61,.06);
+      animation: float 8s ease-in-out infinite;
+    }
+    body::before { width: 400px; height: 400px; top: -100px; right: -100px; }
+    body::after  { width: 300px; height: 300px; bottom: -80px; left: -80px; animation-delay: 4s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50%      { transform: translateY(-30px) scale(1.05); }
+    }
+
+    .register-card {
+      width: 100%; max-width: 460px;
+      background: rgba(255,255,255,.97);
+      border-radius: 20px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.4);
+      overflow: hidden; position: relative; z-index: 1;
+      animation: slideUp .5s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .register-header {
+      background: linear-gradient(135deg, #1a2238 0%, #2d3a55 100%);
+      padding: 2rem 2rem 1.6rem; text-align: center;
+      position: relative;
+    }
+    .register-header::after {
+      content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+      height: 20px; background: rgba(255,255,255,.97);
+      border-radius: 20px 20px 0 0;
+    }
+    .register-header h1 { font-size: 2rem; font-weight: 800; color: #fff; margin: 0; }
+    .register-header h1 span { color: #ff6a3d; }
+    .register-header p { color: #8e9bbe; font-size: .85rem; margin: .3rem 0 0; }
+
+    .register-body { padding: 1.5rem 2rem 2rem; }
+
+    .form-label { font-weight: 600; font-size: .85rem; color: #1a2238; }
+    .form-control {
+      border-radius: 10px; border: 2px solid #e4e7ed;
+      padding: .6rem 1rem; font-size: .88rem;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-control:focus {
+      border-color: #ff6a3d; box-shadow: 0 0 0 3px rgba(255,106,61,.12);
+    }
+
+    .btn-register {
+      background: linear-gradient(135deg, #ff6a3d 0%, #e85a2d 100%);
+      border: none; color: #fff;
+      font-weight: 700; width: 100%; padding: .75rem;
+      border-radius: 10px; font-size: .95rem;
+      transition: all .25s;
+    }
+    .btn-register:hover {
+      transform: translateY(-2px); color: #fff;
+      box-shadow: 0 6px 20px rgba(255,106,61,.4);
+    }
+
+    .login-link {
+      text-align: center; margin-top: 1.2rem;
+      font-size: .88rem; color: #6b7588;
+    }
+    .login-link a { color: #ff6a3d; font-weight: 600; text-decoration: none; }
+    .login-link a:hover { text-decoration: underline; }
+
+    .step-indicator {
+      display: flex; gap: .5rem; justify-content: center;
+      margin-bottom: 1.2rem;
+    }
+    .step-indicator .step {
+      width: 32px; height: 4px; border-radius: 2px;
+      background: #e4e7ed;
+    }
+    .step-indicator .step.filled { background: #ff6a3d; }
+  </style>
+</head>
+<body>
+
+  <div class="register-card">
+    <div class="register-header">
+      <h1><span>CODE</span>-IT</h1>
+      <p>Create your student account</p>
+    </div>
+    <div class="register-body">
+      <div class="step-indicator">
+        <div class="step filled"></div>
+        <div class="step filled"></div>
+        <div class="step filled"></div>
+      </div>
+
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} py-2"
+               style="border-radius:10px; border:none; font-size:.85rem;">
+            <i class="fa fa-circle-info me-1"></i> {{ msg }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label"><i class="fa fa-user me-1 text-muted"></i> {{ form.name.label }}</label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="row">
+          <div class="mb-3 col-md-6">
+            <label class="form-label"><i class="fa fa-id-card me-1 text-muted"></i> {{ form.student_id.label }}</label>
+            {{ form.student_id }}
+            {% if form.student_id.errors %}<div class="text-danger small mt-1">{{ form.student_id.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="mb-3 col-md-6">
+            <label class="form-label"><i class="fa fa-users me-1 text-muted"></i> Section</label>
+            {{ form.section }}
+            {% if form.section.errors %}<div class="text-danger small mt-1">{{ form.section.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="row">
+          <div class="mb-3 col-md-6">
+            <label class="form-label"><i class="fa fa-lock me-1 text-muted"></i> Password</label>
+            {{ form.password }}
+            {% if form.password.errors %}<div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="mb-4 col-md-6">
+            <label class="form-label"><i class="fa fa-shield-halved me-1 text-muted"></i> Confirm</label>
+            {{ form.confirm_password }}
+            {% if form.confirm_password.errors %}<div class="text-danger small mt-1">{{ form.confirm_password.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-register">
+          <i class="fa fa-user-plus me-2"></i>Create Account
+        </button>
+      </form>
+
+      <div class="login-link">
+        Already have an account? <a href="{% url 'student_portal:login' %}">Sign in</a>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
