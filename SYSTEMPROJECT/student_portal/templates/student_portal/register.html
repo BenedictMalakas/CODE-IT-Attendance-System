@@ -76,6 +76,7 @@
       transition: all .25s;
     }
     .btn-register:hover {
+      background: linear-gradient(135deg, #e85a2d 0%, #ff6a3d 100%);
       transform: translateY(-2px); color: #fff;
       box-shadow: 0 6px 20px rgba(255,106,61,.4);
     }
@@ -123,10 +124,17 @@
 
       <form method="post">
         {% csrf_token %}
-        <div class="mb-3">
-          <label class="form-label"><i class="fa fa-user me-1 text-muted"></i> {{ form.name.label }}</label>
-          {{ form.name }}
-          {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
+        <div class="row">
+          <div class="mb-3 col-md-6">
+            <label class="form-label"><i class="fa fa-user me-1 text-muted"></i> {{ form.first_name.label }}</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="mb-3 col-md-6">
+            <label class="form-label"><i class="fa fa-user-tag me-1 text-muted"></i> {{ form.last_name.label }}</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}<div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>{% endif %}
+          </div>
         </div>
         <div class="row">
           <div class="mb-3 col-md-6">
