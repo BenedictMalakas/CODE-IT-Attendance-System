@@ -15,9 +15,6 @@ from django.db.models import Count, Q
 from django.core.mail import send_mail
 from django.conf import settings
 
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment
-
 from myapp.models import Admin, Student, Event, QRToken, AttendanceLog, Section, AdminSection
 from .forms import LoginForm, EventForm
 
@@ -889,6 +886,9 @@ def export_attendance_view(request, event_id):
     if role == 'representative':
         section_ids = get_rep_section_ids(admin)
         logs = logs.filter(student__section_id__in=section_ids)
+
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
 
     wb = openpyxl.Workbook()
     ws = wb.active
