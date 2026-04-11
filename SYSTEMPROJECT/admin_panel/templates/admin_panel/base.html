@@ -13,7 +13,7 @@
       --sidebar-text: #c8d0e0;
       --sidebar-width: 240px;
     }
-    body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+    body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; }
 
     /* Sidebar */
     #sidebar {
@@ -29,6 +29,12 @@
       color: #fff; border-bottom: 1px solid #2d3a55;
     }
     #sidebar .brand span { color: var(--sidebar-accent); }
+    #sidebar .role-badge {
+      font-size: .65rem; font-weight: 600;
+      background: rgba(255,106,61,.15); color: #ff6a3d;
+      padding: .15rem .5rem; border-radius: 4px;
+      margin-left: .5rem; text-transform: uppercase;
+    }
     #sidebar nav { flex: 1; padding: .75rem 0; overflow-y: auto; }
     #sidebar nav a {
       display: flex; align-items: center; gap: .75rem;
@@ -75,10 +81,17 @@
     .badge-active   { background: #d4edda; color: #155724; }
     .badge-rejected { background: #f8d7da; color: #721c24; }
 
+    /* Mobile */
     @media (max-width: 768px) {
       #sidebar { transform: translateX(-100%); }
       #sidebar.open { transform: translateX(0); }
       #main { margin-left: 0; }
+      .content { padding: 1rem; }
+      .stat-card { padding: .75rem !important; }
+      .stat-card .icon { width: 38px; height: 38px; font-size: 1rem; }
+      .stat-card .fw-bold.fs-4 { font-size: 1.2rem !important; }
+      .table { font-size: .82rem; }
+      .btn-sm { font-size: .75rem; padding: .25rem .5rem; }
     }
   </style>
   {% block extra_head %}{% endblock %}
@@ -87,11 +100,32 @@
 
 <!-- Sidebar -->
 <div id="sidebar">
-  <div class="brand"><span>CODE</span>-IT Admin</div>
+  <div class="brand">
+    <span>CODE</span>-IT
+    {% if request.session.admin_role == 'chairperson' %}
+      <span class="role-badge">Chair</span>
+    {% elif request.session.admin_role == 'vits' %}
+      <span class="role-badge">VITS</span>
+    {% elif request.session.admin_role == 'representative' %}
+      <span class="role-badge">Rep</span>
+    {% endif %}
+  </div>
   <nav>
-    <a href="{% url 'admin_panel:dashboard' %}" class="{% block nav_dashboard %}{% endblock %}">
-      <i class="fa fa-gauge"></i> Dashboard
-    </a>
+    {% if request.session.admin_role == 'chairperson' %}
+      <a href="{% url 'admin_panel:chairperson_dashboard' %}" class="{% block nav_dashboard %}{% endblock %}">
+        <i class="fa fa-gauge"></i> Dashboard
+      </a>
+      <a href="{% url 'admin_panel:sections_manage' %}" class="{% block nav_sections %}{% endblock %}">
+        <i class="fa fa-layer-group"></i> Sections
+      </a>
+      <a href="{% url 'admin_panel:admins_manage' %}" class="{% block nav_admins %}{% endblock %}">
+        <i class="fa fa-user-gear"></i> Officers & Reps
+      </a>
+    {% else %}
+      <a href="{% url 'admin_panel:dashboard' %}" class="{% block nav_dashboard_other %}{% endblock %}">
+        <i class="fa fa-gauge"></i> Dashboard
+      </a>
+    {% endif %}
     <a href="{% url 'admin_panel:events' %}" class="{% block nav_events %}{% endblock %}">
       <i class="fa fa-calendar-days"></i> Events
     </a>
@@ -119,7 +153,8 @@
   <div class="content">
     {% if messages %}
       {% for msg in messages %}
-        <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show" role="alert">
+        <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show" role="alert"
+             style="border-radius:10px; font-size:.9rem;">
           {{ msg }}
           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -129,6 +164,88 @@
     {% block content %}{% endblock %}
   </div>
 </div>
+
+<!-- Force Password Change Modal (no close, no escape) -->
+{% if force_password_change %}
+<div id="forcePasswordOverlay" style="
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,.7); z-index:9999;
+  display:flex; align-items:center; justify-content:center;
+">
+  <div style="
+    background:#fff; border-radius:16px; padding:2rem; width:100%; max-width:420px;
+    box-shadow:0 20px 60px rgba(0,0,0,.3); text-align:center;
+  ">
+    <div style="
+      width:60px; height:60px; border-radius:50%;
+      background:linear-gradient(135deg, #ff6a3d, #e85a2d);
+      display:flex; align-items:center; justify-content:center;
+      margin:0 auto 1rem; color:#fff; font-size:1.5rem;
+    ">
+      <i class="fa fa-shield-halved"></i>
+    </div>
+    <h5 style="font-weight:700; color:#1a2238; margin-bottom:.5rem;">Change Your Password</h5>
+    <p style="color:#6b7588; font-size:.85rem; margin-bottom:1.5rem;">
+      For security, you must change your default password before continuing.
+      Use at least <strong>8 characters</strong> with at least <strong>1 special character</strong>.
+    </p>
+    <form method="post" action="{% url 'admin_panel:force_change_password' %}" id="forcePwForm">
+      {% csrf_token %}
+      <div class="mb-3 text-start">
+        <label class="form-label fw-semibold small">New Password</label>
+        <div class="position-relative">
+          <input type="password" name="new_password" class="form-control" id="forcePwNew"
+                 placeholder="Min 8 chars, 1 special" required minlength="8"
+                 style="border-radius:10px; border:2px solid #e4e7ed; padding:.65rem 1rem; padding-right:2.5rem;" />
+          <button type="button" class="pw-toggle-force" onclick="toggleForcePw(this)" style="
+            position:absolute; right:12px; top:50%; transform:translateY(-50%);
+            cursor:pointer; color:#aab0c0; background:none; border:none; font-size:.9rem;
+          "><i class="fa fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="mb-3 text-start">
+        <label class="form-label fw-semibold small">Confirm Password</label>
+        <div class="position-relative">
+          <input type="password" name="confirm_password" class="form-control" id="forcePwConfirm"
+                 placeholder="Re-enter password" required
+                 style="border-radius:10px; border:2px solid #e4e7ed; padding:.65rem 1rem; padding-right:2.5rem;" />
+          <button type="button" class="pw-toggle-force" onclick="toggleForcePw(this)" style="
+            position:absolute; right:12px; top:50%; transform:translateY(-50%);
+            cursor:pointer; color:#aab0c0; background:none; border:none; font-size:.9rem;
+          "><i class="fa fa-eye"></i></button>
+        </div>
+      </div>
+      <div id="forcePwError" class="text-danger small mb-2" style="display:none;"></div>
+      <button type="submit" class="btn w-100" style="
+        background:linear-gradient(135deg, #ff6a3d, #e85a2d);
+        color:#fff; border:none; border-radius:10px; font-weight:600; padding:.7rem;
+      ">
+        <i class="fa fa-key me-2"></i>Set New Password
+      </button>
+    </form>
+  </div>
+</div>
+<script>
+  function toggleForcePw(btn) {
+    const input = btn.parentElement.querySelector('input');
+    const icon  = btn.querySelector('i');
+    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+  }
+  document.getElementById('forcePwForm').addEventListener('submit', function(e) {
+    const pw  = document.getElementById('forcePwNew').value;
+    const cpw = document.getElementById('forcePwConfirm').value;
+    const err = document.getElementById('forcePwError');
+    if (pw.length < 8) { e.preventDefault(); err.textContent = 'Password must be at least 8 characters.'; err.style.display = 'block'; return; }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pw)) { e.preventDefault(); err.textContent = 'Must contain at least 1 special character.'; err.style.display = 'block'; return; }
+    if (pw !== cpw) { e.preventDefault(); err.textContent = 'Passwords do not match.'; err.style.display = 'block'; return; }
+  });
+  // Block escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('forcePasswordOverlay')) e.preventDefault();
+  });
+</script>
+{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>

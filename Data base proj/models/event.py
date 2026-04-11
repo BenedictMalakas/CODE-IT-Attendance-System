@@ -1,10 +1,17 @@
-from sqlalchemy import Column, String, Date, Time, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, String, Date, Time, Integer, DateTime, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
+import enum
 
 from database.connection import Base
+
+
+class EventStatus(str, enum.Enum):
+    pending = "pending"    # created but not started yet
+    active  = "active"     # chairperson started or time matched
+    ended   = "ended"
 
 
 class Event(Base):
@@ -14,7 +21,9 @@ class Event(Base):
     name             = Column(String(150),  nullable=False)          # e.g. "Foundation Week Day 1"
     date             = Column(Date,         nullable=False)
     start_time       = Column(Time,         nullable=False)           # e.g. 08:00
+    end_time         = Column(Time,         nullable=True)
     late_cutoff_mins = Column(Integer,      nullable=False, default=15)  # minutes after start = late
+    status           = Column(Enum(EventStatus), nullable=False, default=EventStatus.pending)
     created_by       = Column(UUID(as_uuid=True), ForeignKey("admins.id"), nullable=False)
     created_at       = Column(DateTime,     default=datetime.utcnow)
 
@@ -22,4 +31,4 @@ class Event(Base):
     attendance_logs  = relationship("AttendanceLog", back_populates="event")
 
     def __repr__(self):
-        return f"<Event '{self.name}' on {self.date} at {self.start_time}>"
+        return f"<Event '{self.name}' on {self.date} [{self.status}]>"

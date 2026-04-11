@@ -8,9 +8,7 @@
 <!-- Filter tabs -->
 <div class="d-flex gap-2 mb-3 flex-wrap">
   <a href="?status=all"      class="btn btn-sm {% if status_filter == 'all' %}btn-dark{% else %}btn-outline-secondary{% endif %}">All</a>
-  <a href="?status=pending"  class="btn btn-sm {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-    Pending
-  </a>
+  <a href="?status=pending"  class="btn btn-sm {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline-primary{% endif %}">Pending</a>
   <a href="?status=active"   class="btn btn-sm {% if status_filter == 'active' %}btn-success{% else %}btn-outline-success{% endif %}">Active</a>
   <a href="?status=rejected" class="btn btn-sm {% if status_filter == 'rejected' %}btn-danger{% else %}btn-outline-danger{% endif %}">Rejected</a>
 </div>
@@ -24,6 +22,8 @@
             <th>Student ID</th>
             <th>Name</th>
             <th>Section</th>
+            <th>Year</th>
+            <th>ID Photo</th>
             <th>Status</th>
             <th>Registered</th>
             <th class="text-center">Actions</th>
@@ -34,7 +34,20 @@
           <tr>
             <td class="font-monospace small">{{ student.student_id }}</td>
             <td class="fw-semibold">{{ student.name }}</td>
-            <td>{{ student.section }}</td>
+            <td>{{ student.section.name }}</td>
+            <td>{{ student.year_level }}</td>
+            <td>
+              {% if student.id_photo_path %}
+                <button type="button" class="btn btn-sm btn-outline-info"
+                        data-bs-toggle="modal" data-bs-target="#idPhotoModal"
+                        data-student-name="{{ student.name }}"
+                        data-photo-url="{{ student.id_photo_path }}">
+                  <i class="fa fa-image me-1"></i>View ID
+                </button>
+              {% else %}
+                <span class="text-muted small">No photo</span>
+              {% endif %}
+            </td>
             <td>
               <span class="badge rounded-pill badge-{{ student.status }} px-3 py-2">
                 {{ student.status|upper }}
@@ -45,45 +58,61 @@
             </td>
             <td class="small text-muted">{{ student.created_at|date:"M d, Y" }}</td>
             <td class="text-center">
-              {% if student.status == 'pending' or student.status == 'rejected' %}
-              <form method="post" action="{% url 'admin_panel:student_approve' student.id %}" class="d-inline">
-                {% csrf_token %}
-                <button class="btn btn-sm btn-success me-1" title="Approve">
-                  <i class="fa fa-check"></i>
-                </button>
-              </form>
-              {% endif %}
-              {% if student.status == 'active' %}
-              <form method="post" action="{% url 'admin_panel:generate_qr' student.id %}" class="d-inline">
-                {% csrf_token %}
-                <button class="btn btn-sm btn-outline-secondary me-1" title="Generate QR Code">
-                  <i class="fa fa-qrcode"></i>
-                </button>
-              </form>
-              {% endif %}
-              {% if student.status == 'pending' or student.status == 'active' %}
-              <button class="btn btn-sm btn-outline-danger me-1" title="Reject"
-                      data-bs-toggle="modal" data-bs-target="#rejectModal"
-                      data-student-id="{{ student.id }}"
-                      data-student-name="{{ student.name }}">
-                <i class="fa fa-xmark"></i>
-              </button>
-              {% endif %}
-              <button class="btn btn-sm btn-danger" title="Delete Student"
-                      data-bs-toggle="modal" data-bs-target="#deleteStudentModal"
-                      data-student-id="{{ student.id }}"
-                      data-student-name="{{ student.name }}">
-                <i class="fa fa-trash"></i>
-              </button>
+              <div class="d-flex flex-wrap justify-content-center gap-1">
+                {% if admin_role != 'representative' %}
+                  {% if student.status == 'pending' or student.status == 'rejected' %}
+                  <form method="post" action="{% url 'admin_panel:student_approve' student.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-success">
+                      <i class="fa fa-check me-1"></i><span class="d-none d-md-inline">Approve</span>
+                    </button>
+                  </form>
+                  {% endif %}
+                  {% if student.status == 'pending' or student.status == 'active' %}
+                  <button class="btn btn-sm btn-outline-danger"
+                          data-bs-toggle="modal" data-bs-target="#rejectModal"
+                          data-student-id="{{ student.id }}"
+                          data-student-name="{{ student.name }}">
+                    <i class="fa fa-xmark me-1"></i><span class="d-none d-md-inline">Reject</span>
+                  </button>
+                  {% endif %}
+                  <button class="btn btn-sm btn-danger"
+                          data-bs-toggle="modal" data-bs-target="#deleteStudentModal"
+                          data-student-id="{{ student.id }}"
+                          data-student-name="{{ student.name }}">
+                    <i class="fa fa-trash me-1"></i><span class="d-none d-md-inline">Delete</span>
+                  </button>
+                {% endif %}
+              </div>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="6" class="text-center text-muted py-4">No students found.</td>
+            <td colspan="8" class="text-center text-muted py-4">No students found.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- ID Photo Modal -->
+<div class="modal fade" id="idPhotoModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-semibold"><i class="fa fa-id-card me-2" style="color:#ff6a3d;"></i>ID Verification</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="fw-semibold mb-2" id="idPhotoStudentName"></p>
+        <img id="idPhotoImage" src="" alt="Student ID Photo"
+             style="max-width:100%; max-height:400px; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.15);" />
+      </div>
+      <div class="modal-footer border-0">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
     </div>
   </div>
 </div>
@@ -142,14 +171,21 @@
 
 {% block extra_js %}
 <script>
-  document.getElementById('rejectModal').addEventListener('show.bs.modal', e => {
+  // ID Photo modal
+  document.getElementById('idPhotoModal')?.addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    document.getElementById('idPhotoStudentName').textContent = btn.dataset.studentName;
+    document.getElementById('idPhotoImage').src = btn.dataset.photoUrl;
+  });
+
+  document.getElementById('rejectModal')?.addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     document.getElementById('rejectStudentName').textContent = btn.dataset.studentName;
     document.getElementById('rejectForm').action =
       `/admin-panel/students/${btn.dataset.studentId}/reject/`;
   });
 
-  document.getElementById('deleteStudentModal').addEventListener('show.bs.modal', e => {
+  document.getElementById('deleteStudentModal')?.addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     document.getElementById('deleteStudentName').textContent = btn.dataset.studentName;
     document.getElementById('deleteStudentForm').action =

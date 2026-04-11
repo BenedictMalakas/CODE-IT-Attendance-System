@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone as dj_timezone
 
-from myapp.models import Student, Event, QRToken, AttendanceLog
+from myapp.models import Student, Event, QRToken, AttendanceLog, Section
 from .forms import StudentLoginForm, StudentRegisterForm
 
 
@@ -32,7 +32,7 @@ def get_current_student(request):
     sid = request.session.get('student_id')
     if sid:
         try:
-            return Student.objects.get(id=sid)
+            return Student.objects.select_related('section').get(id=sid)
         except Student.DoesNotExist:
             pass
     return None
@@ -77,20 +77,51 @@ def register_view(request):
     form = StudentRegisterForm()
     if request.method == 'POST':
         form = StudentRegisterForm(request.POST)
+        # Re-enable section field for validation (it was disabled in HTML)
+        form.fields['section'].widget.attrs.pop('disabled', None)
         if form.is_valid():
             sid = form.cleaned_data['student_id']
+            section_id = form.cleaned_data['section']
+            year_level = int(form.cleaned_data['year_level'])
+
             if Student.objects.filter(student_id=sid).exists():
                 messages.error(request, 'A student with that ID already exists.')
             else:
+                try:
+                    section = Section.objects.get(id=section_id)
+                except Section.DoesNotExist:
+                    messages.error(request, 'Invalid section selected.')
+                    return render(request, 'student_portal/register.html', {'form': form})
+
+                # Handle ID photo upload
+                id_photo_path = ''
+                if 'id_photo' in request.FILES:
+                    import os
+                    from django.conf import settings
+                    from django.core.files.storage import default_storage
+
+                    photo = request.FILES['id_photo']
+                    ext = photo.name.split('.')[-1].lower()
+                    safe_id = sid.replace('-', '_')
+                    filename = f"id_photos/id_{safe_id}.{ext}"
+
+                    # Ensure directory exists
+                    upload_dir = os.path.join(settings.MEDIA_ROOT, 'id_photos')
+                    os.makedirs(upload_dir, exist_ok=True)
+
+                    saved_path = default_storage.save(filename, photo)
+                    id_photo_path = f'/media/{saved_path}'
+
                 Student.objects.create(
                     id=uuid.uuid4(),
                     first_name=form.cleaned_data['first_name'],
                     last_name=form.cleaned_data['last_name'],
                     student_id=sid,
-                    section=form.cleaned_data['section'],
+                    section=section,
+                    year_level=year_level,
                     email=form.cleaned_data['email'],
                     password_hash=hash_password(form.cleaned_data['password']),
-                    id_photo_path='',
+                    id_photo_path=id_photo_path,
                     status='pending',
                     rejection_note='',
                 )
@@ -120,7 +151,7 @@ def dashboard_view(request):
 
     today  = dj_timezone.now().date()
     logs   = AttendanceLog.objects.filter(student=student).select_related('event')
-    events = Event.objects.filter(date__gte=today).order_by('date', 'start_time')[:5]
+    events = Event.objects.filter(date__gte=today, status='active').order_by('date', 'start_time')[:5]
 
     total_present = logs.filter(status='present').count()
     total_late    = logs.filter(status='late').count()
@@ -196,32 +227,36 @@ def profile_view(request):
         return redirect('student_portal:login')
 
     if request.method == 'POST':
-        # Handle file upload if present
-        if 'profile_picture' in request.FILES:
+        action = request.POST.get('action', '')
+
+        # Handle profile picture upload
+        if action == 'upload_photo' and 'profile_picture' in request.FILES:
             import os
             from django.conf import settings
             from django.core.files.storage import default_storage
-            
+
             pic = request.FILES['profile_picture']
             ext = pic.name.split('.')[-1]
             filename = f"profile_{student.id}.{ext}"
-            
+
             filepath = os.path.join(settings.MEDIA_ROOT, filename)
-            # Remove old if exists
             if default_storage.exists(filepath):
                 default_storage.delete(filepath)
-                
+
             saved_path = default_storage.save(filename, pic)
             student.id_photo_path = default_storage.url(saved_path)
             student.save()
             messages.success(request, 'Profile picture updated successfully.')
             return redirect('student_portal:profile')
 
-        new_pw  = request.POST.get('new_password', '').strip()
-        confirm = request.POST.get('confirm_password', '').strip()
-        if new_pw:
+        # Handle password change
+        if action == 'change_password':
             import re
-            if len(new_pw) < 8:
+            new_pw  = request.POST.get('new_password', '').strip()
+            confirm = request.POST.get('confirm_password', '').strip()
+            if not new_pw:
+                messages.error(request, 'Please enter a new password.')
+            elif len(new_pw) < 8:
                 messages.error(request, 'Password must be at least 8 characters.')
             elif not re.search(r'[!@#$%^&*(),.?":{}|<>]', new_pw):
                 messages.error(request, 'Password must contain at least one special character.')

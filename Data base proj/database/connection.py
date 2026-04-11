@@ -31,5 +31,5 @@ def get_db():
 
 def create_all_tables():
     """Create all tables. Run once on startup or use Alembic migrations."""
-    from models import student, admin, event, attendance_log, qr_token
+    from models import student, admin, event, attendance_log, qr_token, section, admin_section
     Base.metadata.create_all(bind=engine)
