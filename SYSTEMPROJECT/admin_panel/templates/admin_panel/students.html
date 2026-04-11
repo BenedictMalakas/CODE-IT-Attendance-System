@@ -53,14 +53,28 @@
                 </button>
               </form>
               {% endif %}
+              {% if student.status == 'active' %}
+              <form method="post" action="{% url 'admin_panel:generate_qr' student.id %}" class="d-inline">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-secondary me-1" title="Generate QR Code">
+                  <i class="fa fa-qrcode"></i>
+                </button>
+              </form>
+              {% endif %}
               {% if student.status == 'pending' or student.status == 'active' %}
-              <button class="btn btn-sm btn-outline-danger" title="Reject"
+              <button class="btn btn-sm btn-outline-danger me-1" title="Reject"
                       data-bs-toggle="modal" data-bs-target="#rejectModal"
                       data-student-id="{{ student.id }}"
                       data-student-name="{{ student.name }}">
                 <i class="fa fa-xmark"></i>
               </button>
               {% endif %}
+              <button class="btn btn-sm btn-danger" title="Delete Student"
+                      data-bs-toggle="modal" data-bs-target="#deleteStudentModal"
+                      data-student-id="{{ student.id }}"
+                      data-student-name="{{ student.name }}">
+                <i class="fa fa-trash"></i>
+              </button>
             </td>
           </tr>
           {% empty %}
@@ -70,6 +84,33 @@
           {% endfor %}
         </tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- Delete student modal -->
+<div class="modal fade" id="deleteStudentModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-semibold text-danger"><i class="fa fa-triangle-exclamation me-2"></i>Delete Student</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to permanently delete <strong id="deleteStudentName"></strong>?
+        <div class="alert alert-warning mt-2 mb-0 py-2 small">
+          <i class="fa fa-warning me-1"></i>This will also delete their QR token and all attendance records.
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteStudentForm" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="fa fa-trash me-1"></i>Delete
+          </button>
+        </form>
+      </div>
     </div>
   </div>
 </div>
@@ -106,6 +147,13 @@
     document.getElementById('rejectStudentName').textContent = btn.dataset.studentName;
     document.getElementById('rejectForm').action =
       `/admin-panel/students/${btn.dataset.studentId}/reject/`;
+  });
+
+  document.getElementById('deleteStudentModal').addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    document.getElementById('deleteStudentName').textContent = btn.dataset.studentName;
+    document.getElementById('deleteStudentForm').action =
+      `/admin-panel/students/${btn.dataset.studentId}/delete/`;
   });
 </script>
 {% endblock %}
