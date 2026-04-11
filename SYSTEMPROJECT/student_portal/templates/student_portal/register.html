@@ -23,14 +23,12 @@
     }
     body::before { width: 400px; height: 400px; top: -100px; right: -100px; }
     body::after  { width: 300px; height: 300px; bottom: -80px; left: -80px; animation-delay: 4s; }
-
     @keyframes float {
       0%, 100% { transform: translateY(0) scale(1); }
       50%      { transform: translateY(-30px) scale(1.05); }
     }
-
     .register-card {
-      width: 100%; max-width: 460px;
+      width: 100%; max-width: 480px;
       background: rgba(255,255,255,.97);
       border-radius: 20px;
       box-shadow: 0 24px 80px rgba(0,0,0,.4);
@@ -41,7 +39,6 @@
       from { opacity: 0; transform: translateY(30px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-
     .register-header {
       background: linear-gradient(135deg, #1a2238 0%, #2d3a55 100%);
       padding: 2rem 2rem 1.6rem; text-align: center;
@@ -55,19 +52,16 @@
     .register-header h1 { font-size: 2rem; font-weight: 800; color: #fff; margin: 0; }
     .register-header h1 span { color: #ff6a3d; }
     .register-header p { color: #8e9bbe; font-size: .85rem; margin: .3rem 0 0; }
-
     .register-body { padding: 1.5rem 2rem 2rem; }
-
     .form-label { font-weight: 600; font-size: .85rem; color: #1a2238; }
-    .form-control {
+    .form-control, .form-select {
       border-radius: 10px; border: 2px solid #e4e7ed;
       padding: .6rem 1rem; font-size: .88rem;
       transition: border-color .2s, box-shadow .2s;
     }
-    .form-control:focus {
+    .form-control:focus, .form-select:focus {
       border-color: #ff6a3d; box-shadow: 0 0 0 3px rgba(255,106,61,.12);
     }
-
     .btn-register {
       background: linear-gradient(135deg, #ff6a3d 0%, #e85a2d 100%);
       border: none; color: #fff;
@@ -80,23 +74,19 @@
       transform: translateY(-2px); color: #fff;
       box-shadow: 0 6px 20px rgba(255,106,61,.4);
     }
-
     .login-link {
       text-align: center; margin-top: 1.2rem;
       font-size: .88rem; color: #6b7588;
     }
     .login-link a { color: #ff6a3d; font-weight: 600; text-decoration: none; }
     .login-link a:hover { text-decoration: underline; }
-
-    .step-indicator {
-      display: flex; gap: .5rem; justify-content: center;
-      margin-bottom: 1.2rem;
+    .pw-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      cursor: pointer; color: #aab0c0; z-index: 5; background: none; border: none;
+      padding: 0; font-size: .9rem;
     }
-    .step-indicator .step {
-      width: 32px; height: 4px; border-radius: 2px;
-      background: #e4e7ed;
-    }
-    .step-indicator .step.filled { background: #ff6a3d; }
+    .pw-toggle:hover { color: #1a2238; }
+    .field-error { color: #dc3545; font-size: .78rem; margin-top: .25rem; }
   </style>
 </head>
 <body>
@@ -107,12 +97,6 @@
       <p>Create your student account</p>
     </div>
     <div class="register-body">
-      <div class="step-indicator">
-        <div class="step filled"></div>
-        <div class="step filled"></div>
-        <div class="step filled"></div>
-      </div>
-
       {% if messages %}
         {% for msg in messages %}
           <div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} py-2"
@@ -122,49 +106,101 @@
         {% endfor %}
       {% endif %}
 
-      <form method="post">
+      <form method="post" enctype="multipart/form-data" id="registerForm">
         {% csrf_token %}
+        <!-- Name -->
         <div class="row">
           <div class="mb-3 col-md-6">
-            <label class="form-label"><i class="fa fa-user me-1 text-muted"></i> {{ form.first_name.label }}</label>
-            {{ form.first_name }}
-            {% if form.first_name.errors %}<div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>{% endif %}
+            <label class="form-label"><i class="fa fa-user me-1 text-muted"></i> First Name</label>
+            <input type="text" name="first_name" class="form-control" placeholder="e.g. Juan"
+                   value="{{ form.first_name.value|default:'' }}" required
+                   pattern="[A-Za-z\s]+" title="Letters only, no special characters" />
+            {% if form.first_name.errors %}<div class="field-error">{{ form.first_name.errors.0 }}</div>{% endif %}
           </div>
           <div class="mb-3 col-md-6">
-            <label class="form-label"><i class="fa fa-user-tag me-1 text-muted"></i> {{ form.last_name.label }}</label>
-            {{ form.last_name }}
-            {% if form.last_name.errors %}<div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>{% endif %}
+            <label class="form-label"><i class="fa fa-user-tag me-1 text-muted"></i> Last Name</label>
+            <input type="text" name="last_name" class="form-control" placeholder="e.g. Dela Cruz"
+                   value="{{ form.last_name.value|default:'' }}" required
+                   pattern="[A-Za-z\s]+" title="Letters only, no special characters" />
+            {% if form.last_name.errors %}<div class="field-error">{{ form.last_name.errors.0 }}</div>{% endif %}
           </div>
         </div>
+
+        <!-- Student ID -->
         <div class="row">
           <div class="mb-3 col-md-6">
-            <label class="form-label"><i class="fa fa-id-card me-1 text-muted"></i> {{ form.student_id.label }}</label>
-            {{ form.student_id }}
-            {% if form.student_id.errors %}<div class="text-danger small mt-1">{{ form.student_id.errors.0 }}</div>{% endif %}
+            <label class="form-label"><i class="fa fa-id-card me-1 text-muted"></i> Student ID</label>
+            <input type="text" name="student_id" id="studentIdInput" class="form-control"
+                   placeholder="xx-xxxx" maxlength="7"
+                   value="{{ form.student_id.value|default:'' }}" required />
+            {% if form.student_id.errors %}<div class="field-error">{{ form.student_id.errors.0 }}</div>{% endif %}
           </div>
           <div class="mb-3 col-md-6">
-            <label class="form-label"><i class="fa fa-users me-1 text-muted"></i> Section</label>
-            {{ form.section }}
-            {% if form.section.errors %}<div class="text-danger small mt-1">{{ form.section.errors.0 }}</div>{% endif %}
+            <label class="form-label"><i class="fa fa-graduation-cap me-1 text-muted"></i> Year Level</label>
+            <select name="year_level" id="yearLevelSelect" class="form-select" required>
+              <option value="">Select year level</option>
+              <option value="1" {% if form.year_level.value == '1' %}selected{% endif %}>1st Year</option>
+              <option value="2" {% if form.year_level.value == '2' %}selected{% endif %}>2nd Year</option>
+              <option value="3" {% if form.year_level.value == '3' %}selected{% endif %}>3rd Year</option>
+              <option value="4" {% if form.year_level.value == '4' %}selected{% endif %}>4th Year</option>
+            </select>
+            {% if form.year_level.errors %}<div class="field-error">{{ form.year_level.errors.0 }}</div>{% endif %}
           </div>
         </div>
+
+        <!-- Section -->
         <div class="mb-3">
-          <label class="form-label"><i class="fa fa-envelope me-1 text-muted"></i> {{ form.email.label }}</label>
-          {{ form.email }}
-          {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>{% endif %}
+          <label class="form-label"><i class="fa fa-users me-1 text-muted"></i> Section</label>
+          <select name="section" id="sectionSelect" class="form-select" required disabled>
+            <option value="">Select year level first</option>
+          </select>
+          {% if form.section.errors %}<div class="field-error">{{ form.section.errors.0 }}</div>{% endif %}
         </div>
+
+        <!-- Email -->
+        <div class="mb-3">
+          <label class="form-label"><i class="fa fa-envelope me-1 text-muted"></i> Email Address</label>
+          <input type="email" name="email" class="form-control" placeholder="e.g. juan@gmail.com"
+                 value="{{ form.email.value|default:'' }}" required />
+          {% if form.email.errors %}<div class="field-error">{{ form.email.errors.0 }}</div>{% endif %}
+        </div>
+
+        <!-- ID Photo Upload -->
+        <div class="mb-3">
+          <label class="form-label"><i class="fa fa-camera me-1 text-muted"></i> Upload Student ID Photo</label>
+          <input type="file" name="id_photo" class="form-control" accept="image/*"
+                 style="border-radius:10px; border:2px solid #e4e7ed; padding:.5rem .75rem; font-size:.85rem;" />
+          <div class="text-muted small mt-1">
+            <i class="fa fa-info-circle me-1"></i>Upload a clear photo of your school ID for identity verification.
+          </div>
+        </div>
+
+        <!-- Password -->
         <div class="row">
           <div class="mb-3 col-md-6">
             <label class="form-label"><i class="fa fa-lock me-1 text-muted"></i> Password</label>
-            {{ form.password }}
-            {% if form.password.errors %}<div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>{% endif %}
+            <div class="position-relative">
+              <input type="password" name="password" class="form-control"
+                     placeholder="Min 8 chars, 1 special" required minlength="8" />
+              <button type="button" class="pw-toggle" onclick="togglePw(this)">
+                <i class="fa fa-eye"></i>
+              </button>
+            </div>
+            {% if form.password.errors %}<div class="field-error">{{ form.password.errors.0 }}</div>{% endif %}
           </div>
           <div class="mb-4 col-md-6">
             <label class="form-label"><i class="fa fa-shield-halved me-1 text-muted"></i> Confirm</label>
-            {{ form.confirm_password }}
-            {% if form.confirm_password.errors %}<div class="text-danger small mt-1">{{ form.confirm_password.errors.0 }}</div>{% endif %}
+            <div class="position-relative">
+              <input type="password" name="confirm_password" class="form-control"
+                     placeholder="Re-enter password" required />
+              <button type="button" class="pw-toggle" onclick="togglePw(this)">
+                <i class="fa fa-eye"></i>
+              </button>
+            </div>
+            {% if form.confirm_password.errors %}<div class="field-error">{{ form.confirm_password.errors.0 }}</div>{% endif %}
           </div>
         </div>
+
         <button type="submit" class="btn btn-register">
           <i class="fa fa-user-plus me-2"></i>Create Account
         </button>
@@ -175,6 +211,81 @@
       </div>
     </div>
   </div>
+
+<script>
+  // Password toggle
+  function togglePw(btn) {
+    const input = btn.parentElement.querySelector('input');
+    const icon  = btn.querySelector('i');
+    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+  }
+
+  // Student ID auto-formatting: numbers only, auto-dash after 2 digits
+  const sidInput = document.getElementById('studentIdInput');
+  sidInput.addEventListener('input', function(e) {
+    let raw = this.value.replace(/[^0-9]/g, '');  // strip non-digits
+    if (raw.length > 6) raw = raw.substring(0, 6);
+    if (raw.length > 2) {
+      this.value = raw.substring(0, 2) + '-' + raw.substring(2);
+    } else {
+      this.value = raw;
+    }
+  });
+  sidInput.addEventListener('keypress', function(e) {
+    if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Tab') {
+      e.preventDefault();
+    }
+  });
+
+  // Name fields: block special characters
+  document.querySelectorAll('input[name="first_name"], input[name="last_name"]').forEach(input => {
+    input.addEventListener('input', function() {
+      this.value = this.value.replace(/[^A-Za-z\s]/g, '');
+    });
+  });
+
+  // Dynamic section dropdown based on year level
+  const yearSelect    = document.getElementById('yearLevelSelect');
+  const sectionSelect = document.getElementById('sectionSelect');
+
+  yearSelect.addEventListener('change', function() {
+    const year = this.value;
+    sectionSelect.innerHTML = '<option value="">Loading...</option>';
+    sectionSelect.disabled = true;
+
+    if (!year) {
+      sectionSelect.innerHTML = '<option value="">Select year level first</option>';
+      return;
+    }
+
+    fetch(`/admin-panel/api/sections/?year=${year}`)
+      .then(r => r.json())
+      .then(data => {
+        sectionSelect.innerHTML = '';
+        if (data.length === 0) {
+          sectionSelect.innerHTML = '<option value="">No sections available</option>';
+        } else {
+          sectionSelect.innerHTML = '<option value="">Select section</option>';
+          data.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.name;
+            sectionSelect.appendChild(opt);
+          });
+          sectionSelect.disabled = false;
+        }
+      })
+      .catch(() => {
+        sectionSelect.innerHTML = '<option value="">Error loading sections</option>';
+      });
+  });
+
+  // Enable section on form submit (in case it's still disabled)
+  document.getElementById('registerForm').addEventListener('submit', function() {
+    sectionSelect.disabled = false;
+  });
+</script>
 
 </body>
 </html>

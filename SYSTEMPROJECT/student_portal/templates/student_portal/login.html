@@ -15,7 +15,6 @@
       font-family: 'Inter', 'Segoe UI', sans-serif;
       position: relative; overflow: hidden;
     }
-    /* Animated background circles */
     body::before, body::after {
       content: ''; position: absolute; border-radius: 50%;
       background: rgba(255,106,61,.06);
@@ -23,12 +22,10 @@
     }
     body::before { width: 400px; height: 400px; top: -100px; right: -100px; }
     body::after  { width: 300px; height: 300px; bottom: -80px; left: -80px; animation-delay: 4s; }
-
     @keyframes float {
       0%, 100% { transform: translateY(0) scale(1); }
       50%      { transform: translateY(-30px) scale(1.05); }
     }
-
     .login-card {
       width: 100%; max-width: 420px;
       background: rgba(255,255,255,.97);
@@ -41,7 +38,6 @@
       from { opacity: 0; transform: translateY(30px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-
     .login-header {
       background: linear-gradient(135deg, #1a2238 0%, #2d3a55 100%);
       padding: 2.2rem 2rem 1.8rem; text-align: center;
@@ -57,12 +53,8 @@
       letter-spacing: -.5px;
     }
     .login-header h1 span { color: #ff6a3d; }
-    .login-header p {
-      color: #8e9bbe; font-size: .88rem; margin: .4rem 0 0;
-    }
-
+    .login-header p { color: #8e9bbe; font-size: .88rem; margin: .4rem 0 0; }
     .login-body { padding: 1.8rem 2rem 2.2rem; }
-
     .form-label { font-weight: 600; font-size: .88rem; color: #1a2238; }
     .form-control {
       border-radius: 10px; border: 2px solid #e4e7ed;
@@ -72,7 +64,6 @@
     .form-control:focus {
       border-color: #ff6a3d; box-shadow: 0 0 0 3px rgba(255,106,61,.12);
     }
-
     .btn-login {
       background: linear-gradient(135deg, #ff6a3d 0%, #e85a2d 100%);
       border: none; color: #fff;
@@ -86,24 +77,24 @@
       box-shadow: 0 6px 20px rgba(255,106,61,.4);
     }
     .btn-login:active { transform: translateY(0); }
-
     .register-link {
       text-align: center; margin-top: 1.2rem;
       font-size: .88rem; color: #6b7588;
     }
-    .register-link a {
-      color: #ff6a3d; font-weight: 600; text-decoration: none;
-    }
+    .register-link a { color: #ff6a3d; font-weight: 600; text-decoration: none; }
     .register-link a:hover { text-decoration: underline; }
-
-    .input-icon {
-      position: relative;
-    }
-    .input-icon i {
+    .input-icon { position: relative; }
+    .input-icon i.field-icon {
       position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
       color: #a0a8ba; font-size: .9rem;
     }
     .input-icon .form-control { padding-left: 2.5rem; }
+    .pw-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      cursor: pointer; color: #aab0c0; z-index: 5; background: none; border: none;
+      padding: 0; font-size: .9rem;
+    }
+    .pw-toggle:hover { color: #1a2238; }
   </style>
 </head>
 <body>
@@ -128,8 +119,10 @@
         <div class="mb-3">
           <label class="form-label">Student ID</label>
           <div class="input-icon">
-            <i class="fa fa-id-card"></i>
-            {{ form.student_id }}
+            <i class="fa fa-id-card field-icon"></i>
+            <input type="text" name="student_id" id="loginStudentId" class="form-control"
+                   placeholder="xx-xxxx" maxlength="7" required
+                   autocomplete="username" />
           </div>
           {% if form.student_id.errors %}
             <div class="text-danger small mt-1">{{ form.student_id.errors.0 }}</div>
@@ -138,8 +131,13 @@
         <div class="mb-4">
           <label class="form-label">Password</label>
           <div class="input-icon">
-            <i class="fa fa-lock"></i>
-            {{ form.password }}
+            <i class="fa fa-lock field-icon"></i>
+            <input type="password" name="password" class="form-control"
+                   placeholder="Your password" required
+                   autocomplete="current-password" style="padding-right:2.5rem;" />
+            <button type="button" class="pw-toggle" onclick="togglePw(this)">
+              <i class="fa fa-eye"></i>
+            </button>
           </div>
           {% if form.password.errors %}
             <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
@@ -155,6 +153,27 @@
       </div>
     </div>
   </div>
+
+<script>
+  function togglePw(btn) {
+    const input = btn.parentElement.querySelector('input[type="password"], input[type="text"]');
+    const icon  = btn.querySelector('i');
+    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+  }
+
+  // Student ID auto-format on login too
+  const sidLogin = document.getElementById('loginStudentId');
+  sidLogin.addEventListener('input', function() {
+    let raw = this.value.replace(/[^0-9]/g, '');
+    if (raw.length > 6) raw = raw.substring(0, 6);
+    if (raw.length > 2) {
+      this.value = raw.substring(0, 2) + '-' + raw.substring(2);
+    } else {
+      this.value = raw;
+    }
+  });
+</script>
 
 </body>
 </html>

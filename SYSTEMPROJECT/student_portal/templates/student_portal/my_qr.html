@@ -5,19 +5,21 @@
 {% block page_title %}My QR Code{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-lg-6">
+<div class="d-flex justify-content-center">
+  <div style="width:100%; max-width:480px;">
     <div class="card-panel text-center">
       <div class="card-header">
         <i class="fa fa-qrcode me-2" style="color:#ff6a3d;"></i> Your QR Code
       </div>
       <div class="card-body py-4">
         {% if qr_token %}
-          <!-- QR Code display using an inline SVG generator via JS -->
+          <!-- QR Code display -->
           <div id="qr-container" style="display:inline-block; padding:1.5rem; background:#fff;
                border-radius:16px; box-shadow: 0 4px 20px rgba(0,0,0,.08); margin-bottom:1.5rem;">
             {% if qr_token.qr_path %}
-              <img src="{{ qr_token.qr_path }}" alt="QR Code" style="max-width:240px; display:block; margin:0 auto;" id="qr-img">
+              <img src="{{ qr_token.qr_path }}" alt="QR Code"
+                   style="width:240px; height:240px; display:block; margin:0 auto; image-rendering:pixelated;"
+                   id="qr-img">
             {% else %}
               <div style="width:240px; height:240px; display:flex; align-items:center; justify-content:center; background:#f8f9fb; border-radius:10px;">
                 <span style="color:#a0a8ba; font-size:.85rem;">QR not generated yet</span>
@@ -35,10 +37,10 @@
 
           <hr style="margin:1.5rem 0; border-color:#edf0f4;">
 
-          <div class="row text-start" style="max-width:320px; margin:0 auto;">
+          <div class="row text-start" style="max-width:360px; margin:0 auto;">
             <div class="col-6 mb-2">
               <span style="font-size:.78rem; color:#8892a5;">Name</span><br>
-              <strong style="font-size:.9rem;">{{ student.name }}</strong>
+              <strong style="font-size:.9rem; white-space:nowrap;">{{ student.first_name }} {{ student.last_name }}</strong>
             </div>
             <div class="col-6 mb-2">
               <span style="font-size:.78rem; color:#8892a5;">Student ID</span><br>
@@ -46,7 +48,7 @@
             </div>
             <div class="col-6">
               <span style="font-size:.78rem; color:#8892a5;">Section</span><br>
-              <strong style="font-size:.9rem;">{{ student.section }}</strong>
+              <strong style="font-size:.9rem;">{{ student.section.name }}</strong>
             </div>
             <div class="col-6">
               <span style="font-size:.78rem; color:#8892a5;">Status</span><br>
@@ -54,11 +56,14 @@
             </div>
           </div>
 
+          {% if qr_token.qr_path %}
           <div class="mt-4">
-            <button onclick="downloadQR()" class="btn btn-accent">
+            <a href="{{ qr_token.qr_path }}" download="CODE-IT_QR_{{ student.student_id }}.png"
+               class="btn btn-accent">
               <i class="fa fa-download me-2"></i>Download QR
-            </button>
+            </a>
           </div>
+          {% endif %}
         {% else %}
           <div class="empty-state">
             <div style="width:100px; height:100px; margin:0 auto 1.2rem; border-radius:50%;
@@ -75,19 +80,4 @@
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-{% if qr_token.qr_path %}
-<script>
-  function downloadQR() {
-    const link = document.createElement('a');
-    link.download = 'my_qr_code.png';
-    link.href = document.getElementById('qr-img').src;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-</script>
-{% endif %}
 {% endblock %}

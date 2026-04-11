@@ -5,11 +5,13 @@
 {% block nav_events %}active{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
   <h5 class="mb-0 fw-semibold">All Events</h5>
+  {% if admin_role == 'chairperson' or admin_role == 'vits' %}
   <a href="{% url 'admin_panel:event_create' %}" class="btn btn-sm" style="background:#ff6a3d;color:#fff;">
     <i class="fa fa-plus me-1"></i> New Event
   </a>
+  {% endif %}
 </div>
 
 <div class="card border-0 shadow-sm">
@@ -22,7 +24,7 @@
             <th>Date</th>
             <th>Start Time</th>
             <th>Late Cutoff</th>
-            <th>Created By</th>
+            <th>Status</th>
             <th class="text-center">Actions</th>
           </tr>
         </thead>
@@ -33,35 +35,75 @@
             <td>{{ event.date }}</td>
             <td>{{ event.start_time|time:"g:i A" }}</td>
             <td>{{ event.late_cutoff_mins }} mins</td>
-            <td>{{ event.created_by.name }}</td>
+            <td>
+              {% if event.status == 'pending' %}
+                <span class="badge bg-warning text-dark px-3">Pending</span>
+              {% elif event.status == 'active' %}
+                <span class="badge bg-success px-3">Active</span>
+              {% else %}
+                <span class="badge bg-secondary px-3">Ended</span>
+              {% endif %}
+            </td>
             <td class="text-center">
-              <a href="{% url 'admin_panel:set_expected' event.id %}" class="btn btn-sm btn-outline-warning me-1" title="Set Expected Students">
-                <i class="fa fa-users"></i>
-              </a>
-              <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success me-1" title="Open QR Scanner">
-                <i class="fa fa-qrcode"></i>
-              </a>
-              <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-sm btn-outline-primary me-1" title="View Attendance">
-                <i class="fa fa-list-check"></i>
-              </a>
-              <a href="{% url 'admin_panel:export' event.id %}" class="btn btn-sm btn-outline-success me-1" title="Export to Excel">
-                <i class="fa fa-file-excel"></i>
-              </a>
-              <a href="{% url 'admin_panel:event_edit' event.id %}" class="btn btn-sm btn-outline-secondary me-1" title="Edit">
-                <i class="fa fa-pen"></i>
-              </a>
-              <button type="button" class="btn btn-sm btn-outline-danger"
-                      data-bs-toggle="modal" data-bs-target="#deleteModal"
-                      data-event-id="{{ event.id }}" data-event-name="{{ event.name }}"
-                      title="Delete">
-                <i class="fa fa-trash"></i>
-              </button>
+              <div class="d-flex flex-wrap justify-content-center gap-1">
+                {% if event.status == 'pending' and admin_role != 'representative' %}
+                <form method="post" action="{% url 'admin_panel:event_start' event.id %}" class="d-inline"
+                      onsubmit="return confirm('Start event \"{{ event.name|escapejs }}\"?');">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-success">
+                    <i class="fa fa-play me-1"></i><span class="d-none d-md-inline">Start</span>
+                  </button>
+                </form>
+                {% endif %}
+
+                {% if admin_role != 'representative' %}
+                <a href="{% url 'admin_panel:set_expected' event.id %}" class="btn btn-sm btn-outline-warning" title="Set Expected Students">
+                  <i class="fa fa-users me-1"></i><span class="d-none d-md-inline">Expected</span>
+                </a>
+                {% endif %}
+
+                {% if admin_role == 'vits' and event.status == 'active' %}
+                <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success">
+                  <i class="fa fa-qrcode me-1"></i><span class="d-none d-md-inline">Scan</span>
+                </a>
+                {% endif %}
+
+                <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-sm btn-outline-primary">
+                  <i class="fa fa-list-check me-1"></i><span class="d-none d-md-inline">Logs</span>
+                </a>
+
+                <a href="{% url 'admin_panel:export' event.id %}" class="btn btn-sm btn-outline-success">
+                  <i class="fa fa-file-excel me-1"></i><span class="d-none d-md-inline">Export</span>
+                </a>
+
+                {% if admin_role != 'representative' %}
+                  {% if event.status == 'active' %}
+                  <form method="post" action="{% url 'admin_panel:event_end' event.id %}" class="d-inline"
+                        onsubmit="return confirm('End event \"{{ event.name|escapejs }}\"?');">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-warning">
+                      <i class="fa fa-stop me-1"></i><span class="d-none d-md-inline">End</span>
+                    </button>
+                  </form>
+                  {% endif %}
+
+                  <a href="{% url 'admin_panel:event_edit' event.id %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fa fa-pen me-1"></i><span class="d-none d-md-inline">Edit</span>
+                  </a>
+
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                          data-bs-toggle="modal" data-bs-target="#deleteModal"
+                          data-event-id="{{ event.id }}" data-event-name="{{ event.name }}">
+                    <i class="fa fa-trash me-1"></i><span class="d-none d-md-inline">Delete</span>
+                  </button>
+                {% endif %}
+              </div>
             </td>
           </tr>
           {% empty %}
           <tr>
             <td colspan="6" class="text-center text-muted py-4">
-              No events yet. <a href="{% url 'admin_panel:event_create' %}">Create one</a>.
+              No events yet. {% if admin_role == 'chairperson' or admin_role == 'vits' %}<a href="{% url 'admin_panel:event_create' %}">Create one</a>.{% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -87,7 +129,7 @@
         <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
         <form id="deleteForm" method="post">
           {% csrf_token %}
-          <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+          <button type="submit" class="btn btn-danger btn-sm"><i class="fa fa-trash me-1"></i>Delete</button>
         </form>
       </div>
     </div>
@@ -98,7 +140,7 @@
 {% block extra_js %}
 <script>
   const deleteModal = document.getElementById('deleteModal');
-  deleteModal.addEventListener('show.bs.modal', e => {
+  deleteModal?.addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     document.getElementById('modalEventName').textContent = btn.dataset.eventName;
     document.getElementById('deleteForm').action =

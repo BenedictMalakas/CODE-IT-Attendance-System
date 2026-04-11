@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Enum
+from sqlalchemy import Column, String, Integer, DateTime, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -18,18 +18,22 @@ class Student(Base):
     __tablename__ = "students"
 
     id             = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name           = Column(String(100),  nullable=False)
-    section        = Column(String(50),   nullable=False)
-    student_id     = Column(String(50),   nullable=False, unique=True)  # e.g. "2024-0001"
+    first_name     = Column(String(50),   nullable=False)
+    last_name      = Column(String(50),   nullable=False)
+    section_id     = Column(UUID(as_uuid=True), ForeignKey("sections.id"), nullable=False)
+    student_id     = Column(String(50),   nullable=False, unique=True)  # e.g. "24-0001"
+    email          = Column(String(150),  nullable=False, unique=True)
+    year_level     = Column(Integer,      nullable=False, default=1)
     password_hash  = Column(String(255),  nullable=False)
-    id_photo_path  = Column(String(500),  nullable=False)               # uploaded school ID photo
+    id_photo_path  = Column(String(500),  nullable=True)
     status         = Column(Enum(StudentStatus), default=StudentStatus.pending, nullable=False)
-    rejection_note = Column(String(255),  nullable=True)                # reason if rejected
+    rejection_note = Column(String(255),  nullable=True)
     created_at     = Column(DateTime,     default=datetime.utcnow)
     updated_at     = Column(DateTime,     default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    qr_token         = relationship("QRToken",        back_populates="student", uselist=False)
-    attendance_logs  = relationship("AttendanceLog",  back_populates="student")
+    section_rel      = relationship("Section",       back_populates="students")
+    qr_token         = relationship("QRToken",       back_populates="student", uselist=False)
+    attendance_logs  = relationship("AttendanceLog", back_populates="student")
 
     def __repr__(self):
-        return f"<Student {self.student_id} — {self.name} [{self.status}]>"
+        return f"<Student {self.student_id} — {self.first_name} {self.last_name} [{self.status}]>"

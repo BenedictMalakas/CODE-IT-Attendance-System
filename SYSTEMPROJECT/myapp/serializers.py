@@ -1,23 +1,27 @@
 from rest_framework import serializers
-from .models import Admin, Student, Event, QRToken, AttendanceLog
+from .models import Admin, Student, Event, QRToken, AttendanceLog, Section
+
+
+class SectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Section
+        fields = ['id', 'name', 'year_level', 'created_at']
 
 
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = Admin
-        fields = ['id', 'name', 'email', 'is_active', 'created_at']
+        fields = ['id', 'name', 'email', 'role', 'is_active', 'created_at']
         # Do not expose password_hash!
 
 
 class StudentSerializer(serializers.ModelSerializer):
-    """
-    Handles creating and listing students.
-    POST only needs: name, section, student_id
-    GET returns all stored fields.
-    """
+    section_name = serializers.CharField(source='section.name', read_only=True)
+
     class Meta:
         model = Student
-        fields = ['id', 'name', 'section', 'student_id', 'status', 'created_at', 'updated_at']
+        fields = ['id', 'first_name', 'last_name', 'name', 'section', 'section_name',
+                  'student_id', 'email', 'year_level', 'status', 'created_at', 'updated_at']
         read_only_fields = ['id', 'status', 'created_at', 'updated_at']
 
 
