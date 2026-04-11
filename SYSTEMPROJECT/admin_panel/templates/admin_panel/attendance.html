@@ -14,14 +14,33 @@
         <i class="fa fa-calendar me-1"></i>{{ event.date }}
         &nbsp;|&nbsp;
         <i class="fa fa-clock me-1"></i>{{ event.start_time|time:"g:i A" }}
+        {% if event.end_time %}
+          &nbsp;&ndash;&nbsp;{{ event.end_time|time:"g:i A" }}
+        {% endif %}
         &nbsp;|&nbsp;
         Late cutoff: {{ event.late_cutoff_mins }} mins
       </span>
+      {% if event_ended %}
+        <span class="badge bg-danger ms-2">Event Ended</span>
+      {% endif %}
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
+      {% if not event_ended %}
       <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-success btn-sm">
         <i class="fa fa-qrcode me-1"></i>Open Scanner
       </a>
+      {% endif %}
+      <a href="{% url 'admin_panel:set_expected' event.id %}" class="btn btn-outline-warning btn-sm">
+        <i class="fa fa-users me-1"></i>Set Expected
+      </a>
+      {% if absent > 0 %}
+      <form method="post" action="{% url 'admin_panel:finalize_event' event.id %}" class="d-inline">
+        {% csrf_token %}
+        <button class="btn btn-outline-danger btn-sm" title="Finalize — confirm all absent students">
+          <i class="fa fa-flag-checkered me-1"></i>Finalize Event
+        </button>
+      </form>
+      {% endif %}
       <a href="{% url 'admin_panel:export' event.id %}" class="btn btn-outline-success btn-sm">
         <i class="fa fa-file-excel me-1"></i>Export Excel
       </a>
