@@ -42,21 +42,21 @@ University attendance tracking system with QR code scanning, event management, a
 # Install dependencies
 pip install -r requirements.txt
 
-# Reset database (wipes everything)
-cd "Data base proj"
-python reset_db.py
-
 # Rebuild Django internal tables
-cd ../SYSTEMPROJECT
+cd SYSTEMPROJECT
 python manage.py migrate
 
 # Seed Chairperson account
-cd "../Data base proj"
+cd ..
+cd Data base proj"
 python seed.py
 
 # Run the server
-cd ../SYSTEMPROJECT
+cd ..
+cd SYSTEMPROJECT
 python manage.py runserver
+
+> now go to the endpoints :)
 ```
 
 ### Default Chairperson Credentials
@@ -64,11 +64,3 @@ python manage.py runserver
 - **Password:** `chair123`
 
 ---
-
-## 📦 Tech Stack
-
-- **Backend:** Django 5.x + Django REST Framework
-- **Database:** PostgreSQL (Supabase) via SQLAlchemy + psycopg
-- **QR Generation:** `qrcode` library (auto-generates PNG on student approval)
-- **Frontend:** Bootstrap 5, Chart.js, Font Awesome
-- **Email:** SMTP (Gmail App Password)
