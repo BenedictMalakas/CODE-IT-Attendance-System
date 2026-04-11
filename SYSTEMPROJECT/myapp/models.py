@@ -46,6 +46,7 @@ class Event(models.Model):
     name = models.CharField(max_length=150)
     date = models.DateField()
     start_time = models.TimeField()
+    end_time = models.TimeField(null=True, blank=True)
     late_cutoff_mins = models.IntegerField(default=15)
     created_by = models.ForeignKey(Admin, on_delete=models.CASCADE, db_column='created_by')
     created_at = models.DateTimeField(auto_now_add=True)

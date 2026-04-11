@@ -14,15 +14,17 @@ class LoginForm(forms.Form):
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
-        fields = ['name', 'date', 'start_time', 'late_cutoff_mins']
+        fields = ['name', 'date', 'start_time', 'end_time', 'late_cutoff_mins']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Foundation Week Day 1'}),
-            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'start_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'name':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Foundation Week Day 1'}),
+            'date':             forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'start_time':       forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'end_time':         forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
             'late_cutoff_mins': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
         }
         labels = {
             'late_cutoff_mins': 'Late cutoff (minutes after start)',
+            'end_time':         'End time',
         }
 
 

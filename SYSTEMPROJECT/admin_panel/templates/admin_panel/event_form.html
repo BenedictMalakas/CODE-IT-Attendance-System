@@ -38,6 +38,14 @@
                 <div class="text-danger small">{{ form.start_time.errors.0 }}</div>
               {% endif %}
             </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">{{ form.end_time.label }}</label>
+              {{ form.end_time }}
+              <div class="form-text">When the event ends, QR scanning will be blocked.</div>
+              {% if form.end_time.errors %}
+                <div class="text-danger small">{{ form.end_time.errors.0 }}</div>
+              {% endif %}
+            </div>
           </div>
 
           <div class="mb-4">

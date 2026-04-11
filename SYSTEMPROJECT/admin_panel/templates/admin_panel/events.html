@@ -35,6 +35,9 @@
             <td>{{ event.late_cutoff_mins }} mins</td>
             <td>{{ event.created_by.name }}</td>
             <td class="text-center">
+              <a href="{% url 'admin_panel:set_expected' event.id %}" class="btn btn-sm btn-outline-warning me-1" title="Set Expected Students">
+                <i class="fa fa-users"></i>
+              </a>
               <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success me-1" title="Open QR Scanner">
                 <i class="fa fa-qrcode"></i>
               </a>

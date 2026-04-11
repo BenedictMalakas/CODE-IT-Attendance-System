@@ -18,6 +18,10 @@ urlpatterns = [
     path('events/<uuid:pk>/edit/',     views.event_edit_view,   name='event_edit'),
     path('events/<uuid:pk>/delete/',   views.event_delete_view, name='event_delete'),
 
+    # Expected students
+    path('events/<uuid:event_id>/expected/',  views.set_expected_students_view, name='set_expected'),
+    path('events/<uuid:event_id>/finalize/',  views.finalize_event_view,        name='finalize_event'),
+
     # Attendance & timestamps
     path('events/<uuid:event_id>/attendance/', views.attendance_view, name='attendance'),
 
@@ -32,4 +36,6 @@ urlpatterns = [
     path('students/',                        views.students_view,        name='students'),
     path('students/<uuid:pk>/approve/',      views.student_approve_view, name='student_approve'),
     path('students/<uuid:pk>/reject/',       views.student_reject_view,  name='student_reject'),
+    path('students/<uuid:pk>/delete/',       views.student_delete_view,  name='student_delete'),
+    path('students/<uuid:pk>/generate-qr/', views.generate_qr_view,     name='generate_qr'),
 ]
