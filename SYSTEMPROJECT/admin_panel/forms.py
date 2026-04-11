@@ -3,11 +3,20 @@ from myapp.models import Event
 
 
 class LoginForm(forms.Form):
+    ROLE_CHOICES = [
+        ('vits', 'VITS Officer'),
+        ('representative', 'Representative'),
+    ]
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Admin email'})
     )
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'})
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password', 'id': 'id_password'})
+    )
+    role = forms.ChoiceField(
+        choices=ROLE_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Login as',
     )
 
 
@@ -26,31 +35,3 @@ class EventForm(forms.ModelForm):
             'late_cutoff_mins': 'Late cutoff (minutes after start)',
             'end_time':         'End time',
         }
-
-
-class AdminRegisterForm(forms.Form):
-    name = forms.CharField(
-        max_length=100,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Juan Dela Cruz'}),
-        label='Full Name',
-    )
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'e.g. admin@school.edu'}),
-    )
-    password = forms.CharField(
-        min_length=6,
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Min 6 characters'}),
-    )
-    confirm_password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Re-enter password'}),
-        label='Confirm Password',
-    )
-
-    def clean(self):
-        cleaned = super().clean()
-        pw  = cleaned.get('password')
-        cpw = cleaned.get('confirm_password')
-        if pw and cpw and pw != cpw:
-            self.add_error('confirm_password', 'Passwords do not match.')
-        return cleaned
-

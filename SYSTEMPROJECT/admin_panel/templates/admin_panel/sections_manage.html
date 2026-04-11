@@ -1,0 +1,109 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Manage Sections{% endblock %}
+{% block page_title %}Section Management{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Add section form -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-header bg-white fw-semibold" style="border-radius:14px 14px 0 0;">
+        <i class="fa fa-plus me-2" style="color:#ff6a3d;"></i>Add Section
+      </div>
+      <div class="card-body">
+        <form method="post" id="sectionForm">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Year Level</label>
+            <select name="year_level" class="form-select" id="sectionYearSelect" style="border-radius:10px;" required>
+              <option value="1">1st Year</option>
+              <option value="2">2nd Year</option>
+              <option value="3">3rd Year</option>
+              <option value="4">4th Year</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Section Name</label>
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-bold" style="white-space:nowrap; color:#1a2238; font-size:.95rem;">BSIT</span>
+              <span id="sectionYearDisplay" class="fw-bold" style="color:#ff6a3d; font-size:.95rem; min-width:16px;">1</span>
+              <span class="fw-bold" style="color:#1a2238;">-</span>
+              <input type="number" name="section_number" class="form-control" id="sectionNumberInput"
+                     placeholder="Section #" min="1" max="99" required
+                     style="border-radius:10px; max-width:100px;" />
+            </div>
+            <div class="text-muted small mt-1">
+              Preview: <strong id="sectionPreview">BSIT 1-</strong>
+            </div>
+          </div>
+          <button type="submit" class="btn w-100" style="background:#ff6a3d; color:#fff; border-radius:10px; font-weight:600;">
+            <i class="fa fa-plus me-1"></i>Add Section
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section list -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-header bg-white fw-semibold" style="border-radius:14px 14px 0 0;">
+        <i class="fa fa-layer-group me-2 text-secondary"></i>All Sections ({{ sections|length }})
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Section</th>
+                <th>Year Level</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for section in sections %}
+              <tr>
+                <td class="fw-semibold">{{ section.name }}</td>
+                <td><span class="badge bg-secondary px-3">Year {{ section.year_level }}</span></td>
+                <td class="text-center">
+                  <form method="post" action="{% url 'admin_panel:section_delete' section.id %}" class="d-inline"
+                        onsubmit="return confirm('Delete section {{ section.name }}? Students in this section may be affected.');">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-danger">
+                      <i class="fa fa-trash me-1"></i>Delete
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-center text-muted py-4">No sections yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const yearSelect = document.getElementById('sectionYearSelect');
+  const yearDisplay = document.getElementById('sectionYearDisplay');
+  const numberInput = document.getElementById('sectionNumberInput');
+  const preview = document.getElementById('sectionPreview');
+
+  function updatePreview() {
+    const year = yearSelect.value;
+    const num  = numberInput.value;
+    yearDisplay.textContent = year;
+    preview.textContent = `BSIT ${year}-${num || '?'}`;
+  }
+
+  yearSelect.addEventListener('change', updatePreview);
+  numberInput.addEventListener('input', updatePreview);
+  updatePreview();
+</script>
+{% endblock %}
