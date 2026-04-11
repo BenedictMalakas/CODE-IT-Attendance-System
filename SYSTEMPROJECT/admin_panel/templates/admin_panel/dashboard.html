@@ -2,7 +2,11 @@
 
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
-{% block nav_dashboard %}active{% endblock %}
+{% block nav_dashboard_other %}active{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
 
 {% block content %}
 <!-- Stat cards -->
@@ -61,6 +65,77 @@
   </div>
 </div>
 
+<!-- Chart (same as chairperson) -->
+{% if all_events %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span><i class="fa fa-chart-line me-2 text-secondary"></i>Attendance Summary (by Section)</span>
+    <div class="d-flex gap-2 flex-wrap">
+      <select id="chartType" class="form-select form-select-sm" style="max-width:140px;">
+        <option value="bar">Bar Graph</option>
+        <option value="line">Line Graph</option>
+        <option value="pie">Pie Chart</option>
+      </select>
+      <select id="eventSelect" class="form-select form-select-sm" style="max-width:260px;">
+        {% for evt in all_events %}
+          <option value="{{ evt.id }}">{{ evt.name }} — {{ evt.date }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="card-body">
+    <canvas id="attendanceChart" height="100"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<!-- Section tiles with attendance -->
+{% if section_tiles %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span><i class="fa fa-th-large me-2 text-secondary"></i>Sections Overview</span>
+    {% if active_events %}
+    <form method="get" action="" class="d-inline">
+      <select name="event_id" class="form-select form-select-sm" style="max-width:280px;" onchange="this.form.submit();">
+        <option value="">— Select Active Event —</option>
+        {% for evt in active_events %}
+          <option value="{{ evt.id }}" {% if selected_event_id == evt.id|stringformat:"s" %}selected{% endif %}>
+            {{ evt.name }} — {{ evt.date }}
+          </option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for tile in section_tiles %}
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="card border p-3 text-center" style="border-radius:12px;">
+          <div class="fw-bold" style="font-size:1rem;">{{ tile.section.name }}</div>
+          <div class="text-muted small">Year {{ tile.section.year_level }}</div>
+          <div class="mt-2">
+            <span class="badge bg-success px-2">{{ tile.active_students }} students</span>
+          </div>
+          <div class="mt-2 d-flex justify-content-center gap-1 flex-wrap">
+            <span class="badge badge-present px-2 py-1" style="font-size:.7rem;">
+              <i class="fa fa-check me-1"></i>{{ tile.present }}
+            </span>
+            <span class="badge badge-late px-2 py-1" style="font-size:.7rem;">
+              <i class="fa fa-clock me-1"></i>{{ tile.late }}
+            </span>
+            <span class="badge badge-absent px-2 py-1" style="font-size:.7rem;">
+              <i class="fa fa-xmark me-1"></i>{{ tile.absent }}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Today's events -->
 {% if today_events %}
 <div class="card border-0 shadow-sm mb-4">
@@ -75,6 +150,7 @@
             <th>Event</th>
             <th>Start Time</th>
             <th>Late Cutoff</th>
+            <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -85,12 +161,32 @@
             <td>{{ event.start_time|time:"g:i A" }}</td>
             <td>{{ event.late_cutoff_mins }} mins</td>
             <td>
-              <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success me-1">
-                <i class="fa fa-qrcode"></i> Scan
-              </a>
-              <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-sm btn-outline-primary">
-                <i class="fa fa-list"></i> Logs
-              </a>
+              {% if event.status == 'active' %}
+                <span class="badge bg-success">Active</span>
+              {% elif event.status == 'pending' %}
+                <span class="badge bg-warning text-dark">Pending</span>
+              {% else %}
+                <span class="badge bg-secondary">Ended</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex flex-wrap gap-1">
+                {% if admin_role == 'vits' and event.status == 'active' %}
+                <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success">
+                  <i class="fa fa-qrcode me-1"></i>Scan
+                </a>
+                {% endif %}
+                <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-sm btn-outline-primary">
+                  <i class="fa fa-list me-1"></i>Logs
+                </a>
+                {% if admin_role == 'vits' and event.status == 'active' %}
+                <form method="post" action="{% url 'admin_panel:event_end' event.id %}" class="d-inline"
+                      onsubmit="return confirm('End this event?');">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-warning"><i class="fa fa-stop me-1"></i>End</button>
+                </form>
+                {% endif %}
+              </div>
             </td>
           </tr>
           {% endfor %}
@@ -115,6 +211,7 @@
             <th>Event</th>
             <th>Date</th>
             <th>Start Time</th>
+            <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -125,23 +222,86 @@
             <td>{{ event.date }}</td>
             <td>{{ event.start_time|time:"g:i A" }}</td>
             <td>
-              <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success me-1">
-                <i class="fa fa-qrcode"></i> Scan
-              </a>
-              <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-sm btn-outline-primary me-1">
-                <i class="fa fa-list"></i> Logs
-              </a>
-              <a href="{% url 'admin_panel:export' event.id %}" class="btn btn-sm btn-outline-success">
-                <i class="fa fa-file-excel"></i> Export
-              </a>
+              {% if event.status == 'active' %}
+                <span class="badge bg-success">Active</span>
+              {% elif event.status == 'pending' %}
+                <span class="badge bg-warning text-dark">Pending</span>
+              {% else %}
+                <span class="badge bg-secondary">Ended</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex flex-wrap gap-1">
+                {% if admin_role == 'vits' and event.status == 'active' %}
+                <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success">
+                  <i class="fa fa-qrcode me-1"></i>Scan
+                </a>
+                {% endif %}
+                <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-sm btn-outline-primary">
+                  <i class="fa fa-list me-1"></i>Logs
+                </a>
+                <a href="{% url 'admin_panel:export' event.id %}" class="btn btn-sm btn-outline-success">
+                  <i class="fa fa-file-excel me-1"></i>Export
+                </a>
+              </div>
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="4" class="text-center text-muted py-3">No events yet.</td></tr>
+          <tr><td colspan="5" class="text-center text-muted py-3">No events yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const chartCtx = document.getElementById('attendanceChart')?.getContext('2d');
+  let chart = null;
+  let cachedData = null;
+
+  function buildChart(type, data) {
+    if (chart) chart.destroy();
+    if (type === 'pie') {
+      const totalPresent = data.present.reduce((a, b) => a + b, 0);
+      const totalLate    = data.late.reduce((a, b) => a + b, 0);
+      const totalAbsent  = data.absent.reduce((a, b) => a + b, 0);
+      chart = new Chart(chartCtx, {
+        type: 'pie',
+        data: {
+          labels: ['Present', 'Late', 'Absent'],
+          datasets: [{ data: [totalPresent, totalLate, totalAbsent], backgroundColor: ['#28a745', '#ffc107', '#dc3545'] }],
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+      });
+    } else {
+      chart = new Chart(chartCtx, {
+        type: type,
+        data: {
+          labels: data.labels,
+          datasets: [
+            { label: 'Present', data: data.present, borderColor: '#28a745', backgroundColor: type === 'bar' ? '#28a745' : 'rgba(40,167,69,.1)', tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 5 : 0 },
+            { label: 'Late', data: data.late, borderColor: '#ffc107', backgroundColor: type === 'bar' ? '#ffc107' : 'rgba(255,193,7,.1)', tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 5 : 0 },
+            { label: 'Absent', data: data.absent, borderColor: '#dc3545', backgroundColor: type === 'bar' ? '#dc3545' : 'rgba(220,53,69,.1)', tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 5 : 0 },
+          ],
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } },
+      });
+    }
+  }
+
+  function loadChart(eventId) {
+    const chartType = document.getElementById('chartType')?.value || 'bar';
+    fetch(`{% url 'admin_panel:chart_data' %}?event_id=${eventId}`)
+      .then(r => r.json())
+      .then(data => { cachedData = data; buildChart(chartType, data); });
+  }
+
+  const eventSelect = document.getElementById('eventSelect');
+  const chartTypeSelect = document.getElementById('chartType');
+  if (eventSelect) { eventSelect.addEventListener('change', () => loadChart(eventSelect.value)); loadChart(eventSelect.value); }
+  if (chartTypeSelect) { chartTypeSelect.addEventListener('change', () => { if (cachedData) buildChart(chartTypeSelect.value, cachedData); }); }
+</script>
 {% endblock %}

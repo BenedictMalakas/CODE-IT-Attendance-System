@@ -1,4 +1,6 @@
 from django import forms
+import re
+from myapp.models import Student
 
 
 class StudentLoginForm(forms.Form):
@@ -6,7 +8,7 @@ class StudentLoginForm(forms.Form):
         max_length=50,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'e.g. 2024-00001',
+            'placeholder': 'e.g. 24-0001',
             'autocomplete': 'username',
         }),
         label='Student ID',
@@ -20,10 +22,15 @@ class StudentLoginForm(forms.Form):
     )
 
 
-import re
-from myapp.models import Student
-
 class StudentRegisterForm(forms.Form):
+    YEAR_CHOICES = [
+        ('', '— Select Year Level —'),
+        ('1', '1st Year'),
+        ('2', '2nd Year'),
+        ('3', '3rd Year'),
+        ('4', '4th Year'),
+    ]
+
     first_name = forms.CharField(
         max_length=50,
         widget=forms.TextInput(attrs={
@@ -45,15 +52,25 @@ class StudentRegisterForm(forms.Form):
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'placeholder': 'e.g. 24-0001',
+            'maxlength': '7',
         }),
         label='Student ID',
     )
-    section = forms.CharField(
-        max_length=50,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'e.g. BSIT-3A',
+    year_level = forms.ChoiceField(
+        choices=YEAR_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_year_level',
         }),
+        label='Year Level',
+    )
+    section = forms.CharField(
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_section',
+            'disabled': 'disabled',
+        }),
+        label='Section',
     )
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={
@@ -77,23 +94,37 @@ class StudentRegisterForm(forms.Form):
         label='Confirm Password',
     )
 
+    def clean_first_name(self):
+        name = self.cleaned_data.get('first_name', '').strip()
+        if not re.match(r'^[A-Za-z\s]+$', name):
+            raise forms.ValidationError("First name must contain letters only. No special characters or numbers.")
+        return name
+
+    def clean_last_name(self):
+        name = self.cleaned_data.get('last_name', '').strip()
+        if not re.match(r'^[A-Za-z\s]+$', name):
+            raise forms.ValidationError("Last name must contain letters only. No special characters or numbers.")
+        return name
+
     def clean_student_id(self):
         student_id = self.cleaned_data.get('student_id')
         if not re.match(r'^\d{2}-\d{4}$', student_id):
             raise forms.ValidationError("Student ID must be in the format xx-xxxx (e.g. 24-0001).")
         return student_id
 
-    def clean_section(self):
-        section = self.cleaned_data.get('section')
-        if not re.match(r'^[A-Za-z0-9]+-[A-Za-z0-9]+$', section):
-            raise forms.ValidationError("Section must be in the format x-x (e.g. BSIT-3A).")
-        return section
-
     def clean_email(self):
-        email = self.cleaned_data.get('email')
-        allowed_domains = ['@gmail.com', '@outlook.com', '@yahoo.com']
-        if not any(email.endswith(domain) for domain in allowed_domains):
-            raise forms.ValidationError("Email must be a @gmail.com, @outlook.com, or @yahoo.com address.")
+        email = self.cleaned_data.get('email', '').strip().lower()
+        # Must have valid structure
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            raise forms.ValidationError("Please enter a valid email address.")
+        # Allow common providers + edu domains
+        allowed_patterns = [
+            '@gmail.com', '@outlook.com', '@yahoo.com', '@hotmail.com',
+            '@icloud.com', '@protonmail.com',
+        ]
+        is_edu = email.endswith('.edu') or email.endswith('.edu.ph')
+        if not is_edu and not any(email.endswith(p) for p in allowed_patterns):
+            raise forms.ValidationError("Please use a recognized email provider (Gmail, Outlook, Yahoo, etc.) or an .edu address.")
         if Student.objects.filter(email=email).exists():
             raise forms.ValidationError("An account with this email already exists.")
         return email

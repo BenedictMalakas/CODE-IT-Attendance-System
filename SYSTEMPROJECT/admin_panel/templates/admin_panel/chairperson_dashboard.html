@@ -1,0 +1,251 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Chairperson Dashboard{% endblock %}
+{% block page_title %}Chairperson Dashboard{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:#e8f4fd;"><i class="fa fa-calendar-days text-primary"></i></div>
+        <div>
+          <div class="fw-bold fs-4">{{ total_events }}</div>
+          <div class="text-muted small">Total Events</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:#e9f9ee;"><i class="fa fa-users text-success"></i></div>
+        <div>
+          <div class="fw-bold fs-4">{{ total_students }}</div>
+          <div class="text-muted small">Active Students</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:#fff8e1;"><i class="fa fa-layer-group text-warning"></i></div>
+        <div>
+          <div class="fw-bold fs-4">{{ total_sections }}</div>
+          <div class="text-muted small">Sections</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:#fce8f3;"><i class="fa fa-user-shield" style="color:#c0399e;"></i></div>
+        <div>
+          <div class="fw-bold fs-4">{{ total_admins }}</div>
+          <div class="text-muted small">Officers & Reps</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart -->
+{% if all_events %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span><i class="fa fa-chart-line me-2 text-secondary"></i>Attendance Summary (by Section)</span>
+    <div class="d-flex gap-2 flex-wrap">
+      <select id="chartType" class="form-select form-select-sm" style="max-width:140px;">
+        <option value="bar">Bar Graph</option>
+        <option value="line">Line Graph</option>
+        <option value="pie">Pie Chart</option>
+      </select>
+      <select id="eventSelect" class="form-select form-select-sm" style="max-width:260px;">
+        {% for evt in all_events %}
+          <option value="{{ evt.id }}">{{ evt.name }} — {{ evt.date }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="card-body">
+    <canvas id="attendanceChart" height="100"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<!-- Section tiles with attendance -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span><i class="fa fa-th-large me-2 text-secondary"></i>Sections Overview</span>
+    <div class="d-flex align-items-center gap-2">
+      {% if active_events %}
+      <form method="get" action="" class="d-inline">
+        <select name="event_id" class="form-select form-select-sm" style="max-width:280px;" onchange="this.form.submit();">
+          <option value="">— Select Active Event —</option>
+          {% for evt in active_events %}
+            <option value="{{ evt.id }}" {% if selected_event_id == evt.id|stringformat:"s" %}selected{% endif %}>
+              {{ evt.name }} — {{ evt.date }}
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+      {% endif %}
+      <a href="{% url 'admin_panel:sections_manage' %}" class="btn btn-sm btn-outline-secondary">Manage Sections</a>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for tile in section_tiles %}
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="card border p-3 text-center" style="border-radius:12px;">
+          <div class="fw-bold" style="font-size:1rem;">{{ tile.section.name }}</div>
+          <div class="text-muted small">Year {{ tile.section.year_level }}</div>
+          <div class="mt-2">
+            <span class="badge bg-success px-2">{{ tile.active_students }} students</span>
+          </div>
+          <div class="mt-2 d-flex justify-content-center gap-1 flex-wrap">
+            <span class="badge badge-present px-2 py-1" style="font-size:.7rem;">
+              <i class="fa fa-check me-1"></i>{{ tile.present }}
+            </span>
+            <span class="badge badge-late px-2 py-1" style="font-size:.7rem;">
+              <i class="fa fa-clock me-1"></i>{{ tile.late }}
+            </span>
+            <span class="badge badge-absent px-2 py-1" style="font-size:.7rem;">
+              <i class="fa fa-xmark me-1"></i>{{ tile.absent }}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Quick links -->
+<div class="row g-3">
+  <div class="col-md-4">
+    <a href="{% url 'admin_panel:admins_manage' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:12px;">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:rgba(255,106,61,.1);"><i class="fa fa-user-gear" style="color:#ff6a3d;"></i></div>
+        <div>
+          <div class="fw-bold">Manage Admins</div>
+          <div class="text-muted small">Officers & Representatives</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'admin_panel:events' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:12px;">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:#e8f4fd;"><i class="fa fa-calendar-days text-primary"></i></div>
+        <div>
+          <div class="fw-bold">Manage Events</div>
+          <div class="text-muted small">Create, edit, end events</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'admin_panel:students' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:12px;">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:#e9f9ee;"><i class="fa fa-users text-success"></i></div>
+        <div>
+          <div class="fw-bold">Manage Students</div>
+          <div class="text-muted small">Approve, reject, view</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const chartCtx = document.getElementById('attendanceChart')?.getContext('2d');
+  let chart = null;
+
+  function buildChart(type, data) {
+    if (chart) chart.destroy();
+
+    if (type === 'pie') {
+      // Pie: sum totals across all sections
+      const totalPresent = data.present.reduce((a, b) => a + b, 0);
+      const totalLate    = data.late.reduce((a, b) => a + b, 0);
+      const totalAbsent  = data.absent.reduce((a, b) => a + b, 0);
+      chart = new Chart(chartCtx, {
+        type: 'pie',
+        data: {
+          labels: ['Present', 'Late', 'Absent'],
+          datasets: [{
+            data: [totalPresent, totalLate, totalAbsent],
+            backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+          }],
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+      });
+    } else {
+      chart = new Chart(chartCtx, {
+        type: type,
+        data: {
+          labels: data.labels,
+          datasets: [
+            {
+              label: 'Present', data: data.present,
+              borderColor: '#28a745', backgroundColor: type === 'bar' ? '#28a745' : 'rgba(40,167,69,.1)',
+              tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 5 : 0,
+            },
+            {
+              label: 'Late', data: data.late,
+              borderColor: '#ffc107', backgroundColor: type === 'bar' ? '#ffc107' : 'rgba(255,193,7,.1)',
+              tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 5 : 0,
+            },
+            {
+              label: 'Absent', data: data.absent,
+              borderColor: '#dc3545', backgroundColor: type === 'bar' ? '#dc3545' : 'rgba(220,53,69,.1)',
+              tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 5 : 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        },
+      });
+    }
+  }
+
+  let cachedData = null;
+
+  function loadChart(eventId) {
+    const chartType = document.getElementById('chartType')?.value || 'bar';
+    fetch(`{% url 'admin_panel:chart_data' %}?event_id=${eventId}`)
+      .then(r => r.json())
+      .then(data => {
+        cachedData = data;
+        buildChart(chartType, data);
+      });
+  }
+
+  const eventSelect = document.getElementById('eventSelect');
+  const chartTypeSelect = document.getElementById('chartType');
+
+  if (eventSelect) {
+    eventSelect.addEventListener('change', () => loadChart(eventSelect.value));
+    loadChart(eventSelect.value);
+  }
+  if (chartTypeSelect) {
+    chartTypeSelect.addEventListener('change', () => {
+      if (cachedData) buildChart(chartTypeSelect.value, cachedData);
+    });
+  }
+</script>
+{% endblock %}

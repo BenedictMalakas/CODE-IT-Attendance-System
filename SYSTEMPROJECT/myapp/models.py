@@ -1,17 +1,55 @@
 from django.db import models
 import uuid
 
+
+class Section(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=50, unique=True)        # e.g. "BSIT 1-8"
+    year_level = models.IntegerField()                          # 1, 2, 3, or 4
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = 'sections'
+
+    def __str__(self):
+        return self.name
+
+
 class Admin(models.Model):
+    class Role(models.TextChoices):
+        CHAIRPERSON    = 'chairperson', 'Chairperson'
+        VITS           = 'vits', 'VITS Officer'
+        REPRESENTATIVE = 'representative', 'Representative'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     email = models.CharField(max_length=150, unique=True)
     password_hash = models.CharField(max_length=255)
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.VITS)
     is_active = models.BooleanField(default=True)
+    force_password_change = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         managed = False
         db_table = 'admins'
+
+    def __str__(self):
+        return f"{self.name} ({self.get_role_display()})"
+
+
+class AdminSection(models.Model):
+    """Maps Representative admins to the sections they manage."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, db_column='admin_id', related_name='admin_sections')
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, db_column='section_id', related_name='admin_sections')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = 'admin_sections'
+
 
 class Student(models.Model):
     class Status(models.TextChoices):
@@ -22,14 +60,10 @@ class Student(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
-    
-    @property
-    def name(self):
-        return f"{self.first_name} {self.last_name}"
-    
-    section = models.CharField(max_length=50)
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, db_column='section_id', related_name='students')
     student_id = models.CharField(max_length=50, unique=True)
-    email = models.CharField(max_length=150, unique=True, blank=True)
+    email = models.CharField(max_length=150, unique=True)
+    year_level = models.IntegerField(default=1)
     password_hash = models.CharField(max_length=255, null=True, blank=True)
     id_photo_path = models.CharField(max_length=500, null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
@@ -37,23 +71,35 @@ class Student(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def name(self):
+        return f"{self.first_name} {self.last_name}"
+
     class Meta:
         managed = False
         db_table = 'students'
 
+
 class Event(models.Model):
+    class EventStatus(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        ACTIVE  = 'active', 'Active'
+        ENDED   = 'ended', 'Ended'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=150)
     date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField(null=True, blank=True)
     late_cutoff_mins = models.IntegerField(default=15)
+    status = models.CharField(max_length=20, choices=EventStatus.choices, default=EventStatus.PENDING)
     created_by = models.ForeignKey(Admin, on_delete=models.CASCADE, db_column='created_by')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         managed = False
         db_table = 'events'
+
 
 class QRToken(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -65,6 +111,7 @@ class QRToken(models.Model):
     class Meta:
         managed = False
         db_table = 'qr_tokens'
+
 
 class AttendanceLog(models.Model):
     class Status(models.TextChoices):
