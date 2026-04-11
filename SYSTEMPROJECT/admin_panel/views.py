@@ -176,6 +176,80 @@ def event_delete_view(request, pk):
 
 
 # ---------------------------------------------------------------------------
+# Finalize Event (lock absent students)
+# ---------------------------------------------------------------------------
+
+@admin_required
+@require_POST
+def finalize_event_view(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+
+    # Count how many are still absent (pre-marked but didn't scan)
+    absent_logs = AttendanceLog.objects.filter(event=event, status='absent')
+    count       = absent_logs.count()
+
+    if count == 0:
+        messages.info(request, f'No absent students to finalize for "{event.name}".')
+    else:
+        messages.success(request, f'Event "{event.name}" finalized — {count} student(s) marked as Absent.')
+
+    return redirect('admin_panel:attendance', event_id=event_id)
+
+
+# ---------------------------------------------------------------------------
+# Expected Students (pre-mark absent)
+# ---------------------------------------------------------------------------
+
+@admin_required
+def set_expected_students_view(request, event_id):
+    event    = get_object_or_404(Event, id=event_id)
+    students = Student.objects.filter(status='active').order_by('last_name', 'first_name')
+
+    # IDs of students already in the expected list for this event
+    existing_logs   = AttendanceLog.objects.filter(event=event).select_related('student')
+    expected_ids    = set(str(log.student.id) for log in existing_logs)
+    locked_ids      = set(str(log.student.id) for log in existing_logs if log.status in ('present', 'late'))
+
+    if request.method == 'POST':
+        selected_ids = set(request.POST.getlist('student_ids'))
+        admin        = get_current_admin(request)
+
+        # Add new expected students (not already in the list)
+        added = 0
+        for student in students:
+            sid = str(student.id)
+            if sid in selected_ids and sid not in expected_ids:
+                AttendanceLog.objects.create(
+                    id=uuid.uuid4(),
+                    student=student,
+                    event=event,
+                    scanned_by=None,
+                    status='absent',
+                    scanned_at=None,
+                )
+                added += 1
+
+        # Remove unchecked students — only if they are still absent (not scanned yet)
+        removed = 0
+        for log in existing_logs:
+            sid = str(log.student.id)
+            if sid not in selected_ids and log.status == 'absent':
+                log.delete()
+                removed += 1
+
+        messages.success(request, f'Expected list updated — {added} added, {removed} removed.')
+        return redirect('admin_panel:attendance', event_id=event_id)
+
+    context = {
+        'event':       event,
+        'students':    students,
+        'expected_ids': expected_ids,
+        'locked_ids':  locked_ids,
+    }
+    return render(request, 'admin_panel/expected_students.html', context)
+
+
+# ---------------------------------------------------------------------------
 # Attendance (timestamps)
 # ---------------------------------------------------------------------------
 
@@ -188,13 +262,21 @@ def attendance_view(request, event_id):
         .select_related('student', 'scanned_by')
         .order_by('scanned_at')
     )
+
+    # Check if event has ended
+    event_ended = False
+    if event.end_time:
+        event_end   = dj_timezone.make_aware(datetime.combine(event.date, event.end_time))
+        event_ended = dj_timezone.now() > event_end
+
     context = {
-        'event':   event,
-        'logs':    logs,
-        'present': logs.filter(status='present').count(),
-        'late':    logs.filter(status='late').count(),
-        'absent':  logs.filter(status='absent').count(),
-        'total':   logs.count(),
+        'event':       event,
+        'logs':        logs,
+        'present':     logs.filter(status='present').count(),
+        'late':        logs.filter(status='late').count(),
+        'absent':      logs.filter(status='absent').count(),
+        'total':       logs.count(),
+        'event_ended': event_ended,
     }
     return render(request, 'admin_panel/attendance.html', context)
 
@@ -213,6 +295,17 @@ def scanner_view(request, event_id):
 @require_POST
 def scan_qr_api(request, event_id):
     event = get_object_or_404(Event, id=event_id)
+
+    # Block scans if event has ended
+    if event.end_time:
+        now_time = dj_timezone.now()
+        event_end = dj_timezone.make_aware(datetime.combine(event.date, event.end_time))
+        if now_time > event_end:
+            return JsonResponse({
+                'success': False,
+                'event_ended': True,
+                'message': f'This event has already ended at {event.end_time.strftime("%I:%M %p")}. No more scans allowed.',
+            })
 
     try:
         data  = json.loads(request.body)
@@ -233,33 +326,41 @@ def scan_qr_api(request, event_id):
     if student.status != 'active':
         return JsonResponse({'success': False, 'message': f'Student "{student.name}" is not active.'})
 
-    # Prevent duplicate scans
-    existing = AttendanceLog.objects.filter(student=student, event=event).first()
-    if existing:
-        return JsonResponse({
-            'success':         False,
-            'already_scanned': True,
-            'message':         f'{student.name} already recorded as {existing.status.upper()}.',
-            'student_name':    student.name,
-            'student_id':      student.student_id,
-            'status':          existing.status,
-        })
-
-    # Determine PRESENT or LATE
+    # Determine PRESENT or LATE based on time
     now         = dj_timezone.now()
     event_start = dj_timezone.make_aware(datetime.combine(event.date, event.start_time))
     cutoff      = event_start + timedelta(minutes=event.late_cutoff_mins)
     status      = 'present' if now <= cutoff else 'late'
 
-    admin = get_current_admin(request)
-    AttendanceLog.objects.create(
-        id=uuid.uuid4(),
-        student=student,
-        event=event,
-        scanned_by=admin,
-        status=status,
-        scanned_at=now,
-    )
+    admin    = get_current_admin(request)
+    existing = AttendanceLog.objects.filter(student=student, event=event).first()
+
+    if existing:
+        # Already scanned as present or late — block duplicate
+        if existing.status in ('present', 'late'):
+            return JsonResponse({
+                'success':         False,
+                'already_scanned': True,
+                'message':         f'{student.name} already recorded as {existing.status.upper()}.',
+                'student_name':    student.name,
+                'student_id':      student.student_id,
+                'status':          existing.status,
+            })
+        # Was pre-marked as absent — update to present/late
+        existing.status     = status
+        existing.scanned_by = admin
+        existing.scanned_at = now
+        existing.save()
+    else:
+        # Walk-in: not in expected list — create new record
+        AttendanceLog.objects.create(
+            id=uuid.uuid4(),
+            student=student,
+            event=event,
+            scanned_by=admin,
+            status=status,
+            scanned_at=now,
+        )
 
     return JsonResponse({
         'success':      True,
@@ -468,4 +569,101 @@ def student_reject_view(request, pk):
     student.rejection_note = note or 'Rejected by admin.'
     student.save()
     messages.warning(request, f'{student.name} rejected.')
+    return redirect('admin_panel:students')
+
+
+# ---------------------------------------------------------------------------
+# Delete Student
+# ---------------------------------------------------------------------------
+
+@admin_required
+@require_POST
+def student_delete_view(request, pk):
+    student = get_object_or_404(Student, id=pk)
+    name    = student.name
+    student.delete()
+    messages.success(request, f'Student "{name}" has been deleted.')
+    return redirect('admin_panel:students')
+
+
+# ---------------------------------------------------------------------------
+# Generate / Regenerate QR Code
+# ---------------------------------------------------------------------------
+
+@admin_required
+@require_POST
+def generate_qr_view(request, pk):
+    import qrcode
+    import secrets
+    import os
+    from io import BytesIO
+    from django.core.files.storage import default_storage
+    from django.conf import settings as django_settings
+
+    student = get_object_or_404(Student, id=pk)
+
+    if student.status != 'active':
+        messages.error(request, f'{student.name} must be active to generate a QR code.')
+        return redirect('admin_panel:students')
+
+    # Get or create QR token
+    try:
+        qr_token = QRToken.objects.get(student=student)
+    except QRToken.DoesNotExist:
+        qr_token = QRToken.objects.create(
+            id=uuid.uuid4(),
+            student=student,
+            token=secrets.token_urlsafe(32),
+            qr_path='',
+        )
+
+    # Generate QR image
+    try:
+        qr_img   = qrcode.make(qr_token.token, box_size=10, border=2)
+        buf      = BytesIO()
+        qr_img.save(buf, format='PNG')
+        buf.seek(0)
+
+        filename = f'qr_{student.id}.png'
+        filepath = os.path.join(django_settings.MEDIA_ROOT, filename)
+
+        # Overwrite if exists
+        if default_storage.exists(filename):
+            default_storage.delete(filename)
+
+        saved_path       = default_storage.save(filename, buf)
+        qr_token.qr_path = default_storage.url(saved_path)
+        qr_token.save()
+
+        # Send QR via email
+        if student.email:
+            try:
+                from django.core.mail import EmailMessage
+                buf.seek(0)
+                subject = f'Your CODE-IT QR Code — {student.name}'
+                body = (
+                    f'Hi {student.name},\n\n'
+                    f'Your QR code has been generated!\n\n'
+                    f'Show this QR code at events to record your attendance.\n\n'
+                    f'Student ID: {student.student_id}\n'
+                    f'Section: {student.section}\n\n'
+                    f'— CODE-IT Attendance System'
+                )
+                mail = EmailMessage(
+                    subject=subject,
+                    body=body,
+                    from_email=django_settings.EMAIL_HOST_USER,
+                    to=[student.email],
+                )
+                mail.attach('qr_code.png', buf.getvalue(), 'image/png')
+                mail.send(fail_silently=False)
+                messages.success(request, f'QR code generated and emailed to {student.email}.')
+            except Exception as e:
+                messages.warning(request, f'QR generated but email failed: {e}')
+        else:
+            messages.success(request, f'QR code generated for {student.name} (no email on file).')
+
+    except Exception as e:
+        messages.error(request, f'QR generation failed: {e}')
+
     return redirect('admin_panel:students')
