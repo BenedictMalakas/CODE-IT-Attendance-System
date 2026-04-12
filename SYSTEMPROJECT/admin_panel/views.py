@@ -14,6 +14,7 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from django.core.mail import send_mail
 from django.conf import settings
+from django.db import transaction
 
 from myapp.models import Admin, Student, Event, QRToken, AttendanceLog, Section, AdminSection
 from .forms import LoginForm, EventForm
@@ -113,8 +114,12 @@ def build_section_tiles_with_attendance(event=None):
 # ---------------------------------------------------------------------------
 
 def login_view(request):
-    if request.session.get('admin_id'):
+    # Verify admin exists in DB before redirecting to dashboard
+    if get_current_admin(request):
         return redirect('admin_panel:dashboard')
+    elif request.session.get('admin_id'):
+        # ID is in session but not in DB (likely deleted) - clear session
+        request.session.flush()
 
     form = LoginForm()
     if request.method == 'POST':
@@ -579,21 +584,29 @@ def event_create_view(request):
             event.id         = uuid.uuid4()
             event.created_by = get_current_admin(request)
 
-            # Time integrity check — reject if start_time is in the past for today
             now = ph_now()
             event_date = event.date
             event_start = event.start_time
 
-            if event_date == now.date() and event_start < now.time():
-                messages.error(
-                    request,
-                    f'Cannot set start time to {event_start.strftime("%I:%M %p")} — '
-                    f'that time has already passed. Current PH time is {now.strftime("%I:%M %p")}.'
-                )
-                return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
+            if event_date == now.date():
+                # Compare at the minute level to allow starting at the current time
+                now_mins = now.hour * 60 + now.minute
+                start_mins = event_start.hour * 60 + event_start.minute
+                if start_mins < now_mins:
+                    messages.error(
+                        request,
+                        f'Cannot set start time to {event_start.strftime("%I:%M %p")} — '
+                        f'that time has already passed. Current PH time is {now.strftime("%I:%M %p")}.'
+                    )
+                    return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
 
             if event_date < now.date():
                 messages.error(request, 'Cannot create an event in the past.')
+                return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
+
+            # End time must be later than start time
+            if event.end_time and event.end_time <= event.start_time:
+                messages.error(request, 'End time must be later than start time.')
                 return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
 
             event.status = 'pending'  # Events start as pending
@@ -614,12 +627,20 @@ def event_edit_view(request, pk):
 
             # Time integrity check for edits too
             now = ph_now()
-            if updated.date == now.date() and updated.start_time < now.time() and event.status == 'pending':
-                messages.error(
-                    request,
-                    f'Cannot set start time to {updated.start_time.strftime("%I:%M %p")} — '
-                    f'that time has already passed. Current PH time is {now.strftime("%I:%M %p")}.'
-                )
+            if updated.date == now.date() and event.status == 'pending':
+                now_mins = now.hour * 60 + now.minute
+                start_mins = updated.start_time.hour * 60 + updated.start_time.minute
+                if start_mins < now_mins:
+                    messages.error(
+                        request,
+                        f'Cannot set start time to {updated.start_time.strftime("%I:%M %p")} — '
+                        f'that time has already passed. Current PH time is {now.strftime("%I:%M %p")}.'
+                    )
+                    return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Edit', 'event': event})
+
+            # End time must be later than start time
+            if updated.end_time and updated.end_time <= updated.start_time:
+                messages.error(request, 'End time must be later than start time.')
                 return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Edit', 'event': event})
 
             updated.save()
@@ -1001,13 +1022,15 @@ def students_view(request):
 
 @role_required('chairperson', 'vits')
 @require_POST
+@transaction.atomic
 def student_approve_view(request, pk):
     import os
     import qrcode
     from io import BytesIO
     from django.core.mail import EmailMessage
 
-    student                = get_object_or_404(Student, id=pk)
+    # Use select_for_update to lock the row and prevent simultaneous approvals
+    student = get_object_or_404(Student.objects.select_for_update(), id=pk)
     student.status         = 'active'
     student.rejection_note = None
     student.save()

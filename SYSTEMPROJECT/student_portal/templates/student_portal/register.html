@@ -62,6 +62,15 @@
     .form-control:focus, .form-select:focus {
       border-color: #ff6a3d; box-shadow: 0 0 0 3px rgba(255,106,61,.12);
     }
+    /* Fix for doubling eye icon in Edge/Chrome */
+    input::-ms-reveal,
+    input::-ms-clear,
+    input::-webkit-reveal {
+      display: none !important;
+    }
+    .form-group-password .form-control {
+      padding-right: 45px;
+    }
     .btn-register {
       background: linear-gradient(135deg, #ff6a3d 0%, #e85a2d 100%);
       border: none; color: #fff;
@@ -126,17 +135,17 @@
           </div>
         </div>
 
-        <!-- Student ID -->
+        <!-- Student ID & Year Level -->
         <div class="row">
           <div class="mb-3 col-md-6">
-            <label class="form-label"><i class="fa fa-id-card me-1 text-muted"></i> Student ID</label>
+            <label class="form-label d-flex align-items-center"><i class="fa fa-id-card me-2 text-muted"></i> Student ID</label>
             <input type="text" name="student_id" id="studentIdInput" class="form-control"
-                   placeholder="xx-xxxx" maxlength="7"
+                   placeholder="xx-xxxx" maxlength="7" autocomplete="username"
                    value="{{ form.student_id.value|default:'' }}" required />
             {% if form.student_id.errors %}<div class="field-error">{{ form.student_id.errors.0 }}</div>{% endif %}
           </div>
           <div class="mb-3 col-md-6">
-            <label class="form-label"><i class="fa fa-graduation-cap me-1 text-muted"></i> Year Level</label>
+            <label class="form-label d-flex align-items-center"><i class="fa fa-graduation-cap me-2 text-muted"></i> Year Level</label>
             <select name="year_level" id="yearLevelSelect" class="form-select" required>
               <option value="">Select year level</option>
               <option value="1" {% if form.year_level.value == '1' %}selected{% endif %}>1st Year</option>
@@ -148,21 +157,21 @@
           </div>
         </div>
 
-        <!-- Section -->
-        <div class="mb-3">
-          <label class="form-label"><i class="fa fa-users me-1 text-muted"></i> Section</label>
-          <select name="section" id="sectionSelect" class="form-select" required disabled>
-            <option value="">Select year level first</option>
-          </select>
-          {% if form.section.errors %}<div class="field-error">{{ form.section.errors.0 }}</div>{% endif %}
-        </div>
-
-        <!-- Email -->
-        <div class="mb-3">
-          <label class="form-label"><i class="fa fa-envelope me-1 text-muted"></i> Email Address</label>
-          <input type="email" name="email" class="form-control" placeholder="e.g. juan@gmail.com"
-                 value="{{ form.email.value|default:'' }}" required />
-          {% if form.email.errors %}<div class="field-error">{{ form.email.errors.0 }}</div>{% endif %}
+        <!-- Section & Email (Updated layout for balance) -->
+        <div class="row">
+          <div class="mb-3 col-md-6">
+            <label class="form-label d-flex align-items-center"><i class="fa fa-users me-2 text-muted"></i> Section</label>
+            <select name="section" id="sectionSelect" class="form-select" required disabled>
+              <option value="">Select year level first</option>
+            </select>
+            {% if form.section.errors %}<div class="field-error">{{ form.section.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="mb-3 col-md-6">
+            <label class="form-label d-flex align-items-center"><i class="fa fa-envelope me-2 text-muted"></i> Email Address</label>
+            <input type="email" name="email" class="form-control" placeholder="e.g. juan@gmail.com"
+                   autocomplete="email" value="{{ form.email.value|default:'' }}" required />
+            {% if form.email.errors %}<div class="field-error">{{ form.email.errors.0 }}</div>{% endif %}
+          </div>
         </div>
 
         <!-- ID Photo Upload -->
@@ -178,10 +187,10 @@
         <!-- Password -->
         <div class="row">
           <div class="mb-3 col-md-6">
-            <label class="form-label"><i class="fa fa-lock me-1 text-muted"></i> Password</label>
-            <div class="position-relative">
+            <label class="form-label d-flex align-items-center"><i class="fa fa-lock me-2 text-muted"></i> Password</label>
+            <div class="position-relative form-group-password">
               <input type="password" name="password" class="form-control"
-                     placeholder="Min 8 chars, 1 special" required minlength="8" />
+                     placeholder="Min 8 chars, 1 special" autocomplete="new-password" required minlength="8" />
               <button type="button" class="pw-toggle" onclick="togglePw(this)">
                 <i class="fa fa-eye"></i>
               </button>
@@ -189,10 +198,10 @@
             {% if form.password.errors %}<div class="field-error">{{ form.password.errors.0 }}</div>{% endif %}
           </div>
           <div class="mb-4 col-md-6">
-            <label class="form-label"><i class="fa fa-shield-halved me-1 text-muted"></i> Confirm</label>
-            <div class="position-relative">
+            <label class="form-label d-flex align-items-center"><i class="fa fa-shield-halved me-2 text-muted"></i> Confirm</label>
+            <div class="position-relative form-group-password">
               <input type="password" name="confirm_password" class="form-control"
-                     placeholder="Re-enter password" required />
+                     placeholder="Re-enter password" autocomplete="new-password" required />
               <button type="button" class="pw-toggle" onclick="togglePw(this)">
                 <i class="fa fa-eye"></i>
               </button>

@@ -95,6 +95,15 @@
       padding: 0; font-size: .9rem;
     }
     .pw-toggle:hover { color: #1a2238; }
+    /* Fix for doubling eye icon in Edge/Chrome */
+    input::-ms-reveal,
+    input::-ms-clear,
+    input::-webkit-reveal {
+      display: none !important;
+    }
+    .form-control-password {
+      padding-right: 3rem !important;
+    }
   </style>
 </head>
 <body>
@@ -132,9 +141,9 @@
           <label class="form-label">Password</label>
           <div class="input-icon">
             <i class="fa fa-lock field-icon"></i>
-            <input type="password" name="password" class="form-control"
+            <input type="password" name="password" class="form-control form-control-password"
                    placeholder="Your password" required
-                   autocomplete="current-password" style="padding-right:2.5rem;" />
+                   autocomplete="current-password" />
             <button type="button" class="pw-toggle" onclick="togglePw(this)">
               <i class="fa fa-eye"></i>
             </button>

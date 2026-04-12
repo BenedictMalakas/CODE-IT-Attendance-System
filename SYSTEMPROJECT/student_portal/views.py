@@ -43,8 +43,12 @@ def get_current_student(request):
 # ---------------------------------------------------------------------------
 
 def login_view(request):
-    if request.session.get('student_id'):
+    # Verify student exists in DB before redirecting to dashboard
+    if get_current_student(request):
         return redirect('student_portal:dashboard')
+    elif request.session.get('student_id'):
+        # ID is in session but not in DB (likely deleted) - clear session
+        request.session.flush()
 
     form = StudentLoginForm()
     if request.method == 'POST':
@@ -237,6 +241,7 @@ def profile_view(request):
         # Handle profile picture upload
         if action == 'upload_photo' and 'profile_picture' in request.FILES:
             import os
+            import time
             from django.conf import settings
             from django.core.files.storage import default_storage
 
@@ -247,11 +252,18 @@ def profile_view(request):
                 messages.error(request, 'Invalid file type. Only PNG, JPG, and WebP are allowed.')
                 return redirect('student_portal:profile')
 
-            filename = f"profile_{student.id}.{ext}"
+            # Cache busting: add timestamp to filename
+            timestamp = int(time.time())
+            filename = f"profile_{student.id}_{timestamp}.{ext}"
 
-            filepath = os.path.join(settings.MEDIA_ROOT, filename)
-            if default_storage.exists(filepath):
-                default_storage.delete(filepath)
+            # Clean up old profile pictures for this student to save space
+            try:
+                upload_dir = os.path.join(settings.MEDIA_ROOT)
+                for existing_file in os.listdir(upload_dir):
+                    if existing_file.startswith(f"profile_{student.id}"):
+                        os.remove(os.path.join(upload_dir, existing_file))
+            except Exception:
+                pass # Non-critical if cleanup fails
 
             saved_path = default_storage.save(filename, pic)
             student.id_photo_path = default_storage.url(saved_path)

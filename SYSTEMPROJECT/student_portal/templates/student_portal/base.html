@@ -276,8 +276,12 @@
     </a>
   </div>
   <div class="sidebar-footer">
-    <div class="avatar">{{ request.session.student_name|default:"S"|truncatechars:1 }}</div>
-    <span>{{ request.session.student_name|default:"Student" }}</span>
+    <div class="avatar" style="{% if student.id_photo_path %}background-image: url('{{ student.id_photo_path }}'); background-size: cover; background-position: center;{% endif %}">
+      {% if not student.id_photo_path %}
+        {{ request.session.student_name|default:"S"|first }}
+      {% endif %}
+    </div>
+    <span>{{ request.session.student_name|default:"Student"|truncatechars:15 }}</span>
     <a href="{% url 'student_portal:logout' %}">Logout</a>
   </div>
 </div>
