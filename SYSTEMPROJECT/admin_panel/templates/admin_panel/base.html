@@ -115,15 +115,17 @@
       <a href="{% url 'admin_panel:chairperson_dashboard' %}" class="{% block nav_dashboard %}{% endblock %}">
         <i class="fa fa-gauge"></i> Dashboard
       </a>
-      <a href="{% url 'admin_panel:sections_manage' %}" class="{% block nav_sections %}{% endblock %}">
-        <i class="fa fa-layer-group"></i> Sections
-      </a>
-      <a href="{% url 'admin_panel:admins_manage' %}" class="{% block nav_admins %}{% endblock %}">
-        <i class="fa fa-user-gear"></i> Officers & Reps
-      </a>
     {% else %}
       <a href="{% url 'admin_panel:dashboard' %}" class="{% block nav_dashboard_other %}{% endblock %}">
         <i class="fa fa-gauge"></i> Dashboard
+      </a>
+    {% endif %}
+    <a href="{% url 'admin_panel:sections_manage' %}" class="{% block nav_sections %}{% endblock %}">
+      <i class="fa fa-layer-group"></i> Sections
+    </a>
+    {% if request.session.admin_role == 'chairperson' %}
+      <a href="{% url 'admin_panel:admins_manage' %}" class="{% block nav_admins %}{% endblock %}">
+        <i class="fa fa-user-gear"></i> Officers & Reps
       </a>
     {% endif %}
     <a href="{% url 'admin_panel:events' %}" class="{% block nav_events %}{% endblock %}">
