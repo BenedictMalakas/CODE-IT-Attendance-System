@@ -608,7 +608,6 @@ def event_create_view(request):
             if event.end_time and event.end_time <= event.start_time:
                 messages.error(request, 'End time must be later than start time.')
                 return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
-
             event.status = 'pending'  # Events start as pending
             event.save()
             messages.success(request, f'Event "{event.name}" created. It will remain pending until you start it.')

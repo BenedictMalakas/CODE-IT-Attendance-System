@@ -71,31 +71,6 @@
     .form-group-password .form-control {
       padding-right: 45px;
     }
-    .btn-register {
-      background: linear-gradient(135deg, #ff6a3d 0%, #e85a2d 100%);
-      border: none; color: #fff;
-      font-weight: 700; width: 100%; padding: .75rem;
-      border-radius: 10px; font-size: .95rem;
-      transition: all .25s;
-    }
-    .btn-register:hover {
-      background: linear-gradient(135deg, #e85a2d 0%, #ff6a3d 100%);
-      transform: translateY(-2px); color: #fff;
-      box-shadow: 0 6px 20px rgba(255,106,61,.4);
-    }
-    .login-link {
-      text-align: center; margin-top: 1.2rem;
-      font-size: .88rem; color: #6b7588;
-    }
-    .login-link a { color: #ff6a3d; font-weight: 600; text-decoration: none; }
-    .login-link a:hover { text-decoration: underline; }
-    .pw-toggle {
-      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-      cursor: pointer; color: #aab0c0; z-index: 5; background: none; border: none;
-      padding: 0; font-size: .9rem;
-    }
-    .pw-toggle:hover { color: #1a2238; }
-    .field-error { color: #dc3545; font-size: .78rem; margin-top: .25rem; }
   </style>
 </head>
 <body>
@@ -199,6 +174,28 @@
           </div>
           <div class="mb-4 col-md-6">
             <label class="form-label d-flex align-items-center"><i class="fa fa-shield-halved me-2 text-muted"></i> Confirm</label>
+            <div class="position-relative form-group-password">
+              <input type="password" name="confirm_password" class="form-control"
+                     placeholder="Re-enter password" autocomplete="new-password" required />
+              <button type="button" class="pw-toggle" onclick="togglePw(this)">
+                <i class="fa fa-eye"></i>
+              </button>
+            </div>
+            {% if form.confirm_password.errors %}<div class="field-error">{{ form.confirm_password.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+              <button type="button" class="pw-toggle" onclick="togglePw(this)">
+                <i class="fa fa-eye"></i>
+              </button>
+            </div>
+            {% if form.password.errors %}<div class="field-error">{{ form.password.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="mb-4 col-md-6">
+<<<<<<< HEAD
+            <label class="form-label d-flex align-items-center"><i class="fa fa-shield-halved me-2 text-muted"></i> Confirm</label>
+            <div class="position-relative form-group-password">
+              <input type="password" name="confirm_password" class="form-control"
+            <label class="form-label"><i class="fa fa-shield-halved me-1 text-muted"></i> Confirm</label>
             <div class="position-relative form-group-password">
               <input type="password" name="confirm_password" class="form-control"
                      placeholder="Re-enter password" autocomplete="new-password" required />
