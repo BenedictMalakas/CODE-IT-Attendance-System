@@ -408,28 +408,47 @@ def chart_data_api(request):
 # Section Management (Chairperson only)
 # ---------------------------------------------------------------------------
 
-@role_required('chairperson', 'vits', 'representative')
+@role_required('chairperson')
 def sections_manage_view(request):
-    sections = Section.objects.all().order_by('year_level', 'name')
+    # Fetch sections and apply numeric sorting (BSIT 1-1, 1-2, ..., 1-10)
+    sections_list = list(Section.objects.all())
+    def sort_key(s):
+        try:
+            # name is "BSIT {year}-{number}"
+            # Extract the number after the dash
+            num_part = s.name.split('-')[-1]
+            return (s.year_level, int(num_part))
+        except (ValueError, IndexError):
+            return (s.year_level, s.name)
+    
+    sections_list.sort(key=sort_key)
     if request.method == 'POST':
         year = request.POST.get('year_level', '1')
         section_number = request.POST.get('section_number', '').strip()
 
         if year and section_number:
-            # Build section name: BSIT x-y format
-            name = f"BSIT {year}-{section_number}"
-            if Section.objects.filter(name=name).exists():
-                messages.error(request, f'Section "{name}" already exists.')
-            else:
-                Section.objects.create(id=uuid.uuid4(), name=name, year_level=int(year))
-                messages.success(request, f'Section "{name}" added.')
+            try:
+                total_to_create = int(section_number)
+                added_count = 0
+                for i in range(1, total_to_create + 1):
+                    name = f"BSIT {year}-{i}"
+                    if not Section.objects.filter(name=name).exists():
+                        Section.objects.create(id=uuid.uuid4(), name=name, year_level=int(year))
+                        added_count += 1
+                
+                if added_count > 0:
+                    messages.success(request, f'Successfully created {added_count} new section(s) for Year {year}.')
+                else:
+                    messages.info(request, f'No new sections created (all sections up to {total_to_create} already exist).')
+            except ValueError:
+                messages.error(request, 'Please enter a valid number for the total sections.')
         else:
             messages.error(request, 'Please fill in all fields.')
         return redirect('admin_panel:sections_manage')
-    return render(request, 'admin_panel/sections_manage.html', {'sections': sections})
+    return render(request, 'admin_panel/sections_manage.html', {'sections': sections_list})
 
 
-@role_required('chairperson', 'vits', 'representative')
+@role_required('chairperson')
 @require_POST
 def section_delete_view(request, pk):
     section = get_object_or_404(Section, id=pk)
@@ -1183,6 +1202,16 @@ def sections_by_year_api(request):
     year = request.GET.get('year', '')
     if not year or not year.isdigit():
         return JsonResponse([], safe=False)
-    sections = Section.objects.filter(year_level=int(year)).order_by('name')
+    sections = list(Section.objects.filter(year_level=int(year)))
+    
+    def sort_key(s):
+        try:
+            num_part = s.name.split('-')[-1]
+            return int(num_part)
+        except (ValueError, IndexError):
+            return s.name
+            
+    sections.sort(key=sort_key)
+    
     data = [{'id': str(s.id), 'name': s.name} for s in sections]
     return JsonResponse(data, safe=False)

@@ -102,6 +102,11 @@ def register_view(request):
 
                     photo = request.FILES['id_photo']
                     ext = photo.name.split('.')[-1].lower()
+                    
+                    if ext not in ['png', 'jpg', 'jpeg', 'webp']:
+                        messages.error(request, 'Invalid file type. Only PNG, JPG, and WebP are allowed.')
+                        return render(request, 'student_portal/register.html', {'form': form})
+
                     safe_id = sid.replace('-', '_')
                     filename = f"id_photos/id_{safe_id}.{ext}"
 
@@ -236,7 +241,12 @@ def profile_view(request):
             from django.core.files.storage import default_storage
 
             pic = request.FILES['profile_picture']
-            ext = pic.name.split('.')[-1]
+            ext = pic.name.split('.')[-1].lower()
+
+            if ext not in ['png', 'jpg', 'jpeg', 'webp']:
+                messages.error(request, 'Invalid file type. Only PNG, JPG, and WebP are allowed.')
+                return redirect('student_portal:profile')
+
             filename = f"profile_{student.id}.{ext}"
 
             filepath = os.path.join(settings.MEDIA_ROOT, filename)

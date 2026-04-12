@@ -120,9 +120,11 @@
         <i class="fa fa-gauge"></i> Dashboard
       </a>
     {% endif %}
+    {% if request.session.admin_role == 'chairperson' %}
     <a href="{% url 'admin_panel:sections_manage' %}" class="{% block nav_sections %}{% endblock %}">
       <i class="fa fa-layer-group"></i> Sections
     </a>
+    {% endif %}
     {% if request.session.admin_role == 'chairperson' %}
       <a href="{% url 'admin_panel:admins_manage' %}" class="{% block nav_admins %}{% endblock %}">
         <i class="fa fa-user-gear"></i> Officers & Reps

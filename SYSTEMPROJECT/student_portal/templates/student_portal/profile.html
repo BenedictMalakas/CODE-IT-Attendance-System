@@ -73,7 +73,7 @@
           {% csrf_token %}
           <input type="hidden" name="action" value="upload_photo" />
           <div class="mb-3">
-            <input type="file" name="profile_picture" class="form-control" accept="image/*"
+            <input type="file" name="profile_picture" class="form-control" accept=".png, .jpg, .jpeg, .webp"
                    style="border-radius:10px; border:2px solid #e4e7ed; padding:.65rem 1rem;" />
           </div>
           <button type="submit" class="btn btn-accent">

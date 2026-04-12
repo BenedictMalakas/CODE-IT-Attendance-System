@@ -3,6 +3,20 @@
 {% block title %}Manage Sections{% endblock %}
 {% block page_title %}Section Management{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* Hide arrows in number input */
+  #sectionNumberInput::-webkit-outer-spin-button,
+  #sectionNumberInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  #sectionNumberInput[type=number] {
+    -moz-appearance: textfield;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row g-4">
   <!-- Add section form -->
@@ -24,21 +38,21 @@
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-semibold small">Section Name</label>
+            <label class="form-label fw-semibold small">Number of Sections</label>
             <div class="d-flex align-items-center gap-2">
               <span class="fw-bold" style="white-space:nowrap; color:#1a2238; font-size:.95rem;">BSIT</span>
               <span id="sectionYearDisplay" class="fw-bold" style="color:#ff6a3d; font-size:.95rem; min-width:16px;">1</span>
               <span class="fw-bold" style="color:#1a2238;">-</span>
               <input type="number" name="section_number" class="form-control" id="sectionNumberInput"
-                     placeholder="Section #" min="1" max="99" required
-                     style="border-radius:10px; max-width:100px;" />
+                     placeholder="e.g. 15" min="1" max="99" required
+                     style="border-radius:10px; max-width:120px;" />
             </div>
             <div class="text-muted small mt-1">
-              Preview: <strong id="sectionPreview">BSIT 1-</strong>
+              Range: <strong id="sectionPreview">BSIT 1-1 to BSIT 1-1</strong>
             </div>
           </div>
           <button type="submit" class="btn w-100" style="background:#ff6a3d; color:#fff; border-radius:10px; font-weight:600;">
-            <i class="fa fa-plus me-1"></i>Add Section
+            <i class="fa fa-plus me-1"></i>Create Sections
           </button>
         </form>
       </div>
@@ -97,9 +111,13 @@
 
   function updatePreview() {
     const year = yearSelect.value;
-    const num  = numberInput.value;
+    const num  = parseInt(numberInput.value) || 1;
     yearDisplay.textContent = year;
-    preview.textContent = `BSIT ${year}-${num || '?'}`;
+    if (num > 1) {
+      preview.textContent = `BSIT ${year}-1 to BSIT ${year}-${num}`;
+    } else {
+      preview.textContent = `BSIT ${year}-1`;
+    }
   }
 
   yearSelect.addEventListener('change', updatePreview);
