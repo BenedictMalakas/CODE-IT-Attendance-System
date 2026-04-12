@@ -184,28 +184,6 @@
             {% if form.confirm_password.errors %}<div class="field-error">{{ form.confirm_password.errors.0 }}</div>{% endif %}
           </div>
         </div>
-              <button type="button" class="pw-toggle" onclick="togglePw(this)">
-                <i class="fa fa-eye"></i>
-              </button>
-            </div>
-            {% if form.password.errors %}<div class="field-error">{{ form.password.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="mb-4 col-md-6">
-<<<<<<< HEAD
-            <label class="form-label d-flex align-items-center"><i class="fa fa-shield-halved me-2 text-muted"></i> Confirm</label>
-            <div class="position-relative form-group-password">
-              <input type="password" name="confirm_password" class="form-control"
-            <label class="form-label"><i class="fa fa-shield-halved me-1 text-muted"></i> Confirm</label>
-            <div class="position-relative form-group-password">
-              <input type="password" name="confirm_password" class="form-control"
-                     placeholder="Re-enter password" autocomplete="new-password" required />
-              <button type="button" class="pw-toggle" onclick="togglePw(this)">
-                <i class="fa fa-eye"></i>
-              </button>
-            </div>
-            {% if form.confirm_password.errors %}<div class="field-error">{{ form.confirm_password.errors.0 }}</div>{% endif %}
-          </div>
-        </div>
 
         <button type="submit" class="btn btn-register">
           <i class="fa fa-user-plus me-2"></i>Create Account
@@ -218,31 +196,66 @@
     </div>
   </div>
 
+<style>
+  .btn-register {
+    width: 100%; padding: .8rem;
+    background: #ff6a3d; color: #fff;
+    border: none; border-radius: 10px;
+    font-weight: 700; font-size: 1rem;
+    transition: all .3s cubic-bezier(.4, 0, .2, 1);
+    box-shadow: 0 4px 15px rgba(255,106,61,.3);
+  }
+  .btn-register:hover {
+    background: #e55a2f; transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255,106,61,.45);
+  }
+  .login-link { text-align: center; margin-top: 1.5rem; font-size: .88rem; color: #64748b; }
+  .login-link a { color: #ff6a3d; font-weight: 700; text-decoration: none; }
+  .login-link a:hover { text-decoration: underline; }
+
+  .pw-toggle {
+    position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none;
+    color: #94a3b8; cursor: pointer;
+    padding: 5px; z-index: 10;
+  }
+  .pw-toggle:hover { color: #ff6a3d; }
+  .field-error { color: #dc3545; font-size: .75rem; margin-top: .25rem; font-weight: 500; }
+</style>
+
 <script>
   // Password toggle
   function togglePw(btn) {
     const input = btn.parentElement.querySelector('input');
     const icon  = btn.querySelector('i');
-    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
-    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+      input.type = 'password';
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
   }
 
   // Student ID auto-formatting: numbers only, auto-dash after 2 digits
   const sidInput = document.getElementById('studentIdInput');
-  sidInput.addEventListener('input', function(e) {
-    let raw = this.value.replace(/[^0-9]/g, '');  // strip non-digits
-    if (raw.length > 6) raw = raw.substring(0, 6);
-    if (raw.length > 2) {
-      this.value = raw.substring(0, 2) + '-' + raw.substring(2);
-    } else {
-      this.value = raw;
-    }
-  });
-  sidInput.addEventListener('keypress', function(e) {
-    if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Tab') {
-      e.preventDefault();
-    }
-  });
+  if (sidInput) {
+    sidInput.addEventListener('input', function(e) {
+      let raw = this.value.replace(/[^0-9]/g, '');
+      if (raw.length > 6) raw = raw.substring(0, 6);
+      if (raw.length > 2) {
+        this.value = raw.substring(0, 2) + '-' + raw.substring(2);
+      } else {
+        this.value = raw;
+      }
+    });
+    sidInput.addEventListener('keypress', function(e) {
+      if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Tab') {
+        e.preventDefault();
+      }
+    });
+  }
 
   // Name fields: block special characters
   document.querySelectorAll('input[name="first_name"], input[name="last_name"]').forEach(input => {
@@ -255,42 +268,47 @@
   const yearSelect    = document.getElementById('yearLevelSelect');
   const sectionSelect = document.getElementById('sectionSelect');
 
-  yearSelect.addEventListener('change', function() {
-    const year = this.value;
-    sectionSelect.innerHTML = '<option value="">Loading...</option>';
-    sectionSelect.disabled = true;
+  if (yearSelect && sectionSelect) {
+    yearSelect.addEventListener('change', function() {
+      const year = this.value;
+      sectionSelect.innerHTML = '<option value="">Loading...</option>';
+      sectionSelect.disabled = true;
 
-    if (!year) {
-      sectionSelect.innerHTML = '<option value="">Select year level first</option>';
-      return;
-    }
+      if (!year) {
+        sectionSelect.innerHTML = '<option value="">Select year level first</option>';
+        return;
+      }
 
-    fetch(`/admin-panel/api/sections/?year=${year}`)
-      .then(r => r.json())
-      .then(data => {
-        sectionSelect.innerHTML = '';
-        if (data.length === 0) {
-          sectionSelect.innerHTML = '<option value="">No sections available</option>';
-        } else {
-          sectionSelect.innerHTML = '<option value="">Select section</option>';
-          data.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.id;
-            opt.textContent = s.name;
-            sectionSelect.appendChild(opt);
-          });
-          sectionSelect.disabled = false;
-        }
-      })
-      .catch(() => {
-        sectionSelect.innerHTML = '<option value="">Error loading sections</option>';
-      });
-  });
+      fetch(`/admin-panel/api/sections/?year=${year}`)
+        .then(r => r.json())
+        .then(data => {
+          sectionSelect.innerHTML = '';
+          if (data.length === 0) {
+            sectionSelect.innerHTML = '<option value="">No sections available</option>';
+          } else {
+            sectionSelect.innerHTML = '<option value="">Select section</option>';
+            data.forEach(s => {
+              const opt = document.createElement('option');
+              opt.value = s.id;
+              opt.textContent = s.name;
+              sectionSelect.appendChild(opt);
+            });
+            sectionSelect.disabled = false;
+          }
+        })
+        .catch(() => {
+          sectionSelect.innerHTML = '<option value="">Error loading sections</option>';
+        });
+    });
+  }
 
-  // Enable section on form submit (in case it's still disabled)
-  document.getElementById('registerForm').addEventListener('submit', function() {
-    sectionSelect.disabled = false;
-  });
+  // Enable section on form submit
+  const registerForm = document.getElementById('registerForm');
+  if (registerForm && sectionSelect) {
+    registerForm.addEventListener('submit', function() {
+      sectionSelect.disabled = false;
+    });
+  }
 </script>
 
 </body>
