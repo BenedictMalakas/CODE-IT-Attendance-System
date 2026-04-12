@@ -408,7 +408,7 @@ def chart_data_api(request):
 # Section Management (Chairperson only)
 # ---------------------------------------------------------------------------
 
-@role_required('chairperson')
+@role_required('chairperson', 'vits', 'representative')
 def sections_manage_view(request):
     sections = Section.objects.all().order_by('year_level', 'name')
     if request.method == 'POST':
@@ -429,7 +429,7 @@ def sections_manage_view(request):
     return render(request, 'admin_panel/sections_manage.html', {'sections': sections})
 
 
-@role_required('chairperson')
+@role_required('chairperson', 'vits', 'representative')
 @require_POST
 def section_delete_view(request, pk):
     section = get_object_or_404(Section, id=pk)
