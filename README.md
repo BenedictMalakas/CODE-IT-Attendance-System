@@ -39,7 +39,7 @@ University attendance tracking system with QR code scanning, event management, a
 |------|-----------|
 | **Student** | `http://localhost:8000/student/login/` |
 | **VITS / Representative** | `http://localhost:8000/admin-panel/login/` |
-| **Chairperson** | `http://localhost:8000/admin-panel/cp-x9k7m2v4-ctrl/` |
+| **Chairperson** | `http://localhost:8000/chair_adminlogin/cp-x9k7m2v4-ctrl/` |
 
 ---
 
