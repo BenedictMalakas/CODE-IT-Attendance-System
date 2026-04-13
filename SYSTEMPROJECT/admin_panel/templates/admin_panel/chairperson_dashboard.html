@@ -76,7 +76,9 @@
     </div>
   </div>
   <div class="card-body py-2">
-    <canvas id="attendanceChart" height="80"></canvas>
+    <div id="chartContainer" style="max-width:320px; max-height:220px; margin:0 auto;">
+      <canvas id="attendanceChart"></canvas>
+    </div>
   </div>
 </div>
 {% endif %}
@@ -181,6 +183,17 @@
   function buildChart(type, data) {
     if (chart) chart.destroy();
 
+    const container = document.getElementById('chartContainer');
+    if (container) {
+      if (type === 'doughnut') {
+        container.style.maxWidth = '320px';
+        container.style.maxHeight = '220px';
+      } else {
+        container.style.maxWidth = '100%';
+        container.style.maxHeight = '350px';
+      }
+    }
+
     if (type === 'doughnut') {
       const totalPresent = data.present.reduce((a, b) => a + b, 0);
       const totalLate    = data.late.reduce((a, b) => a + b, 0);
@@ -197,8 +210,9 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: true,
           cutout: '55%',
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } } },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } },
         },
       });
     } else {
@@ -226,7 +240,8 @@
         },
         options: {
           responsive: true,
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } } },
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } },
           scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
         },
       });
