@@ -85,15 +85,16 @@ class Event(models.Model):
         PENDING = 'pending', 'Pending'
         ACTIVE  = 'active', 'Active'
         ENDED   = 'ended', 'Ended'
+        CLOSED  = 'closed', 'Closed'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=150)
     date = models.DateField()
-    start_time = models.TimeField()
+    start_time = models.TimeField(null=True, blank=True)
     end_time = models.TimeField(null=True, blank=True)
     late_cutoff_mins = models.IntegerField(default=15)
     status = models.CharField(max_length=20, choices=EventStatus.choices, default=EventStatus.PENDING)
-    created_by = models.ForeignKey(Admin, on_delete=models.CASCADE, db_column='created_by')
+    created_by = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, db_column='created_by')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -125,6 +126,7 @@ class AttendanceLog(models.Model):
     scanned_by = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, db_column='scanned_by')
     status = models.CharField(max_length=20, choices=Status.choices)
     scanned_at = models.DateTimeField(null=True, blank=True)
+    scanned_out_at = models.DateTimeField(null=True, blank=True)
     override_note = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

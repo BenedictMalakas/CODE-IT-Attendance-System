@@ -62,8 +62,15 @@
   <!-- Section list -->
   <div class="col-lg-8">
     <div class="card border-0 shadow-sm" style="border-radius:14px;">
-      <div class="card-header bg-white fw-semibold" style="border-radius:14px 14px 0 0;">
-        <i class="fa fa-layer-group me-2 text-secondary"></i>All Sections ({{ sections|length }})
+      <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2" style="border-radius:14px 14px 0 0;">
+        <span><i class="fa fa-layer-group me-2 text-secondary"></i>All Sections (<span id="filteredCount">{{ sections|length }}</span>)</span>
+        <select id="yearFilter" class="form-select form-select-sm" style="max-width:160px; border-radius:10px;">
+          <option value="all">All Year Levels</option>
+          <option value="1">1st Year</option>
+          <option value="2">2nd Year</option>
+          <option value="3">3rd Year</option>
+          <option value="4">4th Year</option>
+        </select>
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
@@ -75,9 +82,9 @@
                 <th class="text-center">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="sectionTableBody">
               {% for section in sections %}
-              <tr>
+              <tr data-year="{{ section.year_level }}">
                 <td class="fw-semibold">{{ section.name }}</td>
                 <td><span class="badge bg-secondary px-3">Year {{ section.year_level }}</span></td>
                 <td class="text-center">
@@ -123,5 +130,24 @@
   yearSelect.addEventListener('change', updatePreview);
   numberInput.addEventListener('input', updatePreview);
   updatePreview();
+
+  // Year level filter for the section list
+  const yearFilter = document.getElementById('yearFilter');
+  const rows = document.querySelectorAll('#sectionTableBody tr[data-year]');
+  const filteredCount = document.getElementById('filteredCount');
+
+  yearFilter.addEventListener('change', () => {
+    const val = yearFilter.value;
+    let visible = 0;
+    rows.forEach(row => {
+      if (val === 'all' || row.dataset.year === val) {
+        row.style.display = '';
+        visible++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    filteredCount.textContent = visible;
+  });
 </script>
 {% endblock %}

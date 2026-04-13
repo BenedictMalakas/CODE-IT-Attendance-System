@@ -70,10 +70,11 @@
                   {% endif %}
 
                   {% if student.status == 'active' %}
-                  <form method="post" action="{% url 'admin_panel:generate_qr' student.id %}" class="d-inline">
+                  <form method="post" action="{% url 'admin_panel:revoke_qr' student.id %}" class="d-inline"
+                        onsubmit="return confirm('Revoke and regenerate QR for {{ student.name }}?');">
                     {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-secondary" title="Generate QR Code">
-                      <i class="fa fa-qrcode me-1"></i><span class="d-none d-md-inline">QR</span>
+                    <button class="btn btn-sm btn-outline-warning" title="Revoke & Regenerate QR Code">
+                      <i class="fa fa-rotate me-1"></i><span class="d-none d-md-inline">Revoke QR</span>
                     </button>
                   </form>
                   {% endif %}

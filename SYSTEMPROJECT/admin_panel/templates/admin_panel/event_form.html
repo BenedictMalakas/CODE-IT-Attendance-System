@@ -32,8 +32,9 @@
               {% endif %}
             </div>
             <div class="col-6">
-              <label class="form-label fw-semibold">Start Time</label>
+              <label class="form-label fw-semibold">{{ form.start_time.label }}</label>
               {{ form.start_time }}
+              <div class="form-text">Leave blank for manual start.</div>
               {% if form.start_time.errors %}
                 <div class="text-danger small">{{ form.start_time.errors.0 }}</div>
               {% endif %}
@@ -41,7 +42,7 @@
             <div class="col-6">
               <label class="form-label fw-semibold">{{ form.end_time.label }}</label>
               {{ form.end_time }}
-              <div class="form-text">When the event ends, QR scanning will be blocked.</div>
+              <div class="form-text">Leave blank for manual end. Auto-switches to Exit Mode.</div>
               {% if form.end_time.errors %}
                 <div class="text-danger small">{{ form.end_time.errors.0 }}</div>
               {% endif %}

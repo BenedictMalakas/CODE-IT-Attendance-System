@@ -4,6 +4,21 @@
 {% block page_title %}Attendance Logs{% endblock %}
 {% block nav_events %}active{% endblock %}
 
+{% block extra_head %}
+<style>
+  .overview-tile {
+    border-radius: 10px;
+    padding: .6rem .8rem;
+    background: #fff;
+    border: 1px solid #eee;
+    text-align: center;
+  }
+  .overview-tile .tile-label { font-size: .72rem; color: #888; }
+  .overview-tile .tile-value { font-size: 1.3rem; font-weight: 700; }
+  .filter-bar select { min-width: 130px; }
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Event header -->
 <div class="card border-0 shadow-sm mb-3">
@@ -13,15 +28,17 @@
       <span class="text-muted small">
         <i class="fa fa-calendar me-1"></i>{{ event.date }}
         &nbsp;|&nbsp;
-        <i class="fa fa-clock me-1"></i>{{ event.start_time|time:"g:i A" }}
+        <i class="fa fa-clock me-1"></i>{% if event.start_time %}{{ event.start_time|time:"g:i A" }}{% else %}Manual{% endif %}
         {% if event.end_time %}
           &nbsp;&ndash;&nbsp;{{ event.end_time|time:"g:i A" }}
         {% endif %}
         &nbsp;|&nbsp;
         Late cutoff: {{ event.late_cutoff_mins }} mins
       </span>
-      {% if event.status == 'ended' or event_ended %}
-        <span class="badge bg-secondary ms-2">Ended</span>
+      {% if event.status == 'closed' %}
+        <span class="badge bg-dark ms-2">Closed</span>
+      {% elif event.status == 'ended' %}
+        <span class="badge bg-secondary ms-2">Ended (Exit Mode)</span>
       {% elif event.status == 'active' %}
         <span class="badge bg-success ms-2">Active</span>
       {% else %}
@@ -29,23 +46,15 @@
       {% endif %}
     </div>
     <div class="d-flex gap-2 flex-wrap">
-      {% if admin_role == 'vits' and event.status == 'active' and not event_ended %}
+      {% if admin_role == 'vits' and event.status == 'active' %}
       <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-success btn-sm">
         <i class="fa fa-qrcode me-1"></i>Open Scanner
       </a>
       {% endif %}
-      {% if admin_role != 'representative' %}
-      <a href="{% url 'admin_panel:set_expected' event.id %}" class="btn btn-outline-warning btn-sm">
-        <i class="fa fa-users me-1"></i>Set Expected
+      {% if admin_role == 'vits' and event.status == 'ended' %}
+      <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-outline-dark btn-sm">
+        <i class="fa fa-door-open me-1"></i>Exit Scanner
       </a>
-      {% if absent > 0 %}
-      <form method="post" action="{% url 'admin_panel:finalize_event' event.id %}" class="d-inline">
-        {% csrf_token %}
-        <button class="btn btn-outline-danger btn-sm" title="Finalize — confirm all absent students">
-          <i class="fa fa-flag-checkered me-1"></i>Finalize Event
-        </button>
-      </form>
-      {% endif %}
       {% endif %}
       <a href="{% url 'admin_panel:export' event.id %}" class="btn btn-outline-success btn-sm">
         <i class="fa fa-file-excel me-1"></i>Export Excel
@@ -57,35 +66,199 @@
   </div>
 </div>
 
-<!-- Summary badges -->
-<div class="row g-3 mb-3">
-  <div class="col-6 col-md-3">
-    <div class="card border-0 shadow-sm text-center py-3">
-      <div class="fw-bold fs-3 text-success">{{ present }}</div>
-      <div class="small text-muted">Present</div>
-    </div>
+<!-- ════════════════════════════════════════════════ -->
+<!-- CHECK-IN SECTION OVERVIEW (Start Event Phase)   -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+    <span><i class="fa fa-sign-in-alt me-2 text-success"></i>Check-In Overview (Start Event)</span>
+    <select id="checkinYearFilter" class="form-select form-select-sm" style="width:auto;" onchange="filterOverview('checkin')">
+      <option value="all">All Years</option>
+      {% for yl in year_levels %}
+      <option value="{{ yl }}">Year {{ yl }}</option>
+      {% endfor %}
+    </select>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card border-0 shadow-sm text-center py-3">
-      <div class="fw-bold fs-3 text-warning">{{ late }}</div>
-      <div class="small text-muted">Late</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card border-0 shadow-sm text-center py-3">
-      <div class="fw-bold fs-3 text-danger">{{ absent }}</div>
-      <div class="small text-muted">Absent</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card border-0 shadow-sm text-center py-3">
-      <div class="fw-bold fs-3">{{ total }}</div>
-      <div class="small text-muted">Total Records</div>
+  <div class="card-body">
+    <div class="row g-2" id="checkinTiles">
+      {% for tile in checkin_tiles %}
+      <div class="col-6 col-md-3 col-lg-2 checkin-tile" data-year="{{ tile.section.year_level }}">
+        <div class="overview-tile">
+          <div class="fw-semibold small mb-1">{{ tile.section.name }}</div>
+          <div class="d-flex justify-content-center gap-2">
+            <div><div class="tile-value text-success">{{ tile.present }}</div><div class="tile-label">Present</div></div>
+            <div><div class="tile-value text-warning">{{ tile.late }}</div><div class="tile-label">Late</div></div>
+            <div><div class="tile-value text-danger">{{ tile.absent }}</div><div class="tile-label">Absent</div></div>
+          </div>
+          <div class="tile-label mt-1">Total: {{ tile.total }}</div>
+        </div>
+      </div>
+      {% endfor %}
     </div>
   </div>
 </div>
 
-<!-- Logs table -->
+<!-- ════════════════════════════════════════════════ -->
+<!-- CHECK-OUT SECTION OVERVIEW (End/Exit Phase)     -->
+<!-- ════════════════════════════════════════════════ -->
+{% if checkout_tiles %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+    <span><i class="fa fa-door-open me-2 text-info"></i>Check-Out Overview (Exit Phase)</span>
+    <select id="checkoutYearFilter" class="form-select form-select-sm" style="width:auto;" onchange="filterOverview('checkout')">
+      <option value="all">All Years</option>
+      {% for yl in year_levels %}
+      <option value="{{ yl }}">Year {{ yl }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="card-body">
+    <div class="row g-2" id="checkoutTiles">
+      {% for tile in checkout_tiles %}
+      <div class="col-6 col-md-3 col-lg-2 checkout-tile" data-year="{{ tile.section.year_level }}">
+        <div class="overview-tile">
+          <div class="fw-semibold small mb-1">{{ tile.section.name }}</div>
+          <div class="d-flex justify-content-center gap-2">
+            <div><div class="tile-value text-info">{{ tile.checked_out }}</div><div class="tile-label">Checked Out</div></div>
+            <div><div class="tile-value text-danger">{{ tile.missed_exit }}</div><div class="tile-label">Missed Exit</div></div>
+          </div>
+          <div class="tile-label mt-1">Total: {{ tile.total }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- FINAL COMPARISON (only when CLOSED)             -->
+<!-- ════════════════════════════════════════════════ -->
+{% if final_tiles %}
+<div class="card border-0 shadow-sm mb-3" style="border-left: 4px solid #1a1a2e !important;">
+  <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+    <span><i class="fa fa-flag-checkered me-2"></i>Final Section Overview (Start vs End Comparison)</span>
+    <select id="finalYearFilter" class="form-select form-select-sm" style="width:auto;" onchange="filterOverview('final')">
+      <option value="all">All Years</option>
+      {% for yl in year_levels %}
+      <option value="{{ yl }}">Year {{ yl }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="card-body">
+    <div class="row g-2" id="finalTiles">
+      {% for tile in final_tiles %}
+      <div class="col-6 col-md-3 col-lg-2 final-tile" data-year="{{ tile.section.year_level }}">
+        <div class="overview-tile" style="border-left: 3px solid #1a1a2e;">
+          <div class="fw-semibold small mb-1">{{ tile.section.name }}</div>
+          <div class="d-flex justify-content-center gap-2">
+            <div><div class="tile-value text-success">{{ tile.final_present }}</div><div class="tile-label">Final Present</div></div>
+            <div><div class="tile-value text-danger">{{ tile.final_absent }}</div><div class="tile-label">Final Absent</div></div>
+          </div>
+          <div class="tile-label mt-1">Total: {{ tile.total }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- FINAL STUDENT LIST (alphabetical, filtered)     -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white fw-semibold">
+    <i class="fa fa-users me-2"></i>Final Student List
+  </div>
+  <div class="card-body">
+    <!-- Filter bar -->
+    <div class="d-flex flex-wrap gap-2 mb-3 filter-bar">
+      <select id="filterStatus" class="form-select form-select-sm" style="width:auto;" onchange="filterStudentList()">
+        <option value="all">All Statuses</option>
+        <option value="present">Final Present</option>
+        <option value="absent">Final Absent</option>
+      </select>
+      <select id="filterYear" class="form-select form-select-sm" style="width:auto;" onchange="filterStudentList()">
+        <option value="all">All Years</option>
+        {% for yl in year_levels %}
+        <option value="{{ yl }}">Year {{ yl }}</option>
+        {% endfor %}
+      </select>
+      <select id="filterSection" class="form-select form-select-sm" style="width:auto;" onchange="filterStudentList()">
+        <option value="all">All Sections</option>
+        {% for sn in section_names %}
+        <option value="{{ sn }}">{{ sn }}</option>
+        {% endfor %}
+      </select>
+      <span class="text-muted small align-self-center" id="listCount"></span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="finalTable">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Student ID</th>
+            <th>Name</th>
+            <th>Section</th>
+            <th>Check-In</th>
+            <th>Check-In Time</th>
+            <th>Check-Out Time</th>
+            <th>Final Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in student_final_list %}
+          <tr class="final-row"
+              data-status="{{ item.final_status }}"
+              data-year="{{ item.year_level }}"
+              data-section="{{ item.section_name }}">
+            <td class="text-muted small">{{ forloop.counter }}</td>
+            <td class="font-monospace small">{{ item.student.student_id }}</td>
+            <td class="fw-semibold">{{ item.student.last_name }}, {{ item.student.first_name }}</td>
+            <td>{{ item.section_name }}</td>
+            <td>
+              {% if item.checkin_status == 'present' %}
+                <span class="badge bg-success px-2">Present</span>
+              {% elif item.checkin_status == 'late' %}
+                <span class="badge bg-warning text-dark px-2">Late</span>
+              {% else %}
+                <span class="badge bg-danger px-2">Absent</span>
+              {% endif %}
+            </td>
+            <td class="small">
+              {% if item.checkin_time %}
+                {{ item.checkin_time|time:"g:i:s A" }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="small">
+              {% if item.checkout_time %}
+                {{ item.checkout_time|time:"g:i:s A" }}
+              {% else %}
+                <span class="text-danger">Missed Exit</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.final_status == 'present' %}
+                <span class="badge bg-success px-3 py-2">FINAL PRESENT</span>
+              {% else %}
+                <span class="badge bg-danger px-3 py-2">FINAL ABSENT</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- TIMESTAMP LOGS TABLE                            -->
+<!-- ════════════════════════════════════════════════ -->
 <div class="card border-0 shadow-sm">
   <div class="card-header bg-white fw-semibold">
     <i class="fa fa-list-check me-2 text-secondary"></i>Timestamp Logs
@@ -101,6 +274,7 @@
             <th>Section</th>
             <th>Status</th>
             <th>Scanned At</th>
+            <th>Checked Out</th>
             <th>Scanned By</th>
           </tr>
         </thead>
@@ -124,11 +298,18 @@
                 <span class="text-muted">—</span>
               {% endif %}
             </td>
+            <td class="small">
+              {% if log.scanned_out_at %}
+                <span class="text-info">{{ log.scanned_out_at|time:"g:i:s A" }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
             <td class="small text-muted">{{ log.scanned_by.name|default:"—" }}</td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="7" class="text-center text-muted py-4">
+            <td colspan="8" class="text-center text-muted py-4">
               No attendance records yet.
             </td>
           </tr>
@@ -138,4 +319,49 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // ── Section Overview Year Filter ──
+  function filterOverview(prefix) {
+    const sel = document.getElementById(prefix + 'YearFilter');
+    const val = sel.value;
+    const tiles = document.querySelectorAll('.' + prefix + '-tile');
+    tiles.forEach(t => {
+      t.style.display = (val === 'all' || t.dataset.year === val) ? '' : 'none';
+    });
+  }
+
+  // ── Final Student List Filters ──
+  function filterStudentList() {
+    const status  = document.getElementById('filterStatus').value;
+    const year    = document.getElementById('filterYear').value;
+    const section = document.getElementById('filterSection').value;
+    const rows    = document.querySelectorAll('.final-row');
+    let visible = 0;
+    let counter = 0;
+
+    rows.forEach(row => {
+      const matchStatus  = (status  === 'all' || row.dataset.status  === status);
+      const matchYear    = (year    === 'all' || row.dataset.year    === year);
+      const matchSection = (section === 'all' || row.dataset.section === section);
+      if (matchStatus && matchYear && matchSection) {
+        row.style.display = '';
+        counter++;
+        row.querySelector('td').textContent = counter;
+        visible++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    document.getElementById('listCount').textContent = visible + ' student(s) shown';
+  }
+
+  // Init count on load
+  if (document.getElementById('listCount')) {
+    filterStudentList();
+  }
+</script>
 {% endblock %}

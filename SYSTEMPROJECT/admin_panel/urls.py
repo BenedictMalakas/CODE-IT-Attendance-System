@@ -33,6 +33,8 @@ urlpatterns = [
     path('events/<uuid:pk>/delete/',   views.event_delete_view, name='event_delete'),
     path('events/<uuid:pk>/start/',    views.event_start_view,  name='event_start'),
     path('events/<uuid:pk>/end/',      views.event_end_view,    name='event_end'),
+    path('events/<uuid:pk>/close/',    views.event_close_view,  name='event_close'),
+    path('events/<uuid:pk>/extend-grace/', views.event_extend_grace_view, name='event_extend_grace'),
 
     # Expected students
     path('events/<uuid:event_id>/expected/',  views.set_expected_students_view, name='set_expected'),
@@ -55,6 +57,7 @@ urlpatterns = [
     path('students/<uuid:pk>/reject/',       views.student_reject_view,  name='student_reject'),
     path('students/<uuid:pk>/delete/',       views.student_delete_view,  name='student_delete'),
     path('students/<uuid:pk>/generate-qr/', views.generate_qr_view,     name='generate_qr'),
+    path('students/<uuid:pk>/revoke-qr/',   views.revoke_qr_view,       name='revoke_qr'),
 
     # Public API for dynamic section dropdown
     path('api/sections/', views.sections_by_year_api, name='sections_by_year'),

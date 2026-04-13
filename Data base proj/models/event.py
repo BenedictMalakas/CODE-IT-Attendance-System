@@ -11,7 +11,8 @@ from database.connection import Base
 class EventStatus(str, enum.Enum):
     pending = "pending"    # created but not started yet
     active  = "active"     # chairperson started or time matched
-    ended   = "ended"
+    ended   = "ended"      # exit scan mode
+    closed  = "closed"     # permanently locked — no scans allowed
 
 
 class Event(Base):
@@ -20,11 +21,11 @@ class Event(Base):
     id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name             = Column(String(150),  nullable=False)          # e.g. "Foundation Week Day 1"
     date             = Column(Date,         nullable=False)
-    start_time       = Column(Time,         nullable=False)           # e.g. 08:00
+    start_time       = Column(Time,         nullable=True)            # optional; auto-set on Start
     end_time         = Column(Time,         nullable=True)
     late_cutoff_mins = Column(Integer,      nullable=False, default=15)  # minutes after start = late
     status           = Column(Enum(EventStatus), nullable=False, default=EventStatus.pending)
-    created_by       = Column(UUID(as_uuid=True), ForeignKey("admins.id"), nullable=False)
+    created_by       = Column(UUID(as_uuid=True), ForeignKey("admins.id", ondelete="SET NULL"), nullable=True)
     created_at       = Column(DateTime,     default=datetime.utcnow)
 
     created_by_admin = relationship("Admin",         back_populates="events")

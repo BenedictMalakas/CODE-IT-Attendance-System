@@ -8,21 +8,28 @@ University attendance tracking system with QR code scanning, event management, a
 
 ### What's New / Ano mga bago?
 
-1. **Database Cleanup** — Winipe ko yung buong database para matanggal lahat ng mga test accounts at dummy data.
+1. **Compact & Mobile-Friendly UI** — Inayos ko yung buong interface para mas maging compact at hindi na mukhang malaking-malaki sa mobile screen. Mas malinis na rin yung sa mga students' dashboard layout natin.
 
-2. **Seed Script Update** — Inayos ko na din yung seed script kaya ngayon Chairperson account na lang talaga yung ginagawa niya by default.
+2. **Session / Role Isolation** — Inayos ko na yung issue sa pag-login. Kapag Chairperson ka, doon ka lang sa hidden endpoint makakapasok. Kung ordinary VITS officer ka tas nag-try ka dun sa chairperson URL, maki-kick ka pabalik. Tapos nilagyan ko ng `forced_password_change` para pagka-login ng bagong admin, required palitan yung system-generated password.
 
-3. **Hidden Chairperson Login** — Meron na din hidden na login endpoint specifically para lang sa Chairperson para mas secure.
+3. **Stacked Donut Chart** — Tinanggal ko na yung napakalaking Pie Chart sa dashboard kase kumakain ng espasyo. Pinalitan ko siya ng compact na magandang Stacked Donut chart para clear at mas presentable tignan yung data ng attendance.
 
-4. **Auto-Generated Admin Passwords** — Tinanggal ko na yung manual na pag-type ng password kapag gumagawa ka ng account para sa VITS o Representative kase si Chairperson na ang maglalagay ng VITS Officers. System na din mismo mag-gegenerate ng password tapos ise-send na lang nang automatic sa email nila.
+4. **Year Level Dropdown sa Sections** — Sa dashboard ni Chairperson, ginawan ko ng Year Level dropdown mask filter yung mga list of sections para hindi sumobra yung haba pababa at para mas pleasant sa mata basahin.
 
-5. **Forced Password Change** — Nilagyan ko ng forced password change. So pag nag-login yung admin sa unang login niya, hindi nila ma-iiskip, kailangan talaga nilang mag-palit ng password nila for security purposes.
+5. **Auto-Generated QR & Emailing** — Tinanggal ko na nang tuluyan yung manual na "Generate QR" button kase yung logic ko na mismo yung gagawa ng QR tsaka mag-sesend derekta sa email ng estudyante pagdating nung na-Approve na ang registration nila.
 
-6. **Timezone Precision** — Konting tweak na din sa timezone para mas sure yung time accuracy/precision. Naka double lock na sa Philippine Standard Time (Asia/Manila) lahat ng checking ng oras at scanning para siguradong tama yung logs.
+6. **Admin / VITS Registration Fix** — Tiniyak ko na rin allowed at hindi mag-eerror pag yung mismong VITS officers or Representatives ay magreregister rin as "Student" account para ma-track din sila na present sa loob ng venue.
 
-7. **Dashboard Section Breakdown** — Sa dashboard ng VITS tsaka Chairperson, nilagyan ko ng breakdown sa bawat section card. Makikita mo na agad dun kung ilan yung present, late, at absent. Dito na din makikita anong section ang pinaka konti ang attendees.
+7. **Optional Start & End Time** — Ginawa ko ng optional lang (pwede i-blanko) or "null" sa database yung Time natin kapag gagawa ka ng Event. Kung i-sscan at i-sstart niyo ng wala dun, susundin na lang at i-sestamp niya automatic yung current na Philippine Time kung anong oras niyo clinick ang manual "Start".
 
-8. **Updated Dependencies** — Updated the requirements.txt :)
+8. **Live Active Counting Metrics** — Tinanggal ko muna yung Expected Students screen, kase dito sa dashboard natin ngayon... yung Absent na nakatala eh eksaktong kung ilan lahat yung tao dun sa section. Sa oras na mag bukas yung event, unti-unti lalakad yung 'Present' / 'Late' habang bumababa ang 'Absent' dependente sa pag scan nila ng totoong buhay! Pag inend yung event tsaka lang mag rereset ang dashboard to 0 para ready para sa next.
+
+9. **Live Photo Scanner** — Para alam ng officer kung sino yung nag s-scan... once na nag pop up sa screen scanner ang check-in ng isang tao, kasabay niya ipapakita yung 64px ID Picture nila doon! Pinalitan ko rin pala yung mga emoji-emoji na yun nung proper Badge status flags para maging propesyunal tignan!
+
+10. **Check-Out & Final Comparison System** — Binago ko yung logs nang slight. Meron tayung tatlong phases:
+      - *Start Phase*: Nakatala yung lahat nang nag scan papasok.
+      - *Exit/End Scan*: Pwedeng i-scan na lahat ng estudyante pag palabas as "Check Out" timer and list of missing the exit.
+      - *Final Close Event*: And finally, dinagdag ko yung button na kulay red na "Close Event". Kapag clinick ito ni Chairperson, ila-lock out niyang permanently yung buong pag-sscan dito ... mag-gegenerate na siya ng magkadikit na "Check-in vs Check-out" record tapos ilalabas natin ang "FINAL OUTPUT LIST"! Dito masasabi kung sino ang True/Final Present gamit yung filter natin ng sections tsaka year level drop-downs direkta sa list.
 
 ---
 
@@ -32,7 +39,7 @@ University attendance tracking system with QR code scanning, event management, a
 |------|-----------|
 | **Student** | `http://localhost:8000/student/login/` |
 | **VITS / Representative** | `http://localhost:8000/admin-panel/login/` |
-| **Chairperson** | `http://localhost:8000/chair_adminlogin/cp-x9k7m2v4-ctrl/` |
+| **Chairperson** | `http://localhost:8000/admin-panel/cp-x9k7m2v4-ctrl/` |
 
 ---
 
@@ -48,7 +55,7 @@ python manage.py migrate
 
 # Seed Chairperson account
 cd ..
-cd Data base proj"
+cd "Data base proj"
 python seed.py
 
 # Run the server

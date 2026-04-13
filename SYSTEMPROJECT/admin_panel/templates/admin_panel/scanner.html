@@ -21,10 +21,12 @@
 
   .result-present { background: #d4edda; border-left: 5px solid #28a745; }
   .result-late    { background: #fff3cd; border-left: 5px solid #ffc107; }
+  .result-checked_out { background: #d1ecf1; border-left: 5px solid #17a2b8; }
   .result-error   { background: #f8d7da; border-left: 5px solid #dc3545; }
   .result-dup     { background: #cfe2ff; border-left: 5px solid #0d6efd; }
 
   .scan-count { font-size: 2rem; font-weight: 700; }
+  .mode-badge { font-size: .85rem; }
 </style>
 {% endblock %}
 
@@ -37,14 +39,23 @@
       <span class="text-muted small">
         <i class="fa fa-calendar me-1"></i>{{ event.date }}
         &nbsp;|&nbsp;
-        <i class="fa fa-clock me-1"></i>{{ event.start_time|time:"g:i A" }}
+        <i class="fa fa-clock me-1"></i>{% if event.start_time %}{{ event.start_time|time:"g:i A" }}{% else %}Manual{% endif %}
         &nbsp;|&nbsp;
         Late after {{ event.late_cutoff_mins }} mins
       </span>
     </div>
-    <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-outline-primary btn-sm">
-      <i class="fa fa-list me-1"></i>View Logs
-    </a>
+    <div class="d-flex align-items-center gap-2">
+      {% if scan_mode == 'check_out' %}
+        <span class="badge bg-info text-dark mode-badge px-3 py-2"><i class="fa fa-door-open me-1"></i>EXIT MODE</span>
+      {% elif scan_mode == 'early' %}
+        <span class="badge bg-warning text-dark mode-badge px-3 py-2"><i class="fa fa-clock me-1"></i>EARLY CHECK-IN</span>
+      {% else %}
+        <span class="badge bg-success mode-badge px-3 py-2"><i class="fa fa-qrcode me-1"></i>CHECK-IN</span>
+      {% endif %}
+      <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-outline-primary btn-sm">
+        <i class="fa fa-list me-1"></i>View Logs
+      </a>
+    </div>
   </div>
 </div>
 
@@ -70,7 +81,8 @@
         <!-- Result display -->
         <div id="resultBox" class="result-card mt-3">
           <div class="d-flex align-items-center gap-3">
-            <div id="resultIcon" class="fs-2"></div>
+            <img id="resultPhoto" src="" alt="" class="rounded-circle border" style="width:64px; height:64px; object-fit:cover; display:none; flex-shrink:0;">
+            <div id="resultIcon" class="fs-2" style="flex-shrink:0;"></div>
             <div>
               <div id="resultName" class="fw-bold fs-5"></div>
               <div id="resultSub" class="small text-muted"></div>
@@ -170,24 +182,48 @@
     const time   = document.getElementById('resultTime');
 
     box.className = 'result-card';
+    const photo = document.getElementById('resultPhoto');
+    photo.style.display = 'none';
 
     if (data.success) {
       box.classList.add('result-' + data.status);
-      icon.textContent   = data.status === 'present' ? '✅' : '⏰';
+      if (data.status === 'checked_out') {
+        icon.innerHTML = '<span class="badge bg-info px-2">OUT</span>';
+        status.innerHTML = `<span class="badge bg-info px-3 py-2">CHECKED OUT</span>`;
+      } else {
+        icon.innerHTML = data.status === 'present'
+          ? '<span class="badge bg-success px-2">OK</span>'
+          : '<span class="badge bg-warning text-dark px-2">LATE</span>';
+        status.innerHTML = `<span class="badge bg-${data.status === 'present' ? 'success' : 'warning text-dark'} px-3 py-2">${data.status.toUpperCase()}</span>`;
+      }
       name.textContent   = data.student_name;
       sub.textContent    = data.student_id + '  ·  ' + data.section;
-      status.innerHTML   = `<span class="badge bg-${data.status === 'present' ? 'success' : 'warning text-dark'} px-3 py-2">${data.status.toUpperCase()}</span>`;
       time.textContent   = 'Scanned at ' + data.scanned_at;
+      // Show ID photo for identity verification
+      if (data.id_photo) {
+        photo.src = data.id_photo;
+        photo.style.display = 'block';
+        icon.style.display = 'none';
+      } else {
+        icon.style.display = 'block';
+      }
     } else if (data.already_scanned) {
       box.classList.add('result-dup');
-      icon.textContent  = 'ℹ️';
+      icon.innerHTML  = '<span class="badge bg-primary px-2">DUP</span>';
       name.textContent  = data.student_name || 'Already Recorded';
       sub.textContent   = data.student_id || '';
       status.innerHTML  = `<span class="badge bg-primary px-3 py-2">${(data.status || '').toUpperCase()} (DUPLICATE)</span>`;
       time.textContent  = data.message;
+      if (data.id_photo) {
+        photo.src = data.id_photo;
+        photo.style.display = 'block';
+        icon.style.display = 'none';
+      } else {
+        icon.style.display = 'block';
+      }
     } else {
       box.classList.add('result-error');
-      icon.textContent  = '❌';
+      icon.innerHTML  = '<span class="badge bg-danger px-2">FAIL</span>';
       name.textContent  = 'Scan Failed';
       sub.textContent   = '';
       status.innerHTML  = '';
@@ -211,12 +247,18 @@
     if (data.success) {
       sessionCount++;
       counter.textContent = sessionCount;
-      const color = data.status === 'present' ? 'success' : 'warning';
+      const color = data.status === 'checked_out' ? 'info' : (data.status === 'present' ? 'success' : 'warning');
+      const photoHtml = data.id_photo
+        ? `<img src="${data.id_photo}" alt="" class="rounded-circle border" style="width:32px; height:32px; object-fit:cover;">`
+        : '';
       li.innerHTML = `
         <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <div class="fw-semibold small">${data.student_name}</div>
-            <div class="text-muted" style="font-size:.78rem;">${data.student_id} · ${data.section}</div>
+          <div class="d-flex align-items-center gap-2">
+            ${photoHtml}
+            <div>
+              <div class="fw-semibold small">${data.student_name}</div>
+              <div class="text-muted" style="font-size:.78rem;">${data.student_id} · ${data.section}</div>
+            </div>
           </div>
           <div class="text-end">
             <span class="badge bg-${color} text-${color === 'warning' ? 'dark' : 'white'}">${data.status.toUpperCase()}</span>

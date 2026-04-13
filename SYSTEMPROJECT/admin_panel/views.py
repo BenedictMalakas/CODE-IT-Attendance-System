@@ -36,6 +36,28 @@ def ph_now():
     return datetime.now(PH_TZ)
 
 
+def auto_update_event_statuses():
+    """Lazy evaluator: auto-start/end events based on their scheduled times.
+    Called on every dashboard/scanner load so we don't need background workers."""
+    now = ph_now()
+    today = now.date()
+    now_time = now.time()
+
+    # Auto-start: pending events whose start_time has arrived
+    pending_today = Event.objects.filter(status='pending', date=today, start_time__isnull=False)
+    for event in pending_today:
+        if event.start_time and now_time >= event.start_time:
+            event.status = 'active'
+            event.save(update_fields=['status'])
+
+    # Auto-end: active events whose end_time has passed
+    active_today = Event.objects.filter(status='active', date=today, end_time__isnull=False)
+    for event in active_today:
+        if event.end_time and now_time >= event.end_time:
+            event.status = 'ended'
+            event.save(update_fields=['status'])
+
+
 def admin_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
@@ -114,11 +136,17 @@ def build_section_tiles_with_attendance(event=None):
 # ---------------------------------------------------------------------------
 
 def login_view(request):
-    # Verify admin exists in DB before redirecting to dashboard
-    if get_current_admin(request):
+    """VITS / Representative login only. Chairperson is blocked here."""
+    # Flush any stale session to prevent session contamination
+    current_admin = get_current_admin(request)
+    if current_admin:
+        # If already logged in as chairperson, boot them — they shouldn't be here
+        if current_admin.role == 'chairperson':
+            request.session.flush()
+            messages.info(request, 'Chairperson account uses a separate login portal.')
+            return render(request, 'admin_panel/login.html', {'form': LoginForm()})
         return redirect('admin_panel:dashboard')
     elif request.session.get('admin_id'):
-        # ID is in session but not in DB (likely deleted) - clear session
         request.session.flush()
 
     form = LoginForm()
@@ -138,6 +166,8 @@ def login_view(request):
                     role_display = admin.get_role_display()
                     messages.error(request, f'This account is registered as a {role_display}. Please select the correct role.')
                 else:
+                    # Flush any existing session before creating new one
+                    request.session.flush()
                     request.session['admin_id']   = str(admin.id)
                     request.session['admin_name'] = admin.name
                     request.session['admin_role'] = admin.role
@@ -201,11 +231,15 @@ def force_change_password_view(request):
 # ---------------------------------------------------------------------------
 
 def chairperson_login_view(request):
-    if request.session.get('admin_id'):
-        role = request.session.get('admin_role')
-        if role == 'chairperson':
+    """Chairperson-only login. VITS/Rep are rejected here."""
+    current_admin = get_current_admin(request)
+    if current_admin:
+        if current_admin.role == 'chairperson':
             return redirect('admin_panel:chairperson_dashboard')
-        return redirect('admin_panel:dashboard')
+        # Non-chairperson trying to use this endpoint — boot them
+        request.session.flush()
+        messages.error(request, 'Access denied. This portal is restricted.')
+        return render(request, 'admin_panel/chairperson_login.html')
 
     if request.method == 'POST':
         email    = request.POST.get('email', '').strip()
@@ -213,6 +247,8 @@ def chairperson_login_view(request):
         pw_hash  = hash_password(password)
         try:
             admin = Admin.objects.get(email=email, password_hash=pw_hash, is_active=True, role='chairperson')
+            # Flush any existing session before creating new one
+            request.session.flush()
             request.session['admin_id']   = str(admin.id)
             request.session['admin_name'] = admin.name
             request.session['admin_role'] = admin.role
@@ -230,6 +266,7 @@ def chairperson_login_view(request):
 
 @admin_required
 def dashboard_view(request):
+    auto_update_event_statuses()
     role = request.session.get('admin_role')
     if role == 'chairperson':
         return redirect('admin_panel:chairperson_dashboard')
@@ -249,11 +286,11 @@ def _vits_dashboard(request):
     today_events     = Event.objects.filter(date=today, status='active')
     recent_events    = Event.objects.order_by('-date', '-start_time')[:5]
 
-    # Active events for section overview dropdown (only active)
+    # Dashboard section overview: only show stats for active events (check-in phase)
+    # When no active event exists, tiles reset to 0
     active_events = Event.objects.filter(status='active').order_by('-date', '-start_time')
     all_events = Event.objects.all().order_by('-date', '-start_time')
 
-    # Determine which event to show stats for
     selected_event = None
     event_id = request.GET.get('event_id')
     if event_id:
@@ -264,6 +301,7 @@ def _vits_dashboard(request):
     if not selected_event:
         selected_event = active_events.first()
 
+    # Pass None when no active event -> tiles show 0
     section_tiles = build_section_tiles_with_attendance(event=selected_event)
 
     context = {
@@ -325,6 +363,7 @@ def _rep_dashboard(request):
 
 @role_required('chairperson')
 def chairperson_dashboard_view(request):
+    auto_update_event_statuses()
     total_events     = Event.objects.count()
     active_events    = Event.objects.filter(status='active').order_by('-date', '-start_time')
     all_events       = Event.objects.all().order_by('-date', '-start_time')
@@ -333,7 +372,8 @@ def chairperson_dashboard_view(request):
     total_sections   = Section.objects.count()
     total_admins     = Admin.objects.filter(is_active=True).exclude(role='chairperson').count()
 
-    # Determine which event to show stats for (only active events)
+    # Dashboard section overview: only for ACTIVE events (check-in phase)
+    # Resets to 0 when no active event
     selected_event = None
     event_id = request.GET.get('event_id')
     if event_id:
@@ -553,9 +593,18 @@ def admin_remove_view(request, pk):
     if admin.role == 'chairperson':
         messages.error(request, 'Cannot remove the chairperson.')
         return redirect('admin_panel:admins_manage')
-    admin.is_active = False
-    admin.save()
-    messages.success(request, f'{admin.name} has been deactivated.')
+
+    name = admin.name
+
+    # Clean up section assignments first
+    AdminSection.objects.filter(admin=admin).delete()
+
+    # Hard delete — removes the admin row from the database entirely.
+    # Events created by this admin will have created_by set to NULL (ON DELETE SET NULL).
+    # Attendance logs scanned by this admin already use SET_NULL.
+    admin.delete()
+
+    messages.success(request, f'{name} has been permanently removed.')
     return redirect('admin_panel:admins_manage')
 
 
@@ -565,6 +614,7 @@ def admin_remove_view(request, pk):
 
 @admin_required
 def events_view(request):
+    auto_update_event_statuses()
     role = request.session.get('admin_role')
     events = Event.objects.order_by('-date', '-start_time')
     return render(request, 'admin_panel/events.html', {
@@ -586,10 +636,13 @@ def event_create_view(request):
 
             now = ph_now()
             event_date = event.date
-            event_start = event.start_time
+            event_start = event.start_time  # may be None now
 
-            if event_date == now.date():
-                # Compare at the minute level to allow starting at the current time
+            if event_date < now.date():
+                messages.error(request, 'Cannot create an event in the past.')
+                return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
+
+            if event_start and event_date == now.date():
                 now_mins = now.hour * 60 + now.minute
                 start_mins = event_start.hour * 60 + event_start.minute
                 if start_mins < now_mins:
@@ -600,17 +653,18 @@ def event_create_view(request):
                     )
                     return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
 
-            if event_date < now.date():
-                messages.error(request, 'Cannot create an event in the past.')
-                return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
-
-            # End time must be later than start time
-            if event.end_time and event.end_time <= event.start_time:
+            # End time must be later than start time (if both set)
+            if event.end_time and event_start and event.end_time <= event_start:
                 messages.error(request, 'End time must be later than start time.')
                 return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
+
             event.status = 'pending'  # Events start as pending
             event.save()
-            messages.success(request, f'Event "{event.name}" created. It will remain pending until you start it.')
+
+            if event_start:
+                messages.success(request, f'Event "{event.name}" created. It will auto-start at {event_start.strftime("%I:%M %p")}.')
+            else:
+                messages.success(request, f'Event "{event.name}" created. Press Start when ready.')
             return redirect('admin_panel:events')
     return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
 
@@ -626,7 +680,7 @@ def event_edit_view(request, pk):
 
             # Time integrity check for edits too
             now = ph_now()
-            if updated.date == now.date() and event.status == 'pending':
+            if updated.start_time and updated.date == now.date() and event.status == 'pending':
                 now_mins = now.hour * 60 + now.minute
                 start_mins = updated.start_time.hour * 60 + updated.start_time.minute
                 if start_mins < now_mins:
@@ -637,8 +691,8 @@ def event_edit_view(request, pk):
                     )
                     return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Edit', 'event': event})
 
-            # End time must be later than start time
-            if updated.end_time and updated.end_time <= updated.start_time:
+            # End time must be later than start time (if both set)
+            if updated.end_time and updated.start_time and updated.end_time <= updated.start_time:
                 messages.error(request, 'End time must be later than start time.')
                 return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Edit', 'event': event})
 
@@ -661,15 +715,19 @@ def event_delete_view(request, pk):
 @role_required('chairperson', 'vits')
 @require_POST
 def event_start_view(request, pk):
-    """Chairperson explicitly starts a pending event."""
+    """Manually start a pending event. Auto-stamps start_time if blank."""
     event = get_object_or_404(Event, id=pk)
     if event.status != 'pending':
         messages.warning(request, f'Event "{event.name}" is already {event.status}.')
         return redirect('admin_panel:events')
 
-    # Time integrity: warn if start_time is in the past
     now = ph_now()
-    if event.date == now.date() and event.start_time < now.time():
+
+    # If no start_time was set, stamp it with the current time
+    if not event.start_time:
+        event.start_time = now.time()
+        messages.info(request, f'Start time auto-set to {now.strftime("%I:%M %p")}.')
+    elif event.date == now.date() and event.start_time < now.time():
         messages.warning(
             request,
             f'Warning: The scheduled start time ({event.start_time.strftime("%I:%M %p")}) '
@@ -689,8 +747,102 @@ def event_end_view(request, pk):
     event = get_object_or_404(Event, id=pk)
     event.status = 'ended'
     event.save()
-    messages.success(request, f'Event "{event.name}" has been ended.')
+    messages.success(request, f'Event "{event.name}" has been ended. Scanner is now in Exit Mode.')
     return redirect('admin_panel:events')
+
+
+@role_required('chairperson')
+@require_POST
+def event_close_view(request, pk):
+    """Chairperson permanently closes an event. No more scans allowed."""
+    event = get_object_or_404(Event, id=pk)
+    if event.status not in ('ended',):
+        messages.warning(request, f'Only ended events can be closed.')
+        return redirect('admin_panel:events')
+    event.status = 'closed'
+    event.save()
+    messages.success(request, f'Event "{event.name}" has been CLOSED. No further scans will be accepted.')
+    return redirect('admin_panel:events')
+
+
+@role_required('chairperson', 'vits')
+@require_POST
+def event_extend_grace_view(request, pk):
+    """Extend the late cutoff by 15 minutes for an active event."""
+    event = get_object_or_404(Event, id=pk)
+    if event.status != 'active':
+        messages.warning(request, f'Grace period can only be extended for active events.')
+        return redirect('admin_panel:events')
+    event.late_cutoff_mins += 15
+    event.save(update_fields=['late_cutoff_mins'])
+    messages.success(request, f'Grace period extended! Late cutoff is now {event.late_cutoff_mins} minutes.')
+    return redirect('admin_panel:events')
+
+
+@role_required('chairperson', 'vits')
+@require_POST
+@transaction.atomic
+def revoke_qr_view(request, pk):
+    """Revoke a compromised QR code and generate a fresh one."""
+    import qrcode
+    import os
+
+    student = get_object_or_404(Student, id=pk)
+    if student.status != 'active':
+        messages.error(request, f'{student.name} must be active to regenerate a QR code.')
+        return redirect('admin_panel:students')
+
+    # Delete old token
+    QRToken.objects.filter(student=student).delete()
+
+    # Generate new token and QR
+    new_token = str(uuid.uuid4())
+    qr_dir = os.path.join(settings.MEDIA_ROOT, 'qr_codes')
+    os.makedirs(qr_dir, exist_ok=True)
+
+    safe_sid = student.student_id.replace('-', '_')
+    filename = f'qr_{safe_sid}.png'
+    full_path = os.path.join(qr_dir, filename)
+
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(new_token)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color='black', back_color='white')
+    img.save(full_path)
+
+    qr_relative = f'/media/qr_codes/{filename}'
+    QRToken.objects.create(
+        id=uuid.uuid4(),
+        student=student,
+        token=new_token,
+        qr_path=qr_relative,
+    )
+
+    # Email the new QR
+    if student.email:
+        try:
+            from django.core.mail import EmailMessage
+            email = EmailMessage(
+                subject='CODE-IT: Your QR Code Has Been Reset',
+                body=(
+                    f'Hi {student.first_name},\n\n'
+                    f'Your QR code has been revoked and a new one has been generated.\n'
+                    f'Your old QR code is no longer valid.\n\n'
+                    f'Please use the attached QR code for future attendance.\n\n'
+                    f'— CODE-IT Attendance System'
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[student.email],
+            )
+            email.attach_file(full_path)
+            email.send(fail_silently=False)
+            messages.success(request, f'QR revoked and new one emailed to {student.email}.')
+        except Exception as e:
+            messages.warning(request, f'QR regenerated but email failed: {e}')
+    else:
+        messages.success(request, f'QR revoked and regenerated for {student.name}.')
+
+    return redirect('admin_panel:students')
 
 
 # ---------------------------------------------------------------------------
@@ -768,7 +920,7 @@ def set_expected_students_view(request, event_id):
 
 
 # ---------------------------------------------------------------------------
-# Attendance (timestamps)
+# Attendance (timestamps) — with Start / End / Final overviews
 # ---------------------------------------------------------------------------
 
 @admin_required
@@ -790,10 +942,91 @@ def attendance_view(request, event_id):
         logs = logs.filter(student__section_id__in=section_ids)
 
     # Check if event has ended
-    event_ended = False
-    if event.end_time:
-        event_end   = datetime.combine(event.date, event.end_time, tzinfo=PH_TZ)
-        event_ended = ph_now() > event_end
+    event_ended = event.status in ('ended', 'closed')
+
+    # ── BUILD SECTION OVERVIEWS ──
+    sections = Section.objects.all().order_by('year_level', 'name')
+    all_students = Student.objects.filter(status='active').select_related('section')
+
+    # --- CHECK-IN OVERVIEW (Start Event phase) ---
+    checkin_tiles = []
+    for sec in sections:
+        total = all_students.filter(section=sec).count()
+        sec_logs = logs.filter(student__section=sec)
+        present = sec_logs.filter(status='present').count()
+        late = sec_logs.filter(status='late').count()
+        absent = total - (present + late)
+        if absent < 0:
+            absent = 0
+        checkin_tiles.append({
+            'section': sec,
+            'total': total,
+            'present': present,
+            'late': late,
+            'absent': absent,
+        })
+
+    # --- CHECK-OUT OVERVIEW (End/Exit phase) ---
+    checkout_tiles = []
+    if event.status in ('ended', 'closed'):
+        for sec in sections:
+            total = all_students.filter(section=sec).count()
+            sec_logs = logs.filter(student__section=sec)
+            checked_out = sec_logs.filter(scanned_out_at__isnull=False).count()
+            missed_exit = total - checked_out
+            if missed_exit < 0:
+                missed_exit = 0
+            checkout_tiles.append({
+                'section': sec,
+                'total': total,
+                'checked_out': checked_out,
+                'missed_exit': missed_exit,
+            })
+
+    # --- FINAL COMPARISON (only when CLOSED) ---
+    final_tiles = []
+    student_final_list = []
+    if event.status == 'closed':
+        for sec in sections:
+            sec_students = all_students.filter(section=sec)
+            total = sec_students.count()
+            final_present = 0
+            final_absent = 0
+            for st in sec_students:
+                log = logs.filter(student=st).first()
+                checked_in = log and log.status in ('present', 'late') if log else False
+                checked_out = log and log.scanned_out_at is not None if log else False
+                is_final_present = checked_in and checked_out
+                if is_final_present:
+                    final_present += 1
+                else:
+                    final_absent += 1
+                student_final_list.append({
+                    'student': st,
+                    'section_name': sec.name,
+                    'year_level': sec.year_level,
+                    'checkin_status': log.status if log else 'absent',
+                    'checkin_time': log.scanned_at if log else None,
+                    'checkout_time': log.scanned_out_at if log else None,
+                    'final_status': 'present' if is_final_present else 'absent',
+                })
+            final_tiles.append({
+                'section': sec,
+                'total': total,
+                'final_present': final_present,
+                'final_absent': final_absent,
+            })
+        # Sort alphabetically: year_level, section name, then last_name
+        student_final_list.sort(key=lambda x: (
+            x['year_level'],
+            x['section_name'],
+            x['student'].last_name.lower(),
+            x['student'].first_name.lower(),
+        ))
+
+    # Collect unique year levels and sections for dropdown filters
+    year_levels = sorted(set(s.year_level for s in sections))
+    section_names = [s.name for s in sections]
 
     context = {
         'event':       event,
@@ -804,6 +1037,13 @@ def attendance_view(request, event_id):
         'total':       logs.count(),
         'event_ended': event_ended,
         'admin_role':  role,
+        # Section overviews
+        'checkin_tiles':  checkin_tiles,
+        'checkout_tiles': checkout_tiles,
+        'final_tiles':    final_tiles,
+        'student_final_list': student_final_list,
+        'year_levels':   year_levels,
+        'section_names': section_names,
     }
     return render(request, 'admin_panel/attendance.html', context)
 
@@ -814,31 +1054,35 @@ def attendance_view(request, event_id):
 
 @role_required('vits')
 def scanner_view(request, event_id):
+    auto_update_event_statuses()
     event = get_object_or_404(Event, id=event_id)
-    if event.status != 'active':
-        messages.warning(request, f'Cannot scan: event "{event.name}" is {event.status}.')
+
+    # Closed events cannot be scanned
+    if event.status == 'closed':
+        messages.error(request, f'Event "{event.name}" is closed. No scanning allowed.')
         return redirect('admin_panel:events')
-    return render(request, 'admin_panel/scanner.html', {'event': event})
+
+    # Allow scanning for pending (early comers), active, and ended (exit mode)
+    scan_mode = 'check_in'
+    if event.status == 'ended':
+        scan_mode = 'check_out'
+    elif event.status == 'pending':
+        scan_mode = 'early'
+    return render(request, 'admin_panel/scanner.html', {
+        'event': event,
+        'scan_mode': scan_mode,
+    })
 
 
 @role_required('vits')
 @require_POST
 def scan_qr_api(request, event_id):
+    auto_update_event_statuses()
     event = get_object_or_404(Event, id=event_id)
 
-    if event.status != 'active':
-        return JsonResponse({'success': False, 'message': 'Event is not active.'}, status=400)
-
-    # Block scans if event has ended
-    if event.end_time:
-        now_time = ph_now()
-        event_end = datetime.combine(event.date, event.end_time, tzinfo=PH_TZ)
-        if now_time > event_end:
-            return JsonResponse({
-                'success': False,
-                'event_ended': True,
-                'message': f'This event has already ended at {event.end_time.strftime("%I:%M %p")}. No more scans allowed.',
-            })
+    # Closed events reject all scans
+    if event.status == 'closed':
+        return JsonResponse({'success': False, 'message': 'This event is closed. No scanning allowed.'}, status=403)
 
     try:
         data  = json.loads(request.body)
@@ -850,7 +1094,7 @@ def scan_qr_api(request, event_id):
         return JsonResponse({'success': False, 'message': 'No QR token provided.'})
 
     try:
-        qr_token = QRToken.objects.select_related('student').get(token=token)
+        qr_token = QRToken.objects.select_related('student', 'student__section').get(token=token)
     except QRToken.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Unrecognized QR code.'})
 
@@ -859,17 +1103,46 @@ def scan_qr_api(request, event_id):
     if student.status != 'active':
         return JsonResponse({'success': False, 'message': f'Student "{student.name}" is not active.'})
 
-    # Use Philippine time for attendance determination
-    now = ph_now()
-    event_start = datetime.combine(event.date, event.start_time, tzinfo=PH_TZ)
-    cutoff      = event_start + timedelta(minutes=event.late_cutoff_mins)
-    status      = 'present' if now <= cutoff else 'late'
+    now   = ph_now()
+    admin = get_current_admin(request)
 
-    admin    = get_current_admin(request)
+    # ── EXIT MODE (event ended) ──
+    if event.status == 'ended':
+        existing = AttendanceLog.objects.filter(student=student, event=event).first()
+        if not existing:
+            return JsonResponse({'success': False, 'message': f'{student.name} has no check-in record for this event.'})
+        if existing.scanned_out_at:
+            return JsonResponse({
+                'success': False,
+                'already_scanned': True,
+                'message': f'{student.name} already checked out at {existing.scanned_out_at.strftime("%I:%M:%S %p")}.',
+            })
+        existing.scanned_out_at = now
+        existing.save(update_fields=['scanned_out_at'])
+        return JsonResponse({
+            'success':      True,
+            'student_name': student.name,
+            'student_id':   student.student_id,
+            'section':      student.section.name if student.section else '',
+            'status':       'checked_out',
+            'scanned_at':   now.strftime('%I:%M:%S %p'),
+            'message':      f'{student.name} checked out successfully.',
+        })
+
+    # ── CHECK-IN MODE (pending = early comers, active = normal) ──
+    # Determine present vs late
+    if event.status == 'active' and event.start_time:
+        event_start = datetime.combine(event.date, event.start_time, tzinfo=PH_TZ)
+        cutoff      = event_start + timedelta(minutes=event.late_cutoff_mins)
+        status      = 'present' if now <= cutoff else 'late'
+    else:
+        # Pending event or no start_time: everyone is "present" (early comers)
+        status = 'present'
+
+    # Double-scan prevention
     existing = AttendanceLog.objects.filter(student=student, event=event).first()
 
     if existing:
-        # Already scanned as present or late — block duplicate
         if existing.status in ('present', 'late'):
             return JsonResponse({
                 'success':         False,
@@ -878,6 +1151,7 @@ def scan_qr_api(request, event_id):
                 'student_name':    student.name,
                 'student_id':      student.student_id,
                 'status':          existing.status,
+                'id_photo':        student.id_photo_path or '',
             })
         # Was pre-marked as absent — update to present/late
         existing.status     = status
@@ -885,7 +1159,6 @@ def scan_qr_api(request, event_id):
         existing.scanned_at = now
         existing.save()
     else:
-        # Walk-in: not in expected list — create new record
         AttendanceLog.objects.create(
             id=uuid.uuid4(),
             student=student,
@@ -902,6 +1175,7 @@ def scan_qr_api(request, event_id):
         'section':      student.section.name if student.section else '',
         'status':       status,
         'scanned_at':   now.strftime('%I:%M:%S %p'),
+        'id_photo':     student.id_photo_path or '',
     })
 
 
@@ -941,7 +1215,8 @@ def export_attendance_view(request, event_id):
 
     ws.merge_cells('A2:G2')
     sub_cell           = ws['A2']
-    sub_cell.value     = f'Date: {event.date}  |  Start: {event.start_time.strftime("%I:%M %p")}  |  Late cutoff: {event.late_cutoff_mins} mins'
+    start_str = event.start_time.strftime('%I:%M %p') if event.start_time else 'Manual'
+    sub_cell.value     = f'Date: {event.date}  |  Start: {start_str}  |  Late cutoff: {event.late_cutoff_mins} mins'
     sub_cell.alignment = Alignment(horizontal='center')
 
     headers     = ['Student ID', 'Name', 'Section', 'Year', 'Status', 'Scanned At', 'Scanned By']

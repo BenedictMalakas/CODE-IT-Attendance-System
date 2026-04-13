@@ -33,22 +33,24 @@
           <tr>
             <td class="fw-semibold">{{ event.name }}</td>
             <td>{{ event.date }}</td>
-            <td>{{ event.start_time|time:"g:i A" }}</td>
+            <td>{% if event.start_time %}{{ event.start_time|time:"g:i A" }}{% else %}<span class="text-muted fst-italic">Manual</span>{% endif %}</td>
             <td>{{ event.late_cutoff_mins }} mins</td>
             <td>
               {% if event.status == 'pending' %}
                 <span class="badge bg-warning text-dark px-3">Pending</span>
               {% elif event.status == 'active' %}
                 <span class="badge bg-success px-3">Active</span>
-              {% else %}
+              {% elif event.status == 'ended' %}
                 <span class="badge bg-secondary px-3">Ended</span>
+              {% elif event.status == 'closed' %}
+                <span class="badge bg-dark px-3">Closed</span>
               {% endif %}
             </td>
             <td class="text-center">
               <div class="d-flex flex-wrap justify-content-center gap-1">
                 {% if event.status == 'pending' and admin_role != 'representative' %}
                 <form method="post" action="{% url 'admin_panel:event_start' event.id %}" class="d-inline"
-                      onsubmit="return confirm('Start event \"{{ event.name|escapejs }}\"?');">
+                      onsubmit="return confirm('Start event \'{{ event.name|escapejs }}\'?');">
                   {% csrf_token %}
                   <button class="btn btn-sm btn-success">
                     <i class="fa fa-play me-1"></i><span class="d-none d-md-inline">Start</span>
@@ -56,16 +58,26 @@
                 </form>
                 {% endif %}
 
-                {% if admin_role != 'representative' %}
-                <a href="{% url 'admin_panel:set_expected' event.id %}" class="btn btn-sm btn-outline-warning" title="Set Expected Students">
-                  <i class="fa fa-users me-1"></i><span class="d-none d-md-inline">Expected</span>
-                </a>
-                {% endif %}
-
-                {% if admin_role == 'vits' and event.status == 'active' %}
+                {% if admin_role == 'vits' and event.status in 'active pending' %}
                 <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success">
                   <i class="fa fa-qrcode me-1"></i><span class="d-none d-md-inline">Scan</span>
                 </a>
+                {% endif %}
+
+                {% if admin_role == 'vits' and event.status == 'ended' %}
+                <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-outline-dark" title="Exit Mode Scanner">
+                  <i class="fa fa-door-open me-1"></i><span class="d-none d-md-inline">Exit Scan</span>
+                </a>
+                {% endif %}
+
+                {% if event.status == 'active' and admin_role != 'representative' %}
+                <form method="post" action="{% url 'admin_panel:event_extend_grace' event.id %}" class="d-inline"
+                      onsubmit="return confirm('Extend grace period by +15 minutes?');">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-outline-info" title="Extend late cutoff by 15 min">
+                    <i class="fa fa-clock me-1"></i><span class="d-none d-md-inline">+15m</span>
+                  </button>
+                </form>
                 {% endif %}
 
                 <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-sm btn-outline-primary">
@@ -79,10 +91,20 @@
                 {% if admin_role != 'representative' %}
                   {% if event.status == 'active' %}
                   <form method="post" action="{% url 'admin_panel:event_end' event.id %}" class="d-inline"
-                        onsubmit="return confirm('End event \"{{ event.name|escapejs }}\"?');">
+                        onsubmit="return confirm('End event \'{{ event.name|escapejs }}\'? Scanner will switch to Exit Mode.');">
                     {% csrf_token %}
                     <button class="btn btn-sm btn-warning">
                       <i class="fa fa-stop me-1"></i><span class="d-none d-md-inline">End</span>
+                    </button>
+                  </form>
+                  {% endif %}
+
+                  {% if event.status == 'ended' and admin_role == 'chairperson' %}
+                  <form method="post" action="{% url 'admin_panel:event_close' event.id %}" class="d-inline"
+                        onsubmit="return confirm('CLOSE event \'{{ event.name|escapejs }}\'? This will permanently lock the event. No more scans will be allowed.');">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-danger">
+                      <i class="fa fa-lock me-1"></i><span class="d-none d-md-inline">Close</span>
                     </button>
                   </form>
                   {% endif %}

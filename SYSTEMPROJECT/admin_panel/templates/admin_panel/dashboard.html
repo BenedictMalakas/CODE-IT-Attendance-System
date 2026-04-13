@@ -10,93 +10,93 @@
 
 {% block content %}
 <!-- Stat cards -->
-<div class="row g-3 mb-4">
+<div class="row g-2 mb-3">
   <div class="col-6 col-md-3">
-    <div class="card stat-card p-3">
-      <div class="d-flex align-items-center gap-3">
-        <div class="icon" style="background:#e8f4fd;">
-          <i class="fa fa-calendar-days text-primary"></i>
+    <div class="card stat-card p-2">
+      <div class="d-flex align-items-center gap-2">
+        <div class="icon" style="background:#e8f4fd; width:36px; height:36px;">
+          <i class="fa fa-calendar-days text-primary" style="font-size:.85rem;"></i>
         </div>
         <div>
-          <div class="fw-bold fs-4">{{ total_events }}</div>
-          <div class="text-muted small">Total Events</div>
+          <div class="fw-bold fs-5">{{ total_events }}</div>
+          <div class="text-muted" style="font-size:.75rem;">Total Events</div>
         </div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card stat-card p-3">
-      <div class="d-flex align-items-center gap-3">
-        <div class="icon" style="background:#e9f9ee;">
-          <i class="fa fa-users text-success"></i>
+    <div class="card stat-card p-2">
+      <div class="d-flex align-items-center gap-2">
+        <div class="icon" style="background:#e9f9ee; width:36px; height:36px;">
+          <i class="fa fa-users text-success" style="font-size:.85rem;"></i>
         </div>
         <div>
-          <div class="fw-bold fs-4">{{ total_students }}</div>
-          <div class="text-muted small">Active Students</div>
+          <div class="fw-bold fs-5">{{ total_students }}</div>
+          <div class="text-muted" style="font-size:.75rem;">Active Students</div>
         </div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card stat-card p-3">
-      <div class="d-flex align-items-center gap-3">
-        <div class="icon" style="background:#fff8e1;">
-          <i class="fa fa-clock text-warning"></i>
+    <div class="card stat-card p-2">
+      <div class="d-flex align-items-center gap-2">
+        <div class="icon" style="background:#fff8e1; width:36px; height:36px;">
+          <i class="fa fa-clock text-warning" style="font-size:.85rem;"></i>
         </div>
         <div>
-          <div class="fw-bold fs-4">{{ pending_students }}</div>
-          <div class="text-muted small">Pending Approval</div>
+          <div class="fw-bold fs-5">{{ pending_students }}</div>
+          <div class="text-muted" style="font-size:.75rem;">Pending Approval</div>
         </div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card stat-card p-3">
-      <div class="d-flex align-items-center gap-3">
-        <div class="icon" style="background:#fce8f3;">
-          <i class="fa fa-clipboard-list" style="color:#c0399e;"></i>
+    <div class="card stat-card p-2">
+      <div class="d-flex align-items-center gap-2">
+        <div class="icon" style="background:#fce8f3; width:36px; height:36px;">
+          <i class="fa fa-clipboard-list" style="color:#c0399e; font-size:.85rem;"></i>
         </div>
         <div>
-          <div class="fw-bold fs-4">{{ total_logs }}</div>
-          <div class="text-muted small">Attendance Records</div>
+          <div class="fw-bold fs-5">{{ total_logs }}</div>
+          <div class="text-muted" style="font-size:.75rem;">Attendance Records</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Chart (same as chairperson) -->
+<!-- Chart -->
 {% if all_events %}
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2">
-    <span><i class="fa fa-chart-line me-2 text-secondary"></i>Attendance Summary (by Section)</span>
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
+    <span style="font-size:.9rem;"><i class="fa fa-chart-line me-2 text-secondary"></i>Attendance Summary</span>
     <div class="d-flex gap-2 flex-wrap">
-      <select id="chartType" class="form-select form-select-sm" style="max-width:140px;">
+      <select id="chartType" class="form-select form-select-sm" style="max-width:130px;">
         <option value="bar">Bar Graph</option>
         <option value="line">Line Graph</option>
-        <option value="pie">Pie Chart</option>
+        <option value="doughnut">Donut Chart</option>
       </select>
-      <select id="eventSelect" class="form-select form-select-sm" style="max-width:260px;">
+      <select id="eventSelect" class="form-select form-select-sm" style="max-width:240px;">
         {% for evt in all_events %}
           <option value="{{ evt.id }}">{{ evt.name }} — {{ evt.date }}</option>
         {% endfor %}
       </select>
     </div>
   </div>
-  <div class="card-body">
-    <canvas id="attendanceChart" height="100"></canvas>
+  <div class="card-body py-2">
+    <canvas id="attendanceChart" height="80"></canvas>
   </div>
 </div>
 {% endif %}
 
 <!-- Section tiles with attendance -->
 {% if section_tiles %}
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2">
-    <span><i class="fa fa-th-large me-2 text-secondary"></i>Sections Overview</span>
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
+    <span style="font-size:.9rem;"><i class="fa fa-th-large me-2 text-secondary"></i>Sections Overview</span>
     {% if active_events %}
     <form method="get" action="" class="d-inline">
-      <select name="event_id" class="form-select form-select-sm" style="max-width:280px;" onchange="this.form.submit();">
+      <select name="event_id" class="form-select form-select-sm" style="max-width:240px;" onchange="this.form.submit();">
         <option value="">— Select Active Event —</option>
         {% for evt in active_events %}
           <option value="{{ evt.id }}" {% if selected_event_id == evt.id|stringformat:"s" %}selected{% endif %}>
@@ -107,24 +107,24 @@
     </form>
     {% endif %}
   </div>
-  <div class="card-body">
-    <div class="row g-3">
+  <div class="card-body py-2">
+    <div class="row g-2">
       {% for tile in section_tiles %}
       <div class="col-6 col-md-4 col-lg-3">
-        <div class="card border p-3 text-center" style="border-radius:12px;">
-          <div class="fw-bold" style="font-size:1rem;">{{ tile.section.name }}</div>
-          <div class="text-muted small">Year {{ tile.section.year_level }}</div>
-          <div class="mt-2">
-            <span class="badge bg-success px-2">{{ tile.active_students }} students</span>
+        <div class="card border p-2 text-center" style="border-radius:10px;">
+          <div class="fw-bold" style="font-size:.9rem;">{{ tile.section.name }}</div>
+          <div class="text-muted" style="font-size:.7rem;">Year {{ tile.section.year_level }}</div>
+          <div class="mt-1">
+            <span class="badge bg-success px-2" style="font-size:.65rem;">{{ tile.active_students }} students</span>
           </div>
-          <div class="mt-2 d-flex justify-content-center gap-1 flex-wrap">
-            <span class="badge badge-present px-2 py-1" style="font-size:.7rem;">
+          <div class="mt-1 d-flex justify-content-center gap-1 flex-wrap">
+            <span class="badge badge-present px-2 py-1" style="font-size:.65rem;">
               <i class="fa fa-check me-1"></i>{{ tile.present }}
             </span>
-            <span class="badge badge-late px-2 py-1" style="font-size:.7rem;">
+            <span class="badge badge-late px-2 py-1" style="font-size:.65rem;">
               <i class="fa fa-clock me-1"></i>{{ tile.late }}
             </span>
-            <span class="badge badge-absent px-2 py-1" style="font-size:.7rem;">
+            <span class="badge badge-absent px-2 py-1" style="font-size:.65rem;">
               <i class="fa fa-xmark me-1"></i>{{ tile.absent }}
             </span>
           </div>
@@ -138,8 +138,8 @@
 
 <!-- Today's events -->
 {% if today_events %}
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-header bg-white fw-semibold d-flex align-items-center gap-2">
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white fw-semibold d-flex align-items-center gap-2 py-2">
     <i class="fa fa-star text-warning"></i> Today's Events
   </div>
   <div class="card-body p-0">
@@ -158,7 +158,7 @@
           {% for event in today_events %}
           <tr>
             <td class="fw-semibold">{{ event.name }}</td>
-            <td>{{ event.start_time|time:"g:i A" }}</td>
+            <td>{% if event.start_time %}{{ event.start_time|time:"g:i A" }}{% else %}<span class="text-muted">Manual</span>{% endif %}</td>
             <td>{{ event.late_cutoff_mins }} mins</td>
             <td>
               {% if event.status == 'active' %}
@@ -171,9 +171,14 @@
             </td>
             <td>
               <div class="d-flex flex-wrap gap-1">
-                {% if admin_role == 'vits' and event.status == 'active' %}
+                {% if admin_role == 'vits' and event.status != 'ended' %}
                 <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success">
                   <i class="fa fa-qrcode me-1"></i>Scan
+                </a>
+                {% endif %}
+                {% if admin_role == 'vits' and event.status == 'ended' %}
+                <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-outline-dark">
+                  <i class="fa fa-door-open me-1"></i>Exit
                 </a>
                 {% endif %}
                 <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-sm btn-outline-primary">
@@ -199,8 +204,8 @@
 
 <!-- Recent events -->
 <div class="card border-0 shadow-sm">
-  <div class="card-header bg-white fw-semibold d-flex align-items-center justify-content-between">
-    <span><i class="fa fa-history me-2 text-secondary"></i>Recent Events</span>
+  <div class="card-header bg-white fw-semibold d-flex align-items-center justify-content-between py-2">
+    <span style="font-size:.9rem;"><i class="fa fa-history me-2 text-secondary"></i>Recent Events</span>
     <a href="{% url 'admin_panel:events' %}" class="btn btn-sm btn-outline-secondary">View All</a>
   </div>
   <div class="card-body p-0">
@@ -220,7 +225,7 @@
           <tr>
             <td class="fw-semibold">{{ event.name }}</td>
             <td>{{ event.date }}</td>
-            <td>{{ event.start_time|time:"g:i A" }}</td>
+            <td>{% if event.start_time %}{{ event.start_time|time:"g:i A" }}{% else %}<span class="text-muted">Manual</span>{% endif %}</td>
             <td>
               {% if event.status == 'active' %}
                 <span class="badge bg-success">Active</span>
@@ -232,7 +237,7 @@
             </td>
             <td>
               <div class="d-flex flex-wrap gap-1">
-                {% if admin_role == 'vits' and event.status == 'active' %}
+                {% if admin_role == 'vits' and event.status != 'ended' %}
                 <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success">
                   <i class="fa fa-qrcode me-1"></i>Scan
                 </a>
@@ -264,17 +269,17 @@
 
   function buildChart(type, data) {
     if (chart) chart.destroy();
-    if (type === 'pie') {
+    if (type === 'doughnut') {
       const totalPresent = data.present.reduce((a, b) => a + b, 0);
       const totalLate    = data.late.reduce((a, b) => a + b, 0);
       const totalAbsent  = data.absent.reduce((a, b) => a + b, 0);
       chart = new Chart(chartCtx, {
-        type: 'pie',
+        type: 'doughnut',
         data: {
           labels: ['Present', 'Late', 'Absent'],
-          datasets: [{ data: [totalPresent, totalLate, totalAbsent], backgroundColor: ['#28a745', '#ffc107', '#dc3545'] }],
+          datasets: [{ data: [totalPresent, totalLate, totalAbsent], backgroundColor: ['#28a745', '#ffc107', '#dc3545'], borderWidth: 2 }],
         },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+        options: { responsive: true, cutout: '55%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } } } },
       });
     } else {
       chart = new Chart(chartCtx, {
@@ -282,12 +287,16 @@
         data: {
           labels: data.labels,
           datasets: [
-            { label: 'Present', data: data.present, borderColor: '#28a745', backgroundColor: type === 'bar' ? '#28a745' : 'rgba(40,167,69,.1)', tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 5 : 0 },
-            { label: 'Late', data: data.late, borderColor: '#ffc107', backgroundColor: type === 'bar' ? '#ffc107' : 'rgba(255,193,7,.1)', tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 5 : 0 },
-            { label: 'Absent', data: data.absent, borderColor: '#dc3545', backgroundColor: type === 'bar' ? '#dc3545' : 'rgba(220,53,69,.1)', tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 5 : 0 },
+            { label: 'Present', data: data.present, borderColor: '#28a745', backgroundColor: type === 'bar' ? '#28a745' : 'rgba(40,167,69,.1)', tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 4 : 0 },
+            { label: 'Late', data: data.late, borderColor: '#ffc107', backgroundColor: type === 'bar' ? '#ffc107' : 'rgba(255,193,7,.1)', tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 4 : 0 },
+            { label: 'Absent', data: data.absent, borderColor: '#dc3545', backgroundColor: type === 'bar' ? '#dc3545' : 'rgba(220,53,69,.1)', tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 4 : 0 },
           ],
         },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        },
       });
     }
   }

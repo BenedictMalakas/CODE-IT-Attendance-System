@@ -23,6 +23,7 @@ class AttendanceLog(Base):
     scanned_by    = Column(UUID(as_uuid=True), ForeignKey("admins.id"),   nullable=True)   # null if auto-absent
     status        = Column(Enum(AttendanceStatus), nullable=False)
     scanned_at    = Column(DateTime, nullable=True)                   # null for auto-absent
+    scanned_out_at= Column(DateTime, nullable=True)                   # exit scan timestamp
     override_note = Column(String(255), nullable=True)                # reason if manually changed
     created_at    = Column(DateTime, default=datetime.utcnow)
 

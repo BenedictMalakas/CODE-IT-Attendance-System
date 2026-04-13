@@ -32,6 +32,13 @@ class EventForm(forms.ModelForm):
             'late_cutoff_mins': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
         }
         labels = {
+            'start_time':       'Start time (optional — auto-starts if set)',
             'late_cutoff_mins': 'Late cutoff (minutes after start)',
-            'end_time':         'End time',
+            'end_time':         'End time (optional — auto-ends if set)',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['start_time'].required = False
+        self.fields['end_time'].required = False
+
