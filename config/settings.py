@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-s5#lxjf)g3*f*@3a0*c*tm968zrkp@*mup$ch@e167d&ccb7*s')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net', 'codeit-attendance.azurewebsites.net', 'localhost', '127.0.0.1', '*']
 
