@@ -34,6 +34,9 @@
                 <a href="{% url 'admin_panel:activity_logs' %}" class="btn btn-outline-secondary w-100" style="border-radius:10px;">
                     Reset
                 </a>
+                <button type="button" class="btn btn-outline-danger w-100" style="border-radius:10px;" data-bs-toggle="modal" data-bs-target="#clearLogsModal">
+                    <i class="fa fa-trash-can me-2"></i>Clear
+                </button>
             </div>
         </form>
     </div>
@@ -100,4 +103,33 @@
     .table td { vertical-align: middle; padding: 1rem .75rem; }
     .table thead th { font-weight: 600; text-transform: uppercase; font-size: .7rem; letter-spacing: .5px; border-bottom: 2px solid #edf2f9; color: #6e84a3; padding: 1rem .75rem; }
 </style>
+
+<!-- Clear Logs Confirmation Modal -->
+<div class="modal fade" id="clearLogsModal" tabindex="-1" aria-labelledby="clearLogsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px; border:none; box-shadow:0 10px 40px rgba(0,0,0,.1);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="clearLogsModalLabel">Clear Audit Trail?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-danger-subtle rounded-circle mb-3" style="width:70px; height:70px;">
+                        <i class="fa fa-triangle-exclamation text-danger fs-2"></i>
+                    </div>
+                    <p class="mb-0 text-muted">Are you sure you want to clear all activity logs? This action <strong>cannot be undone</strong> and will remove the entire history of admin actions.</p>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light w-100" style="border-radius:10px; font-weight:600;" data-bs-dismiss="modal">Cancel</button>
+                <form action="{% url 'admin_panel:activity_logs_clear' %}" method="POST" class="w-100">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger w-100" style="border-radius:10px; font-weight:600;">
+                        Yes, Clear Everything
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

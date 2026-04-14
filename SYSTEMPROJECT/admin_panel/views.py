@@ -1561,3 +1561,20 @@ def activity_logs_view(request):
         'admin_role':   'chairperson',
     }
     return render(request, 'admin_panel/activity_logs.html', context)
+@role_required('chairperson')
+def clear_activity_logs_view(request):
+    """Destructive action to clear all activity logs."""
+    if request.method == 'POST':
+        count = ActivityLog.objects.all().count()
+        ActivityLog.objects.all().delete()
+        
+        # Log the clearing action itself (Meta-logging)
+        log_activity(
+            request, 
+            action="Logs Cleared", 
+            target="System Audit Trail", 
+            description=f"Admin cleared {count} log entries."
+        )
+        
+        messages.success(request, f"System audit trail cleared successfully ({count} entries removed).")
+    return redirect('admin_panel:activity_logs')

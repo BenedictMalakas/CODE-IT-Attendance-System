@@ -28,6 +28,7 @@ urlpatterns = [
 
     # Chairperson: Activity Logs
     path('activity-logs/', views.activity_logs_view, name='activity_logs'),
+    path('activity-logs/clear/', views.clear_activity_logs_view, name='activity_logs_clear'),
 
     # Events
     path('events/',                    views.events_view,       name='events'),
