@@ -31,6 +31,12 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net', 'codeit-attendance.azurewebsites.net', 'localhost', '127.0.0.1', '*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net',
+    'https://codeit-attendance.azurewebsites.net'
+]
+
+
 
 # Application definition
 
