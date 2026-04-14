@@ -1,0 +1,103 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Activity Logs{% endblock %}
+{% block page_title %}Audit Trail / Activity Logs{% endblock %}
+{% block nav_activity %}active{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Filters -->
+    <div class="card mb-4 stat-card p-3">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small">Action Type</label>
+                <select name="action_type" class="form-select" style="border-radius:10px;">
+                    <option value="">All Actions</option>
+                    {% for action in action_types %}
+                        <option value="{{ action }}" {% if action == selected_action %}selected{% endif %}>{{ action }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small">Performed By</label>
+                <select name="admin_id" class="form-select" style="border-radius:10px;">
+                    <option value="">All Admins</option>
+                    {% for admin in admins %}
+                        <option value="{{ admin.id }}" {% if admin.id|stringformat:"s" == selected_admin %}selected{% endif %}>{{ admin.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100" style="border-radius:10px; background-color:#1a2238; border:none;">
+                    <i class="fa fa-filter me-2"></i>Filter
+                </button>
+                <a href="{% url 'admin_panel:activity_logs' %}" class="btn btn-outline-secondary w-100" style="border-radius:10px;">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="card stat-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead style="background:#f8f9fa;">
+                        <tr>
+                            <th class="ps-4">Timestamp</th>
+                            <th>Admin</th>
+                            <th>Action</th>
+                            <th>Target</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td class="ps-4 small text-muted">
+                                {{ log.created_at|date:"Y-m-d" }}<br>
+                                <span class="fw-bold">{{ log.created_at|date:"h:i:s A" }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm me-2 d-flex align-items-center justify-content-center bg-light rounded-circle" style="width:32px; height:32px;">
+                                        <i class="fa fa-user-shield text-secondary small"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold small">{{ log.admin.name|default:"System / Unknown" }}</div>
+                                        <div class="text-muted small" style="font-size: .7rem;">{{ log.admin.get_role_display|default:"N/A" }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {% if 'Deleted' in log.action or 'Removed' in log.action or 'Rejected' in log.action %}bg-danger-subtle text-danger{% elif 'Created' in log.action or 'Added' in log.action or 'Approved' in log.action %}bg-success-subtle text-success{% else %}bg-primary-subtle text-primary{% endif %}" style="font-size: .75rem; border-radius: 6px;">
+                                    {{ log.action }}
+                                </span>
+                            </td>
+                            <td class="small">{{ log.target|default:"—" }}</td>
+                            <td class="small text-muted" style="max-width: 300px;">{{ log.description|default:"—" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fa fa-clipboard-list fa-3x mb-3 d-block opacity-25"></i>
+                                No activity logs found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-success-subtle { background-color: #d1e7dd; color: #0f5132 !important; }
+    .bg-danger-subtle { background-color: #f8d7da; color: #842029 !important; }
+    .bg-primary-subtle { background-color: #cfe2ff; color: #084298 !important; }
+    .table td { vertical-align: middle; padding: 1rem .75rem; }
+    .table thead th { font-weight: 600; text-transform: uppercase; font-size: .7rem; letter-spacing: .5px; border-bottom: 2px solid #edf2f9; color: #6e84a3; padding: 1rem .75rem; }
+</style>
+{% endblock %}

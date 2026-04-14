@@ -129,6 +129,9 @@
       <a href="{% url 'admin_panel:admins_manage' %}" class="{% block nav_admins %}{% endblock %}">
         <i class="fa fa-user-gear"></i> Officers & Reps
       </a>
+      <a href="{% url 'admin_panel:activity_logs' %}" class="{% block nav_activity %}{% endblock %}">
+        <i class="fa fa-clipboard-list"></i> Activity Logs
+      </a>
     {% endif %}
     <a href="{% url 'admin_panel:events' %}" class="{% block nav_events %}{% endblock %}">
       <i class="fa fa-calendar-days"></i> Events

@@ -16,7 +16,8 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.db import transaction
 
-from myapp.models import Admin, Student, Event, QRToken, AttendanceLog, Section, AdminSection
+from myapp.models import Admin, Student, Event, QRToken, AttendanceLog, Section, AdminSection, ActivityLog
+from myapp.utils import log_activity
 from .forms import LoginForm, EventForm
 
 import zoneinfo
@@ -482,6 +483,7 @@ def sections_manage_view(request):
                         added_count += 1
                 
                 if added_count > 0:
+                    log_activity(request, "Sections Created", f"Year {year}", f"Created {added_count} sections for year {year}")
                     messages.success(request, f'Successfully created {added_count} new section(s) for Year {year}.')
                 else:
                     messages.info(request, f'No new sections created (all sections up to {total_to_create} already exist).')
@@ -499,6 +501,7 @@ def section_delete_view(request, pk):
     section = get_object_or_404(Section, id=pk)
     name = section.name
     section.delete()
+    log_activity(request, "Section Deleted", name, f"Deleted section {name}")
     messages.success(request, f'Section "{name}" deleted.')
     return redirect('admin_panel:sections_manage')
 
@@ -543,6 +546,8 @@ def admins_manage_view(request):
                 if role == 'representative' and sec_ids:
                     for sid in sec_ids:
                         AdminSection.objects.create(id=uuid.uuid4(), admin=new_admin, section_id=sid)
+
+                log_activity(request, "Admin Added", name, f"Added {role_display} with email {email}")
 
                 # Send email with credentials
                 role_display = new_admin.get_role_display()
@@ -604,6 +609,7 @@ def admin_remove_view(request, pk):
     # Attendance logs scanned by this admin already use SET_NULL.
     admin.delete()
 
+    log_activity(request, "Admin Removed", name, f"Permanently removed admin account for {name}")
     messages.success(request, f'{name} has been permanently removed.')
     return redirect('admin_panel:admins_manage')
 
@@ -661,6 +667,8 @@ def event_create_view(request):
             event.status = 'pending'  # Events start as pending
             event.save()
 
+            log_activity(request, "Event Created", event.name, f"Created event scheduled for {event.date}")
+
             if event_start:
                 messages.success(request, f'Event "{event.name}" created. It will auto-start at {event_start.strftime("%I:%M %p")}.')
             else:
@@ -697,6 +705,7 @@ def event_edit_view(request, pk):
                 return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Edit', 'event': event})
 
             updated.save()
+            log_activity(request, "Event Updated", event.name, f"Updated event details for {event.name}")
             messages.success(request, f'Event "{event.name}" updated.')
             return redirect('admin_panel:events')
     return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Edit', 'event': event})
@@ -708,6 +717,7 @@ def event_delete_view(request, pk):
     event = get_object_or_404(Event, id=pk)
     name  = event.name
     event.delete()
+    log_activity(request, "Event Deleted", name, f"Deleted event {name}")
     messages.success(request, f'Event "{name}" deleted.')
     return redirect('admin_panel:events')
 
@@ -737,6 +747,7 @@ def event_start_view(request, pk):
 
     event.status = 'active'
     event.save()
+    log_activity(request, "Event Started", event.name, f"Manually started event {event.name}")
     messages.success(request, f'Event "{event.name}" is now ACTIVE.')
     return redirect('admin_panel:events')
 
@@ -747,6 +758,7 @@ def event_end_view(request, pk):
     event = get_object_or_404(Event, id=pk)
     event.status = 'ended'
     event.save()
+    log_activity(request, "Event Ended", event.name, f"Manually ended event {event.name}")
     messages.success(request, f'Event "{event.name}" has been ended. Scanner is now in Exit Mode.')
     return redirect('admin_panel:events')
 
@@ -761,6 +773,7 @@ def event_close_view(request, pk):
         return redirect('admin_panel:events')
     event.status = 'closed'
     event.save()
+    log_activity(request, "Event Closed", event.name, f"Permanently closed event {event.name}")
     messages.success(request, f'Event "{event.name}" has been CLOSED. No further scans will be accepted.')
     return redirect('admin_panel:events')
 
@@ -775,6 +788,7 @@ def event_extend_grace_view(request, pk):
         return redirect('admin_panel:events')
     event.late_cutoff_mins += 15
     event.save(update_fields=['late_cutoff_mins'])
+    log_activity(request, "Grace Period Extended", event.name, f"Extended late cutoff to {event.late_cutoff_mins} mins")
     messages.success(request, f'Grace period extended! Late cutoff is now {event.late_cutoff_mins} minutes.')
     return redirect('admin_panel:events')
 
@@ -836,6 +850,7 @@ def revoke_qr_view(request, pk):
             )
             email.attach_file(full_path)
             email.send(fail_silently=False)
+            log_activity(request, "QR Token Revoked", student.name, f"Revoked and regenerated QR token for {student.name}")
             messages.success(request, f'QR revoked and new one emailed to {student.email}.')
         except Exception as e:
             messages.warning(request, f'QR regenerated but email failed: {e}')
@@ -907,6 +922,7 @@ def set_expected_students_view(request, event_id):
                 log.delete()
                 removed += 1
 
+        log_activity(request, "Expected List Updated", event.name, f"Updated expected students for {event.name} (+{added}, -{removed})")
         messages.success(request, f'Expected list updated — {added} added, {removed} removed.')
         return redirect('admin_panel:attendance', event_id=event_id)
 
@@ -1370,6 +1386,7 @@ def student_approve_view(request, pk):
                 request,
                 f'{student.name} approved. QR code generated and emailed to {student.email}.'
             )
+            log_activity(request, "Student Approved", student.name, f"Approved registration for {student.name} and sent QR email")
         except Exception as e:
             messages.warning(
                 request,
@@ -1391,6 +1408,7 @@ def student_reject_view(request, pk):
     student.status         = 'rejected'
     student.rejection_note = note or 'Rejected by admin.'
     student.save()
+    log_activity(request, "Student Rejected", student.name, f"Rejected registration for {student.name}. Note: {note}")
     messages.warning(request, f'{student.name} rejected.')
     return redirect('admin_panel:students')
 
@@ -1401,6 +1419,7 @@ def student_delete_view(request, pk):
     student = get_object_or_404(Student, id=pk)
     name    = student.name
     student.delete()
+    log_activity(request, "Student Deleted", name, f"Deleted student record for {name}")
     messages.success(request, f'Student "{name}" has been deleted.')
     return redirect('admin_panel:students')
 
@@ -1512,3 +1531,33 @@ def sections_by_year_api(request):
     
     data = [{'id': str(s.id), 'name': s.name} for s in sections]
     return JsonResponse(data, safe=False)
+
+
+@role_required('chairperson')
+def activity_logs_view(request):
+    """View to display the audit trail of administrative actions."""
+    logs = ActivityLog.objects.select_related('admin').order_by('-created_at')
+
+    # Simple filtering
+    action_query = request.GET.get('action_type', '')
+    admin_query  = request.GET.get('admin_id', '')
+
+    if action_query:
+        logs = logs.filter(action=action_query)
+    if admin_query:
+        logs = logs.filter(admin_id=admin_query)
+
+    # For filter dropdowns
+    action_types = ActivityLog.objects.values_list('action', flat=True).distinct().order_by('action')
+    admins       = Admin.objects.filter(is_active=True).order_by('name')
+
+    context = {
+        'logs':         logs,
+        'action_types': action_types,
+        'admins':       admins,
+        'selected_action': action_query,
+        'selected_admin':  admin_query,
+        'admin_name':   request.session.get('admin_name', 'Admin'),
+        'admin_role':   'chairperson',
+    }
+    return render(request, 'admin_panel/activity_logs.html', context)

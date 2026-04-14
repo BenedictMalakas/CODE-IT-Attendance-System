@@ -26,6 +26,9 @@ urlpatterns = [
     path('admins/', views.admins_manage_view, name='admins_manage'),
     path('admins/<uuid:pk>/remove/', views.admin_remove_view, name='admin_remove'),
 
+    # Chairperson: Activity Logs
+    path('activity-logs/', views.activity_logs_view, name='activity_logs'),
+
     # Events
     path('events/',                    views.events_view,       name='events'),
     path('events/create/',             views.event_create_view, name='event_create'),

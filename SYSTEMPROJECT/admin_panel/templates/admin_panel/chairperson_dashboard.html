@@ -133,41 +133,54 @@
 
 <!-- Quick links -->
 <div class="row g-2">
-  <div class="col-md-4">
+  <div class="col-md-3">
     <a href="{% url 'admin_panel:admins_manage' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:10px;">
       <div class="d-flex align-items-center gap-3">
         <div style="background:rgba(255,106,61,.1); width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
           <i class="fa fa-user-gear" style="color:#ff6a3d; font-size:1.1rem;"></i>
         </div>
         <div>
-          <div class="fw-bold" style="font-size:.9rem;">Manage Admins</div>
-          <div class="text-muted" style="font-size:.7rem;">Officers & Representatives</div>
+          <div class="fw-bold" style="font-size:.9rem;">Admins</div>
+          <div class="text-muted" style="font-size:.7rem;">Officers & Reps</div>
         </div>
       </div>
     </a>
   </div>
-  <div class="col-md-4">
+  <div class="col-md-3">
     <a href="{% url 'admin_panel:events' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:10px;">
       <div class="d-flex align-items-center gap-3">
         <div style="background:#e8f4fd; width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
           <i class="fa fa-calendar-days text-primary" style="font-size:1.1rem;"></i>
         </div>
         <div>
-          <div class="fw-bold" style="font-size:.9rem;">Manage Events</div>
-          <div class="text-muted" style="font-size:.7rem;">Create, edit, end events</div>
+          <div class="fw-bold" style="font-size:.9rem;">Events</div>
+          <div class="text-muted" style="font-size:.7rem;">Schedules & Status</div>
         </div>
       </div>
     </a>
   </div>
-  <div class="col-md-4">
+  <div class="col-md-3">
     <a href="{% url 'admin_panel:students' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:10px;">
       <div class="d-flex align-items-center gap-3">
         <div style="background:#e9f9ee; width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
           <i class="fa fa-users text-success" style="font-size:1.1rem;"></i>
         </div>
         <div>
-          <div class="fw-bold" style="font-size:.9rem;">Manage Students</div>
-          <div class="text-muted" style="font-size:.7rem;">Approve, reject, view</div>
+          <div class="fw-bold" style="font-size:.9rem;">Students</div>
+          <div class="text-muted" style="font-size:.7rem;">Approvals & Portal</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="{% url 'admin_panel:activity_logs' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:10px;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="background:#fce8f3; width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <i class="fa fa-clipboard-list" style="color:#c0399e; font-size:1.1rem;"></i>
+        </div>
+        <div>
+          <div class="fw-bold" style="font-size:.9rem;">Activity Logs</div>
+          <div class="text-muted" style="font-size:.7rem;">System Audit Trail</div>
         </div>
       </div>
     </a>

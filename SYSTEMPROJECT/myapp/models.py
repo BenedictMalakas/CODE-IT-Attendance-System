@@ -133,3 +133,16 @@ class AttendanceLog(models.Model):
     class Meta:
         managed = False
         db_table = 'attendance_logs'
+
+
+class ActivityLog(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    admin = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, db_column='admin_id')
+    action = models.CharField(max_length=100)
+    target = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = 'activity_logs'
