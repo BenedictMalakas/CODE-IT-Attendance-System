@@ -29,12 +29,13 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-s5#lxjf)g3*f*@3a0*c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net', 'codeit-attendance.azurewebsites.net', 'localhost', '127.0.0.1', '*']
+ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net', 'codeit-attendance.azurewebsites.net', 'localhost', '127.0.0.1', '52.253.95.130', 'codeit-attendancesystem.me', '*']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net',
     'https://codeit-attendance.azurewebsites.net',
-    'http://52.253.95.130'
+    'http://52.253.95.130',
+    'http://codeit-attendancesystem.me'
 ]
 
 
