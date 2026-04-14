@@ -249,14 +249,28 @@
       h4 { font-size: 1.1rem; }
       #topbar { padding: .6rem 1rem; }
       #topbar .page-title { font-size: .95rem; }
+      .sidebar-close-btn { display: block; }
+    }
+
+    #sidebarOverlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 999;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+    }
+    #sidebarOverlay.show { opacity: 1; pointer-events: auto; }
+    .sidebar-close-btn {
+      display: none; position: absolute; top: 1.2rem; right: 1rem;
+      background: none; border: none; color: #fff; font-size: 1.5rem;
     }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
 <body>
+<div id="sidebarOverlay"></div>
 
 <!-- Sidebar -->
 <div id="sidebar">
+  <button class="sidebar-close-btn" id="sidebarCloseBtn"><i class="fa fa-xmark"></i></button>
   <div class="sidebar-brand">
     <h2><span>CODE</span>-IT</h2>
     <p>Student Portal</p>
@@ -310,9 +324,19 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  document.getElementById('sidebarToggle')?.addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('open');
-  });
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const toggleBtn = document.getElementById('sidebarToggle');
+  const closeBtn = document.getElementById('sidebarCloseBtn');
+
+  function toggleSidebar() {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('show');
+  }
+
+  toggleBtn?.addEventListener('click', toggleSidebar);
+  closeBtn?.addEventListener('click', toggleSidebar);
+  overlay?.addEventListener('click', toggleSidebar);
 </script>
 {% block extra_js %}{% endblock %}
 </body>
