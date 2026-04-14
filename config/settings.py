@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-s5#lxjf)g3*f*@3a0*c*tm968zrkp@*mup$ch@e167d&ccb7*s')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = True
 
 ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net', 'codeit-attendance.azurewebsites.net', 'localhost', '127.0.0.1', '*']
 
@@ -191,5 +191,5 @@ DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'noreply@code-it.edu')
 # Azure HTTPS Support
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = False   # Azure handles this at the SSL settings level
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
