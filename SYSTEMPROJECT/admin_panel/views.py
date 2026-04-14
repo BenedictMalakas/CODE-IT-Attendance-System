@@ -547,10 +547,10 @@ def admins_manage_view(request):
                     for sid in sec_ids:
                         AdminSection.objects.create(id=uuid.uuid4(), admin=new_admin, section_id=sid)
 
+                role_display = new_admin.get_role_display()
                 log_activity(request, "Admin Added", name, f"Added {role_display} with email {email}")
 
                 # Send email with credentials
-                role_display = new_admin.get_role_display()
                 try:
                     send_mail(
                         subject=f'CODE-IT System — You have been added as {role_display}',
