@@ -11,10 +11,10 @@
     body {
       background: linear-gradient(135deg, #1a2238 0%, #2d3a55 50%, #1a2238 100%);
       min-height: 100vh;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; flex-direction: column;
       font-family: 'Inter', 'Segoe UI', sans-serif;
-      position: relative; overflow: hidden;
-      padding: 2rem 1rem;
+      position: relative; overflow-x: hidden;
+      padding: 2.5rem 1rem;
     }
     body::before, body::after {
       content: ''; position: absolute; border-radius: 50%;
@@ -28,7 +28,7 @@
       50%      { transform: translateY(-30px) scale(1.05); }
     }
     .register-card {
-      width: 100%; max-width: 480px;
+      width: 100%; max-width: 480px; margin: auto;
       background: rgba(255,255,255,.97);
       border-radius: 20px;
       box-shadow: 0 24px 80px rgba(0,0,0,.4);

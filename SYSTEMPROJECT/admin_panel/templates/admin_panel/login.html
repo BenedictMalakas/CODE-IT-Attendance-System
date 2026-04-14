@@ -10,11 +10,13 @@
     body {
       background: linear-gradient(135deg, #1a2238 0%, #2d3a55 100%);
       min-height: 100vh;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; flex-direction: column;
       font-family: 'Segoe UI', sans-serif;
+      padding: 2.5rem 1rem;
+      overflow-x: hidden;
     }
     .login-card {
-      width: 100%; max-width: 400px;
+      width: 100%; max-width: 400px; margin: auto;
       background: #fff; border-radius: 16px;
       box-shadow: 0 20px 60px rgba(0,0,0,.35);
       overflow: hidden;
