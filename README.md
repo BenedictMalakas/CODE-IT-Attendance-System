@@ -31,6 +31,8 @@ University attendance tracking system with QR code scanning, event management, a
       - *Exit/End Scan*: Pwedeng i-scan na lahat ng estudyante pag palabas as "Check Out" timer and list of missing the exit.
       - *Final Close Event*: And finally, dinagdag ko yung button na kulay red na "Close Event". Kapag clinick ito ni Chairperson, ila-lock out niyang permanently yung buong pag-sscan dito ... mag-gegenerate na siya ng magkadikit na "Check-in vs Check-out" record tapos ilalabas natin ang "FINAL OUTPUT LIST"! Dito masasabi kung sino ang True/Final Present gamit yung filter natin ng sections tsaka year level drop-downs direkta sa list.
 
+11. **Activity log**- Meron ng activity log na chairman lang nakakaaccess nakikita nya dito kung ano yung denelete, create, accept ng mga admins meron nadin tong filter na pwede mong isearch yung name ng admin para makita mo ano ginawa nila.
+
 ---
 
 ## 🔗 Updated Endpoints
