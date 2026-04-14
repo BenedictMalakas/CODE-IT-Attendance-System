@@ -33,7 +33,8 @@ ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsi
 
 CSRF_TRUSTED_ORIGINS = [
     'https://codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net',
-    'https://codeit-attendance.azurewebsites.net'
+    'https://codeit-attendance.azurewebsites.net',
+    'http://52.253.95.130'
 ]
 
 
