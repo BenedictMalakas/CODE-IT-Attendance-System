@@ -19,30 +19,34 @@
       <table class="table table-hover align-middle mb-0">
         <thead class="table-light">
           <tr>
-            <th>Student ID</th>
-            <th>Name</th>
-            <th>Section</th>
-            <th>Year</th>
-            <th>ID Photo</th>
+            <th>Student</th>
+            <th class="d-none d-lg-table-cell">Section</th>
+            <th class="d-none d-lg-table-cell">Year</th>
+            <th>Verification</th>
             <th>Status</th>
-            <th>Registered</th>
+            <th class="d-none d-xl-table-cell">Registered</th>
             <th class="text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for student in students %}
-          <tr>
-            <td class="font-monospace small">{{ student.student_id }}</td>
-            <td class="fw-semibold">{{ student.name }}</td>
-            <td>{{ student.section.name }}</td>
-            <td>{{ student.year_level }}</td>
+          <tr class="align-middle">
+            <td>
+              <div class="fw-semibold">{{ student.name }}</div>
+              <div class="text-muted font-monospace" style="font-size:.7rem;">{{ student.student_id }}</div>
+              <div class="d-lg-none text-muted small mt-1">
+                <i class="fa fa-users me-1"></i>{{ student.section.name }} &middot; Year {{ student.year_level }}
+              </div>
+            </td>
+            <td class="d-none d-lg-table-cell">{{ student.section.name }}</td>
+            <td class="d-none d-lg-table-cell">{{ student.year_level }}</td>
             <td>
               {% if student.id_photo_path %}
                 <button type="button" class="btn btn-sm btn-outline-info"
                         data-bs-toggle="modal" data-bs-target="#idPhotoModal"
                         data-student-name="{{ student.name }}"
                         data-photo-url="{% if student.id_photo_path|slice:':1' == '/' %}{{ student.id_photo_path }}{% else %}/media/{{ student.id_photo_path }}{% endif %}">
-                  <i class="fa fa-image me-1"></i>View ID
+                  <i class="fa fa-image"></i><span class="d-none d-sm-inline ms-1">View ID</span>
                 </button>
               {% else %}
                 <span class="text-muted small">No photo</span>
@@ -56,7 +60,7 @@
                 <div class="text-muted small mt-1">{{ student.rejection_note }}</div>
               {% endif %}
             </td>
-            <td class="small text-muted">{{ student.created_at|date:"M d, Y" }}</td>
+            <td class="small text-muted d-none d-xl-table-cell">{{ student.created_at|date:"M d, Y" }}</td>
             <td class="text-center">
               <div class="d-flex flex-wrap justify-content-center gap-1">
                 {% if admin_role != 'representative' %}

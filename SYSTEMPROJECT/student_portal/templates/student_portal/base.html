@@ -103,6 +103,8 @@
     }
     #topbar .page-title {
       font-weight: 700; font-size: 1.1rem; margin: 0; color: var(--primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      padding-right: 1rem;
     }
     #sidebarToggle {
       display: none; border: none; background: none;
@@ -250,6 +252,9 @@
       #topbar { padding: .6rem 1rem; }
       #topbar .page-title { font-size: .95rem; }
       .sidebar-close-btn { display: block; }
+      #topbar { padding: .65rem 1rem; }
+      #topbar .page-title { font-size: .95rem; }
+      #sidebarToggle { flex-shrink: 0; display: block; }
     }
 
     #sidebarOverlay {

@@ -197,13 +197,12 @@
       <table class="table table-hover align-middle mb-0" id="finalTable">
         <thead class="table-light">
           <tr>
-            <th>#</th>
-            <th>Student ID</th>
-            <th>Name</th>
-            <th>Section</th>
+            <th class="d-none d-md-table-cell">#</th>
+            <th>Student</th>
+            <th class="d-none d-lg-table-cell">Section</th>
             <th>Check-In</th>
-            <th>Check-In Time</th>
-            <th>Check-Out Time</th>
+            <th class="d-none d-md-table-cell">Time IN</th>
+            <th class="d-none d-md-table-cell">Time OUT</th>
             <th>Final Status</th>
           </tr>
         </thead>
@@ -213,10 +212,13 @@
               data-status="{{ item.final_status }}"
               data-year="{{ item.year_level }}"
               data-section="{{ item.section_name }}">
-            <td class="text-muted small">{{ forloop.counter }}</td>
-            <td class="font-monospace small">{{ item.student.student_id }}</td>
-            <td class="fw-semibold">{{ item.student.last_name }}, {{ item.student.first_name }}</td>
-            <td>{{ item.section_name }}</td>
+            <td class="text-muted small d-none d-md-table-cell">{{ forloop.counter }}</td>
+            <td>
+              <div class="fw-semibold" style="font-size:.85rem;">{{ item.student.last_name }}, {{ item.student.first_name }}</div>
+              <div class="text-muted font-monospace" style="font-size:.7rem;">{{ item.student.student_id }}</div>
+              <div class="d-lg-none text-muted small mt-1"><i class="fa fa-users me-1"></i>{{ item.section_name }}</div>
+            </td>
+            <td class="d-none d-lg-table-cell">{{ item.section_name }}</td>
             <td>
               {% if item.checkin_status == 'present' %}
                 <span class="badge bg-success px-2">Present</span>
@@ -226,14 +228,14 @@
                 <span class="badge bg-danger px-2">Absent</span>
               {% endif %}
             </td>
-            <td class="small">
+            <td class="small d-none d-md-table-cell">
               {% if item.checkin_time %}
                 {{ item.checkin_time|time:"g:i:s A" }}
               {% else %}
                 <span class="text-muted">—</span>
               {% endif %}
             </td>
-            <td class="small">
+            <td class="small d-none d-md-table-cell">
               {% if item.checkout_time %}
                 {{ item.checkout_time|time:"g:i:s A" }}
               {% else %}
@@ -242,9 +244,9 @@
             </td>
             <td>
               {% if item.final_status == 'present' %}
-                <span class="badge bg-success px-3 py-2">FINAL PRESENT</span>
+                <span class="badge bg-success px-2 py-1" style="font-size:.7rem;">PRESENT</span>
               {% else %}
-                <span class="badge bg-danger px-3 py-2">FINAL ABSENT</span>
+                <span class="badge bg-danger px-2 py-1" style="font-size:.7rem;">ABSENT</span>
               {% endif %}
             </td>
           </tr>

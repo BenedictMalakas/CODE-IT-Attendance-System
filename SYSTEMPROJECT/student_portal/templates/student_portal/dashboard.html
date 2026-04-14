@@ -16,11 +16,11 @@
     <h3 style="font-weight:800; font-size:1.4rem; margin-bottom:.3rem;">
       Welcome back, {{ student.name }}! 👋
     </h3>
-    <p style="color:#c8d0e0; margin:0; font-size:.9rem;">
+    <p style="color:#c8d0e0; margin:0; font-size:.85rem; line-height:1.5;">
       <span class="status-dot {{ student.status }}"></span>
-      Status: <strong>{{ student.status|upper }}</strong>
-      &nbsp;&bull;&nbsp; ID: {{ student.student_id }}
-      &nbsp;&bull;&nbsp; Section: {{ student.section }}
+      Status: <strong>{{ student.status|upper }}</strong><br class="d-md-none">
+      <span class="d-none d-md-inline">&nbsp;&bull;&nbsp;</span> ID: {{ student.student_id }}<br class="d-md-none">
+      <span class="d-none d-md-inline">&nbsp;&bull;&nbsp;</span> Section: {{ student.section }}
     </p>
   </div>
 </div>
