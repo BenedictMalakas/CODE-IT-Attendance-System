@@ -90,7 +90,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Load .env file only if it exists (for local development)
 # On Azure, we use the Environment Variables set in the Portal.
-env_path = BASE_DIR.parent / 'Data base proj' / '.env'
+env_path = BASE_DIR / 'Data base proj' / '.env'
 if env_path.exists():
     load_dotenv(env_path, override=True)
 else:
@@ -159,6 +159,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# WhiteNoise Optimization for Azure
+WHITENOISE_MANIFEST_STRICT = False
+WHITENOISE_USE_FINDERS = True
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
