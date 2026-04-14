@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+import logging
+from dotenv import load_dotenv
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-s5#lxjf)g3*f*@3a0*c*tm968zrkp@*mup$ch@e167d&ccb7*s'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-s5#lxjf)g3*f*@3a0*c*tm968zrkp@*mup$ch@e167d&ccb7*s')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net', 'codeit-attendance.azurewebsites.net', 'localhost', '127.0.0.1', '*']
 
 
 # Application definition
@@ -46,6 +50,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -75,14 +80,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-import os
-import logging
-from dotenv import load_dotenv
-import dj_database_url
 
-# Load the exact same .env file used by your SQLAlchemy setup
+
+# Load .env file only if it exists (for local development)
+# On Azure, we use the Environment Variables set in the Portal.
 env_path = BASE_DIR.parent / 'Data base proj' / '.env'
-load_dotenv(env_path, override=True)  # override=True ensures it always loads
+if env_path.exists():
+    load_dotenv(env_path, override=True)
+else:
+    load_dotenv() # Fallback to standard loading
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -142,6 +148,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -167,3 +176,9 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')       # your Gmail address
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '') # Gmail App Password
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'noreply@code-it.edu')
+
+# Azure HTTPS Support
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = False   # Azure handles this at the SSL settings level
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True

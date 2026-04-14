@@ -114,10 +114,10 @@ def register_view(request):
                     safe_id = sid.replace('-', '_')
                     filename = f"id_photos/id_{safe_id}.{ext}"
 
-                    # Ensure directory exists
-                    upload_dir = os.path.join(settings.MEDIA_ROOT, 'id_photos')
-                    os.makedirs(upload_dir, exist_ok=True)
-
+                    # Save using storage system (handles paths and permissions automatically)
+                    if default_storage.exists(filename):
+                        default_storage.delete(filename)
+                        
                     saved_path = default_storage.save(filename, photo)
                     id_photo_path = f'/media/{saved_path}'
 
@@ -254,19 +254,19 @@ def profile_view(request):
 
             # Cache busting: add timestamp to filename
             timestamp = int(time.time())
-            filename = f"profile_{student.id}_{timestamp}.{ext}"
+            # Use id_photos subdirectory for all profile photos
+            filename = f"id_photos/profile_{student.id}_{timestamp}.{ext}"
 
-            # Clean up old profile pictures for this student to save space
+            # Only attempt cleanup if on a filesystem that supports it, otherwise ignore
             try:
-                upload_dir = os.path.join(settings.MEDIA_ROOT)
-                for existing_file in os.listdir(upload_dir):
-                    if existing_file.startswith(f"profile_{student.id}"):
-                        os.remove(os.path.join(upload_dir, existing_file))
+                if default_storage.exists(filename):
+                    default_storage.delete(filename)
             except Exception:
-                pass # Non-critical if cleanup fails
+                pass
 
             saved_path = default_storage.save(filename, pic)
-            student.id_photo_path = default_storage.url(saved_path)
+            # Ensure path starts with /media/ for consistent loading
+            student.id_photo_path = f'/media/{saved_path}'
             student.save()
             messages.success(request, 'Profile picture updated successfully.')
             return redirect('student_portal:profile')

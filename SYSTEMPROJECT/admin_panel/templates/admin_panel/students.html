@@ -41,7 +41,7 @@
                 <button type="button" class="btn btn-sm btn-outline-info"
                         data-bs-toggle="modal" data-bs-target="#idPhotoModal"
                         data-student-name="{{ student.name }}"
-                        data-photo-url="{{ student.id_photo_path }}">
+                        data-photo-url="{% if student.id_photo_path|slice:':1' == '/' %}{{ student.id_photo_path }}{% else %}/media/{{ student.id_photo_path }}{% endif %}">
                   <i class="fa fa-image me-1"></i>View ID
                 </button>
               {% else %}

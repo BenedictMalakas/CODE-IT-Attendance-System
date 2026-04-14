@@ -1319,8 +1319,8 @@ def student_approve_view(request, pk):
     from io import BytesIO
     from django.core.mail import EmailMessage
 
-    # Use select_for_update to lock the row and prevent simultaneous approvals
-    student = get_object_or_404(Student.objects.select_for_update(), id=pk)
+    # Get the student record (removed select_for_update for better compatibility)
+    student = get_object_or_404(Student, id=pk)
     student.status         = 'active'
     student.rejection_note = None
     student.save()
@@ -1332,23 +1332,31 @@ def student_approve_view(request, pk):
     if not QRToken.objects.filter(student=student).exists():
         token = str(uuid.uuid4())
 
-        # Generate the physical QR PNG using the qrcode library
-        qr_dir = os.path.join(settings.MEDIA_ROOT, 'qr_codes')
-        os.makedirs(qr_dir, exist_ok=True)
-
-        safe_sid = student.student_id.replace('-', '_')
-        filename = f'qr_{safe_sid}.png'
-        full_path = os.path.join(qr_dir, filename)
-
-        # Build QR image
+        # Generate the QR in memory using BytesIO
         qr = qrcode.QRCode(version=1, box_size=10, border=4)
         qr.add_data(token)
         qr.make(fit=True)
         img = qr.make_image(fill_color='black', back_color='white')
-        img.save(full_path)
+        
+        # Save to buffer
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
 
-        # Save relative path for serving via /media/
-        qr_relative = f'/media/qr_codes/{filename}'
+        safe_sid = student.student_id.replace('-', '_')
+        filename = f'qr_{safe_sid}.png'
+        relative_path = f'qr_codes/{filename}'
+
+        # Save to storage (Azure/WhiteNoise friendly)
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        
+        if default_storage.exists(relative_path):
+            default_storage.delete(relative_path)
+        
+        saved_path = default_storage.save(relative_path, ContentFile(buffer.read()))
+        qr_relative = f'/media/{saved_path}'
+        full_path   = default_storage.path(saved_path) if hasattr(default_storage, 'path') else saved_path
 
         QRToken.objects.create(
             id=uuid.uuid4(),
