@@ -138,14 +138,12 @@ def build_section_tiles_with_attendance(event=None):
 
 def login_view(request):
     """VITS / Representative login only. Chairperson is blocked here."""
-    # Flush any stale session to prevent session contamination
     current_admin = get_current_admin(request)
     if current_admin:
-        # If already logged in as chairperson, boot them — they shouldn't be here
+        # If already logged in as chairperson, redirect them to their own dashboard
         if current_admin.role == 'chairperson':
-            request.session.flush()
-            messages.info(request, 'Chairperson account uses a separate login portal.')
-            return render(request, 'admin_panel/login.html', {'form': LoginForm()})
+            messages.info(request, 'You are already logged in. Redirecting to your dashboard.')
+            return redirect('admin_panel:chairperson_dashboard')
         return redirect('admin_panel:dashboard')
     elif request.session.get('admin_id'):
         request.session.flush()
@@ -237,10 +235,9 @@ def chairperson_login_view(request):
     if current_admin:
         if current_admin.role == 'chairperson':
             return redirect('admin_panel:chairperson_dashboard')
-        # Non-chairperson trying to use this endpoint — boot them
-        request.session.flush()
-        messages.error(request, 'Access denied. This portal is restricted.')
-        return render(request, 'admin_panel/chairperson_login.html')
+        # Non-chairperson trying to use this endpoint — redirect them back to their own dashboard
+        messages.info(request, 'You are already logged in. Redirecting to your dashboard.')
+        return redirect('admin_panel:dashboard')
 
     if request.method == 'POST':
         email    = request.POST.get('email', '').strip()
