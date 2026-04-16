@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-s5#lxjf)g3*f*@3a0*c*tm968zrkp@*mup$ch@e167d&ccb7*s')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net', 'codeit-attendance.azurewebsites.net', 'localhost', '127.0.0.1', '52.253.95.130', 'codeit-attendancesystem.me', '*']
 
@@ -92,7 +92,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Load .env file only if it exists (for local development)
 # On Azure, we use the Environment Variables set in the Portal.
-env_path = BASE_DIR / 'Data base proj' / '.env'
+env_path = BASE_DIR / '.env'
 if env_path.exists():
     load_dotenv(env_path, override=True)
 else:
@@ -157,7 +157,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Only use WhiteNoise's compressed manifest storage in production (when DEBUG is False)
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
