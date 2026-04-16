@@ -151,11 +151,17 @@
 
         <!-- ID Photo Upload -->
         <div class="mb-3">
-          <label class="form-label"><i class="fa fa-camera me-1 text-muted"></i> Upload Student ID Photo</label>
-          <input type="file" name="id_photo" class="form-control" accept=".png, .jpg, .jpeg, .webp"
+          <label class="form-label d-flex justify-content-between">
+            <span><i class="fa fa-camera me-1 text-muted"></i> Upload Student ID Photo</span>
+            <span class="text-danger fw-bold" style="font-size: 0.75rem;">Max: 5MB</span>
+          </label>
+          <input type="file" name="id_photo" id="idPhotoInput" class="form-control" accept=".png, .jpg, .jpeg, .webp"
                  style="border-radius:10px; border:2px solid #e4e7ed; padding:.5rem .75rem; font-size:.85rem;" required />
           <div class="text-muted small mt-1">
             <i class="fa fa-info-circle me-1"></i>Upload a clear photo of your school ID for identity verification.
+          </div>
+          <div id="fileSizeError" class="field-error" style="display:none;">
+            <i class="fa fa-exclamation-triangle me-1"></i> File is too large. Please select a photo smaller than 5MB.
           </div>
         </div>
 
@@ -302,10 +308,39 @@
     });
   }
 
+  // File size validation (Max 5MB)
+  const idPhotoInput = document.getElementById('idPhotoInput');
+  const sizeError    = document.getElementById('fileSizeError');
+  const submitBtn    = registerForm.querySelector('button[type="submit"]');
+
+  if (idPhotoInput) {
+    idPhotoInput.addEventListener('change', function() {
+      if (this.files && this.files[0]) {
+        const fileSize = this.files[0].size / 1024 / 1024; // MB
+        if (fileSize > 5) {
+          sizeError.style.display = 'block';
+          this.classList.add('is-invalid');
+          submitBtn.disabled = true;
+          this.value = ""; // Clear file
+        } else {
+          sizeError.style.display = 'none';
+          this.classList.remove('is-invalid');
+          submitBtn.disabled = false;
+        }
+      }
+    });
+  }
+
   // Enable section on form submit
-  const registerForm = document.getElementById('registerForm');
   if (registerForm && sectionSelect) {
-    registerForm.addEventListener('submit', function() {
+    registerForm.addEventListener('submit', function(e) {
+      if (idPhotoInput && idPhotoInput.files && idPhotoInput.files[0]) {
+        const fileSize = idPhotoInput.files[0].size / 1024 / 1024;
+        if (fileSize > 5) {
+          e.preventDefault();
+          return false;
+        }
+      }
       sectionSelect.disabled = false;
     });
   }

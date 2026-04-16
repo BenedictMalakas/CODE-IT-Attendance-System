@@ -69,14 +69,21 @@
         <i class="fa fa-camera me-2" style="color:#ff6a3d;"></i> Update Profile Picture
       </div>
       <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" id="photoUploadForm">
           {% csrf_token %}
           <input type="hidden" name="action" value="upload_photo" />
           <div class="mb-3">
-            <input type="file" name="profile_picture" class="form-control" accept=".png, .jpg, .jpeg, .webp"
+            <div class="d-flex justify-content-between mb-1">
+              <label class="form-label" style="font-weight:600; font-size:.88rem; color:#1a2238; margin:0;">Profile Photo</label>
+              <span class="text-danger fw-bold" style="font-size: 0.75rem;">Max: 5MB</span>
+            </div>
+            <input type="file" name="profile_picture" id="profilePhotoInput" class="form-control" accept=".png, .jpg, .jpeg, .webp"
                    style="border-radius:10px; border:2px solid #e4e7ed; padding:.65rem 1rem;" />
+            <div id="fileSizeError" class="text-danger small mt-1" style="display:none; font-weight:500;">
+              <i class="fa fa-exclamation-triangle me-1"></i> File is too large. Max allowed is 5MB.
+            </div>
           </div>
-          <button type="submit" class="btn btn-accent">
+          <button type="submit" class="btn btn-accent" id="photoSubmitBtn">
             <i class="fa fa-upload me-2"></i> Save Photo
           </button>
         </form>
@@ -146,6 +153,42 @@
     const icon  = btn.querySelector('i');
     if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
     else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+  }
+
+  // File size validation (Max 5MB)
+  const profilePhotoInput = document.getElementById('profilePhotoInput');
+  const sizeError         = document.getElementById('fileSizeError');
+  const photoSubmitBtn    = document.getElementById('photoSubmitBtn');
+  const photoUploadForm   = document.getElementById('photoUploadForm');
+
+  if (profilePhotoInput) {
+    profilePhotoInput.addEventListener('change', function() {
+      if (this.files && this.files[0]) {
+        const fileSize = this.files[0].size / 1024 / 1024; // MB
+        if (fileSize > 5) {
+          sizeError.style.display = 'block';
+          this.classList.add('is-invalid');
+          photoSubmitBtn.disabled = true;
+          this.value = ""; // Clear file
+        } else {
+          sizeError.style.display = 'none';
+          this.classList.remove('is-invalid');
+          photoSubmitBtn.disabled = false;
+        }
+      }
+    });
+  }
+
+  if (photoUploadForm && profilePhotoInput) {
+    photoUploadForm.addEventListener('submit', function(e) {
+      if (profilePhotoInput.files && profilePhotoInput.files[0]) {
+        const fileSize = profilePhotoInput.files[0].size / 1024 / 1024;
+        if (fileSize > 5) {
+          e.preventDefault();
+          return false;
+        }
+      }
+    });
   }
 </script>
 <style>
