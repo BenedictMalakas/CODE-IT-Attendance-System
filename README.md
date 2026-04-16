@@ -32,7 +32,8 @@ University attendance tracking system with QR code scanning, event management, a
       - *Final Close Event*: And finally, dinagdag ko yung button na kulay red na "Close Event". Kapag clinick ito ni Chairperson, ila-lock out niyang permanently yung buong pag-sscan dito ... mag-gegenerate na siya ng magkadikit na "Check-in vs Check-out" record tapos ilalabas natin ang "FINAL OUTPUT LIST"! Dito masasabi kung sino ang True/Final Present gamit yung filter natin ng sections tsaka year level drop-downs direkta sa list.
 
 11. **Activity log**- Meron ng activity log na chairman lang nakakaaccess nakikita nya dito kung ano yung denelete, create, accept ng mga admins meron nadin tong filter na pwede mong isearch yung name ng admin para makita mo ano ginawa nila.
-
+12. **HTTPS** - gumagana na yung cam kasi nakakuha na nang certificate sa certbot ng azure para mas secure na kasi kanina di gumagana dahil naka HTTP lang
+13. **Fixed Login "Kick-Out" Bug** - since bawal mag login pag same broweser ang admin panel and chairperson dahil same lang naman sila ng session id na kapag pumunta kadon nag aauto logout inayos ko sya na if same browser yung gamit then for example nasa admin ka clinick mo chairperson mag aauto balik ka sa admin.
 ---
 
 ## 🔗 Updated Endpoints
