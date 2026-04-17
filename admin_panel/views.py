@@ -601,9 +601,6 @@ def admin_remove_view(request, pk):
     # Clean up section assignments first
     AdminSection.objects.filter(admin=admin).delete()
 
-    # Hard delete — removes the admin row from the database entirely.
-    # Events created by this admin will have created_by set to NULL (ON DELETE SET NULL).
-    # Attendance logs scanned by this admin already use SET_NULL.
     admin.delete()
 
     log_activity(request, "Admin Removed", name, f"Permanently removed admin account for {name}")

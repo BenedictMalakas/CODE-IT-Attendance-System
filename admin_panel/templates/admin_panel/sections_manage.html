@@ -88,13 +88,12 @@
                 <td class="fw-semibold">{{ section.name }}</td>
                 <td><span class="badge bg-secondary px-3">Year {{ section.year_level }}</span></td>
                 <td class="text-center">
-                  <form method="post" action="{% url 'admin_panel:section_delete' section.id %}" class="d-inline"
-                        onsubmit="return confirm('Delete section {{ section.name }}? Students in this section may be affected.');">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-danger">
-                      <i class="fa fa-trash me-1"></i>Delete
-                    </button>
-                  </form>
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                          data-bs-toggle="modal" data-bs-target="#deleteSectionModal"
+                          data-section-id="{{ section.id }}"
+                          data-section-name="{{ section.name }}">
+                    <i class="fa fa-trash me-1"></i>Delete
+                  </button>
                 </td>
               </tr>
               {% empty %}
@@ -103,6 +102,33 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Section Modal -->
+<div class="modal fade" id="deleteSectionModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-semibold text-danger"><i class="fa fa-triangle-exclamation me-2"></i>Delete Section</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete <strong id="deleteSectionName"></strong>?
+        <div class="alert alert-warning mt-2 mb-0 py-2 small">
+          <i class="fa fa-warning me-1"></i>Students registered in this section may be affected.
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteSectionForm" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="fa fa-trash me-1"></i>Delete
+          </button>
+        </form>
       </div>
     </div>
   </div>
@@ -148,6 +174,14 @@
       }
     });
     filteredCount.textContent = visible;
+  });
+
+  // Delete modal logic
+  document.getElementById('deleteSectionModal')?.addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    document.getElementById('deleteSectionName').textContent = btn.dataset.sectionName;
+    document.getElementById('deleteSectionForm').action =
+      `/admin-panel/sections/${btn.dataset.sectionId}/delete/`;
   });
 </script>
 {% endblock %}

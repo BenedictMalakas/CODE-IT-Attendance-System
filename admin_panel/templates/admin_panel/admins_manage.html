@@ -93,13 +93,12 @@
                   {% endfor %}
                 </td>
                 <td class="text-center">
-                  <form method="post" action="{% url 'admin_panel:admin_remove' item.admin.id %}" class="d-inline"
-                        onsubmit="return confirm('Deactivate {{ item.admin.name }}?');">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-danger">
-                      <i class="fa fa-user-minus me-1"></i>Remove
-                    </button>
-                  </form>
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                          data-bs-toggle="modal" data-bs-target="#removeAdminModal"
+                          data-admin-id="{{ item.admin.id }}"
+                          data-admin-name="{{ item.admin.name }}">
+                    <i class="fa fa-user-minus me-1"></i>Remove
+                  </button>
                 </td>
               </tr>
               {% empty %}
@@ -112,6 +111,33 @@
     </div>
   </div>
 </div>
+
+<!-- Remove Admin Modal -->
+<div class="modal fade" id="removeAdminModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-semibold text-danger"><i class="fa fa-user-slash me-2"></i>Remove Officer</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to permanently remove <strong id="removeAdminName"></strong>?
+        <div class="alert alert-warning mt-2 mb-0 py-2 small">
+          <i class="fa fa-warning me-1"></i>This administrator will no longer be able to log in.
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <form id="removeAdminForm" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="fa fa-trash me-1"></i>Remove
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -120,6 +146,14 @@
   const sectionGroup = document.getElementById('sectionGroup');
   roleSelect.addEventListener('change', () => {
     sectionGroup.style.display = roleSelect.value === 'representative' ? 'block' : 'none';
+  });
+
+  // Remove admin modal logic
+  document.getElementById('removeAdminModal')?.addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    document.getElementById('removeAdminName').textContent = btn.dataset.adminName;
+    document.getElementById('removeAdminForm').action =
+      `/admin-panel/admins/${btn.dataset.adminId}/remove/`;
   });
 </script>
 {% endblock %}
