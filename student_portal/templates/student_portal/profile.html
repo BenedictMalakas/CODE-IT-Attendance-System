@@ -2,143 +2,148 @@
 
 {% block title %}Profile{% endblock %}
 {% block nav_profile %}active{% endblock %}
-{% block page_title %}My Profile{% endblock %}
 
 {% block content %}
 <div class="row g-4">
-  <!-- Profile info -->
+  <!-- Profile Card -->
   <div class="col-lg-5">
-    <div class="card-panel">
-      <div class="card-body text-center py-4">
-        {% if student.id_photo_path %}
-          <div style="width:120px; height:120px; border-radius:50%; margin:0 auto 1rem;
+    <div class="folder-card">
+      <div class="folder-tab">Profile</div>
+      <div class="folder-body">
+        <span class="screw screw-tl"></span>
+        <span class="screw screw-tr"></span>
+        <span class="screw screw-bl"></span>
+        <span class="screw screw-br"></span>
+        <div class="folder-inner" style="text-align:center;">
+          <!-- Avatar -->
+          {% if student.id_photo_path %}
+            <div style="width:110px; height:110px; border-radius:16px; margin:0 auto 16px;
                  background-image: url('{% if student.id_photo_path|slice:':1' == '/' %}{{ student.id_photo_path }}{% else %}/media/{{ student.id_photo_path }}{% endif %}');
-                 background-size: cover; background-position: center;
-                 box-shadow: 0 6px 20px rgba(0,0,0,.15); border: 4px solid #fff;">
-          </div>
-        {% else %}
-          <div style="width:120px; height:120px; border-radius:50%; margin:0 auto 1rem;
-                 background: linear-gradient(135deg, #ff6a3d, #e85a2d);
+                 background-size:cover; background-position:center;
+                 border: 3px solid rgba(255,255,255,0.3);
+                 box-shadow: 0 6px 20px rgba(0,0,0,0.2);"></div>
+          {% else %}
+            <div style="width:110px; height:110px; border-radius:16px; margin:0 auto 16px;
+                 background: linear-gradient(135deg, #9DAAE8, #7B8ED8);
                  display:flex; align-items:center; justify-content:center;
-                 font-size:3rem; font-weight:800; color:#fff;
-                 box-shadow: 0 6px 20px rgba(255,106,61,.3);">
-            {{ student.first_name|first }}
-          </div>
-        {% endif %}
+                 border: 3px solid rgba(255,255,255,0.3);
+                 box-shadow: 0 6px 20px rgba(0,0,0,0.2);">
+              <i class="fa fa-user" style="font-size:2.5rem; color:rgba(30,30,46,0.5);"></i>
+            </div>
+          {% endif %}
 
-        <h4 style="font-weight:700; margin-bottom:.15rem; color:#1a2238;">{{ student.name }}</h4>
-        <p style="color:#8892a5; margin-bottom:1rem; font-size:.88rem;">{{ student.section.name }}</p>
+          <h4 style="font-weight:800; color:var(--text-dark); margin-bottom:2px;">{{ student.name }}</h4>
+          <p style="font-weight:600; color:rgba(30,30,46,0.6); margin-bottom:20px; font-size:0.9rem;">{{ student.section.name }}</p>
 
-        <div class="text-start" style="max-width:280px; margin:0 auto;">
-          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid #f2f4f7;">
-            <span style="color:#8892a5; font-size:.85rem;">Student ID</span>
-            <strong style="font-size:.85rem;">{{ student.student_id }}</strong>
-          </div>
-          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid #f2f4f7;">
-            <span style="color:#8892a5; font-size:.85rem;">Year Level</span>
-            <strong style="font-size:.85rem;">Year {{ student.year_level }}</strong>
-          </div>
-          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid #f2f4f7;">
-            <span style="color:#8892a5; font-size:.85rem;">Section</span>
-            <strong style="font-size:.85rem;">{{ student.section.name }}</strong>
-          </div>
-          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid #f2f4f7;">
-            <span style="color:#8892a5; font-size:.85rem;">Email</span>
-            <strong style="font-size:.85rem;">{{ student.email }}</strong>
-          </div>
-          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid #f2f4f7;">
-            <span style="color:#8892a5; font-size:.85rem;">Status</span>
-            <span class="badge badge-{{ student.status }} px-3" style="border-radius:20px;">
-              <span class="status-dot {{ student.status }}"></span>{{ student.status|upper }}
-            </span>
-          </div>
-          <div class="d-flex justify-content-between py-2">
-            <span style="color:#8892a5; font-size:.85rem;">Registered</span>
-            <strong style="font-size:.85rem;">{{ student.created_at|date:"M d, Y" }}</strong>
+          <!-- Info Rows -->
+          <div style="text-align:left;">
+            <div class="info-row">
+              <span class="label">Student ID</span>
+              <span class="value">{{ student.student_id }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Year Level</span>
+              <span class="value">{% if student.year_level == 1 %}First Year{% elif student.year_level == 2 %}Second Year{% elif student.year_level == 3 %}Third Year{% elif student.year_level == 4 %}Fourth Year{% else %}Year {{ student.year_level }}{% endif %}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Section</span>
+              <span class="value">{{ student.section.name }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Email</span>
+              <span class="value" style="font-size:0.82rem;">{{ student.email }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Status</span>
+              <span class="value" style="color:{% if student.status == 'active' %}#22C55E{% elif student.status == 'pending' %}#F59E0B{% else %}#EF4444{% endif %}; font-style:italic;">
+                {{ student.status|capfirst }}
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="label">Register</span>
+              <span class="value">{{ student.created_at|date:"M d, Y" }}</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Profile picture & password -->
+  <!-- Settings Card -->
   <div class="col-lg-7">
-    <!-- Profile Picture Upload -->
-    <div class="card-panel mb-4">
-      <div class="card-header">
-        <i class="fa fa-camera me-2" style="color:#ff6a3d;"></i> Update Profile Picture
-      </div>
-      <div class="card-body">
-        <form method="post" enctype="multipart/form-data" id="photoUploadForm">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="upload_photo" />
-          <div class="mb-3">
-            <div class="d-flex justify-content-between mb-1">
-              <label class="form-label" style="font-weight:600; font-size:.88rem; color:#1a2238; margin:0;">Profile Photo</label>
-              <span class="text-danger fw-bold" style="font-size: 0.75rem;">Max: 5MB</span>
+    <div class="folder-card">
+      <div class="folder-tab">Settings</div>
+      <div class="folder-body">
+        <span class="screw screw-tl"></span>
+        <span class="screw screw-tr"></span>
+        <span class="screw screw-bl"></span>
+        <span class="screw screw-br"></span>
+        <div class="folder-inner white" style="padding:32px;">
+          <!-- Update Profile Picture -->
+          <h5 style="font-weight:800; font-size:1.1rem; color:var(--text-dark); margin-bottom:16px;">
+            Update Profile Picture
+          </h5>
+          <form method="post" enctype="multipart/form-data" id="photoUploadForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="upload_photo" />
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+              <label for="profilePhotoInput" class="btn-codeit btn-codeit-sm"
+                     style="cursor:pointer; background:#E0E0E0; color:var(--text-dark); font-size:0.8rem;">
+                Choose File
+              </label>
+              <span id="fileNameDisplay" style="font-size:0.82rem; color:var(--text-muted); font-weight:500;">
+                No File Chosen
+              </span>
+              <input type="file" name="profile_picture" id="profilePhotoInput"
+                     accept=".png, .jpg, .jpeg, .webp" style="display:none;" />
             </div>
-            <input type="file" name="profile_picture" id="profilePhotoInput" class="form-control" accept=".png, .jpg, .jpeg, .webp"
-                   style="border-radius:10px; border:2px solid #e4e7ed; padding:.65rem 1rem;" />
-            <div id="fileSizeError" class="text-danger small mt-1" style="display:none; font-weight:500;">
+            <div id="fileSizeError" style="display:none; color:#E74C3C; font-size:0.8rem; font-weight:600; margin-bottom:8px;">
               <i class="fa fa-exclamation-triangle me-1"></i> File is too large. Max allowed is 5MB.
             </div>
-          </div>
-          <button type="submit" class="btn btn-accent" id="photoSubmitBtn">
-            <i class="fa fa-upload me-2"></i> Save Photo
-          </button>
-        </form>
-      </div>
-    </div>
+            <button type="submit" class="btn-codeit" id="photoSubmitBtn" style="width:100%;">
+              <i class="fa fa-upload"></i> Save Photo
+            </button>
+          </form>
 
-    <!-- Change Password -->
-    <div class="card-panel">
-      <div class="card-header">
-        <i class="fa fa-shield-halved me-2" style="color:#ff6a3d;"></i> Change Password
-      </div>
-      <div class="card-body">
-        <form method="post">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="change_password" />
-          <div class="mb-3">
-            <label class="form-label" style="font-weight:600; font-size:.88rem; color:#1a2238;">
-              New Password
-            </label>
-            <div class="position-relative">
-              <input type="password" name="new_password" class="form-control form-control-password"
-                     placeholder="Min 8 characters" minlength="8"
-                     style="border-radius:10px; border:2px solid #e4e7ed; padding:.65rem 1rem;" />
-              <button type="button" class="pw-toggle" onclick="togglePw(this)">
-                <i class="fa fa-eye"></i>
+          <hr style="margin:28px 0; border-color:#E4E7ED;" />
+
+          <!-- Change Password -->
+          <h5 style="font-weight:800; font-size:1.1rem; color:var(--text-dark); margin-bottom:16px;">
+            Change Password
+          </h5>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="change_password" />
+            <div style="margin-bottom:14px;">
+              <label class="codeit-label" style="font-size:0.82rem;">New Password</label>
+              <div style="position:relative;">
+                <input type="password" name="new_password" class="form-control form-control-password"
+                       placeholder="Min 8 Characters" minlength="8"
+                       style="border-radius:10px; border:2px solid #E4E7ED; padding:10px 16px; padding-right:3rem;
+                              font-family:var(--font); font-size:0.9rem;" />
+                <button type="button" class="pw-toggle" onclick="togglePw(this)">
+                  <i class="fa fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div style="margin-bottom:18px;">
+              <label class="codeit-label" style="font-size:0.82rem;">Change New Password</label>
+              <div style="position:relative;">
+                <input type="password" name="confirm_password" class="form-control form-control-password"
+                       placeholder="Re-enter new password"
+                       style="border-radius:10px; border:2px solid #E4E7ED; padding:10px 16px; padding-right:3rem;
+                              font-family:var(--font); font-size:0.9rem;" />
+                <button type="button" class="pw-toggle" onclick="togglePw(this)">
+                  <i class="fa fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div style="text-align:center;">
+              <button type="submit" class="btn-codeit btn-codeit-sm">
+                <i class="fa fa-key"></i> Update New Password
               </button>
             </div>
-          </div>
-          <div class="mb-4">
-            <label class="form-label" style="font-weight:600; font-size:.88rem; color:#1a2238;">
-              Confirm New Password
-            </label>
-            <div class="position-relative">
-              <input type="password" name="confirm_password" class="form-control form-control-password"
-                     placeholder="Re-enter new password"
-                     style="border-radius:10px; border:2px solid #e4e7ed; padding:.65rem 1rem;" />
-              <button type="button" class="pw-toggle" onclick="togglePw(this)">
-                <i class="fa fa-eye"></i>
-              </button>
-            </div>
-          </div>
-          <button type="submit" class="btn btn-accent">
-            <i class="fa fa-key me-2"></i> Update Password
-          </button>
-        </form>
-
-        <div class="mt-4 p-3" style="background:#f8f9fb; border-radius:10px;">
-          <p style="font-weight:600; font-size:.85rem; color:#1a2238; margin-bottom:.5rem;">
-            <i class="fa fa-info-circle me-1" style="color:#ff6a3d;"></i> Password Tips
-          </p>
-          <ul style="font-size:.82rem; color:#6b7588; margin:0; padding-left:1.2rem;">
-            <li>Use at least 8 characters</li>
-            <li>Include at least one special character</li>
-            <li>Don't reuse passwords from other accounts</li>
-          </ul>
+          </form>
         </div>
       </div>
     </div>
@@ -147,6 +152,22 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+  .pw-toggle {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    cursor: pointer; color: #aab0c0; z-index: 5; background: none; border: none;
+    padding: 0; font-size: .9rem;
+  }
+  .pw-toggle:hover { color: var(--text-dark); }
+  input::-ms-reveal,
+  input::-ms-clear,
+  input::-webkit-reveal {
+    display: none !important;
+  }
+  .form-control-password {
+    padding-right: 3rem !important;
+  }
+</style>
 <script>
   function togglePw(btn) {
     const input = btn.parentElement.querySelector('input');
@@ -155,8 +176,9 @@
     else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
   }
 
-  // File size validation (Max 5MB)
+  /* File upload display */
   const profilePhotoInput = document.getElementById('profilePhotoInput');
+  const fileNameDisplay   = document.getElementById('fileNameDisplay');
   const sizeError         = document.getElementById('fileSizeError');
   const photoSubmitBtn    = document.getElementById('photoSubmitBtn');
   const photoUploadForm   = document.getElementById('photoUploadForm');
@@ -164,15 +186,15 @@
   if (profilePhotoInput) {
     profilePhotoInput.addEventListener('change', function() {
       if (this.files && this.files[0]) {
-        const fileSize = this.files[0].size / 1024 / 1024; // MB
+        const fileSize = this.files[0].size / 1024 / 1024;
+        fileNameDisplay.textContent = this.files[0].name;
         if (fileSize > 5) {
           sizeError.style.display = 'block';
-          this.classList.add('is-invalid');
           photoSubmitBtn.disabled = true;
-          this.value = ""; // Clear file
+          this.value = "";
+          fileNameDisplay.textContent = 'No File Chosen';
         } else {
           sizeError.style.display = 'none';
-          this.classList.remove('is-invalid');
           photoSubmitBtn.disabled = false;
         }
       }
@@ -183,29 +205,9 @@
     photoUploadForm.addEventListener('submit', function(e) {
       if (profilePhotoInput.files && profilePhotoInput.files[0]) {
         const fileSize = profilePhotoInput.files[0].size / 1024 / 1024;
-        if (fileSize > 5) {
-          e.preventDefault();
-          return false;
-        }
+        if (fileSize > 5) { e.preventDefault(); return false; }
       }
     });
   }
 </script>
-<style>
-  .pw-toggle {
-    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-    cursor: pointer; color: #aab0c0; z-index: 5; background: none; border: none;
-    padding: 0; font-size: .9rem;
-  }
-  .pw-toggle:hover { color: #1a2238; }
-  /* Fix for doubling eye icon in Edge/Chrome */
-  input::-ms-reveal,
-  input::-ms-clear,
-  input::-webkit-reveal {
-    display: none !important;
-  }
-  .form-control-password {
-    padding-right: 3rem !important;
-  }
-</style>
 {% endblock %}

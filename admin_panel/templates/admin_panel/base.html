@@ -6,132 +6,418 @@
   <title>{% block title %}Admin Panel{% endblock %} | CODE-IT</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
+    /* ================================================================
+       CODE-IT ADMIN DESIGN SYSTEM — "Folder-Tab Neobrutalism"
+       ================================================================ */
     :root {
-      --sidebar-bg: #1a2238;
-      --sidebar-accent: #ff6a3d;
-      --sidebar-text: #c8d0e0;
-      --sidebar-width: 240px;
-    }
-    body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; }
+      --bg-base:        #111840;
+      --blob-purple:    #3D2C6B;
+      --blob-blue:      #2E4A8C;
+      --blob-orange:    #D68B35;
+      --blob-dark:      #1A1540;
 
-    /* Sidebar */
-    #sidebar {
-      position: fixed; top: 0; left: 0;
-      width: var(--sidebar-width); height: 100vh;
-      background: var(--sidebar-bg);
-      display: flex; flex-direction: column;
-      z-index: 1000; transition: transform .25s;
-    }
-    #sidebar .brand {
-      padding: 1.25rem 1.5rem;
-      font-size: 1.2rem; font-weight: 700;
-      color: #fff; border-bottom: 1px solid #2d3a55;
-    }
-    #sidebar .brand span { color: var(--sidebar-accent); }
-    #sidebar .role-badge {
-      font-size: .65rem; font-weight: 600;
-      background: rgba(255,106,61,.15); color: #ff6a3d;
-      padding: .15rem .5rem; border-radius: 4px;
-      margin-left: .5rem; text-transform: uppercase;
-    }
-    #sidebar nav { flex: 1; padding: .75rem 0; overflow-y: auto; }
-    #sidebar nav a {
-      display: flex; align-items: center; gap: .75rem;
-      padding: .65rem 1.5rem; color: var(--sidebar-text);
-      text-decoration: none; font-size: .92rem;
-      transition: background .15s, color .15s;
-    }
-    #sidebar nav a:hover, #sidebar nav a.active {
-      background: rgba(255,255,255,.08); color: #fff;
-    }
-    #sidebar nav a.active { border-left: 3px solid var(--sidebar-accent); }
-    #sidebar nav a i { width: 18px; text-align: center; }
-    #sidebar .sidebar-footer {
-      padding: 1rem 1.5rem; border-top: 1px solid #2d3a55;
-      font-size: .82rem; color: var(--sidebar-text);
+      --card-border:    #1E1E2E;
+      --card-outer:     #FFFFFF;
+      --card-inner:     linear-gradient(145deg, #7B8ED8 0%, #9DAAE8 60%, #A8B5F0 100%);
+      --card-inner-dark: linear-gradient(145deg, #1A1E3D 0%, #242850 100%);
+      --card-inner-white:#FFFFFF;
+      --card-radius:    18px;
+      --card-border-w:  3px;
+
+      --accent-orange:  #F5A623;
+      --btn-orange:     #E89430;
+      --btn-orange-hover:#D07A20;
+      --accent-green:   #2ECC71;
+      --accent-red:     #E74C3C;
+
+      --screw-size:     14px;
+      --screw-bg:       radial-gradient(circle at 35% 35%, #E8E8E8, #A0A0A0);
+      --screw-border:   #808080;
+
+      --font:           'Outfit', 'Segoe UI', system-ui, sans-serif;
+      --text-dark:      #1E1E2E;
+      --text-white:     #FFFFFF;
+      --text-muted:     #6B7588;
     }
 
-    /* Main */
-    #main { margin-left: var(--sidebar-width); min-height: 100vh; }
-    #topbar {
-      background: #fff; padding: .75rem 1.5rem;
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid #e0e0e0; position: sticky; top: 0; z-index: 100;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg-base);
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: var(--text-dark);
+      position: relative;
+      isolation: isolate;
     }
-    #topbar .page-title { 
-      font-weight: 600; font-size: 1.05rem; margin: 0; 
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
-      padding-right: 1rem;
-    }
-    .content { padding: 1.5rem; }
 
-    /* Cards */
+    /* ---- BLOB BACKGROUND ---- */
+    .blob-bg {
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      z-index:-1; pointer-events:none; overflow:hidden;
+    }
+    .blob,
+    .blob * {
+      pointer-events: none !important;
+    }
+    .blob { position: absolute; border-radius: 50%; }
+    .blob-1 { width:600px; height:600px; background:var(--blob-blue); top:-100px; left:-120px; opacity:0.85; }
+    .blob-2 { width:550px; height:550px; background:var(--blob-purple); top:-60px; right:-80px; opacity:0.8; }
+    .blob-3 { width:500px; height:500px; background:var(--blob-blue); top:35%; right:-100px; opacity:0.7; }
+    .blob-4 { width:480px; height:480px; background:var(--blob-orange); bottom:-120px; left:10%; opacity:0.75; }
+    .blob-5 { width:520px; height:520px; background:var(--blob-purple); bottom:-100px; right:20%; opacity:0.6; }
+    .blob-6 { width:400px; height:400px; background:var(--blob-orange); top:20%; left:40%; opacity:0.4; }
+
+    /* ---- NAVIGATION HEADER ---- */
+    .nav-header {
+      position: fixed; top: 16px; left: 20px;
+      z-index: 1000;
+    }
+    .user-card {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card-outer);
+      border: var(--card-border-w) solid var(--card-border);
+      border-radius: 14px;
+      padding: 8px 18px 8px 10px;
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.15s;
+      user-select: none;
+    }
+    .user-card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      transform: translateY(-1px);
+    }
+    .user-avatar {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, #7B8ED8, #5B6FC1);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 1rem;
+    }
+    .user-info { display: flex; flex-direction: column; line-height: 1.2; }
+    .user-name {
+      font-weight: 800; font-size: 0.9rem; color: var(--text-dark);
+      white-space: nowrap;
+    }
+    .user-name .role-tag {
+      font-weight: 700; color: var(--accent-orange);
+      font-size: 0.8rem;
+    }
+
+    .nav-toggle-icon {
+      font-size: 0.7rem; color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+    .nav-dropdown {
+      position: absolute; top: calc(100% + 8px); left: 0;
+      background: var(--card-outer);
+      border: var(--card-border-w) solid var(--card-border);
+      border-radius: 14px;
+      min-width: 240px;
+      padding: 8px 0;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+      opacity: 0; visibility: hidden;
+      transform: translateY(-8px);
+      transition: all 0.2s ease;
+    }
+    .nav-dropdown.show {
+      opacity: 1; visibility: visible;
+      transform: translateY(0);
+    }
+    .nav-dropdown a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px;
+      color: var(--text-dark);
+      text-decoration: none;
+      font-weight: 600; font-size: 0.9rem;
+      transition: background 0.15s;
+    }
+    .nav-dropdown a:hover { background: #f0f2f5; }
+    .nav-dropdown a.active {
+      color: var(--accent-orange);
+      background: rgba(245,166,35,0.08);
+    }
+    .nav-dropdown a i { width: 18px; text-align: center; }
+    .nav-dropdown hr { margin: 4px 16px; border: none; border-top: 1px solid #e4e7ed; }
+    .nav-dropdown .logout-link { color: #E74C3C; }
+    .nav-dropdown .logout-link:hover { background: rgba(231,76,60,0.06); }
+
+    /* ---- PAGE CONTENT ---- */
+    .page-content {
+      position: relative;
+      padding: 80px 32px 40px;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    /* ---- FOLDER-TAB CARD SYSTEM ---- */
+    .folder-card { position: relative; margin-top: 32px; }
+    .folder-tab {
+      position: absolute;
+      top: -26px; left: 24px;
+      background: var(--card-outer);
+      border: var(--card-border-w) solid var(--card-border);
+      border-bottom: var(--card-border-w) solid var(--card-outer);
+      border-radius: 12px 12px 0 0;
+      padding: 4px 22px 2px;
+      font-weight: 800; font-size: 1.05rem;
+      color: var(--accent-orange);
+      z-index: 3; letter-spacing: 0.3px;
+    }
+    .folder-body {
+      background: var(--card-outer);
+      border: var(--card-border-w) solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 14px;
+      position: relative;
+    }
+    .folder-inner {
+      background: var(--card-inner);
+      border-radius: 14px;
+      padding: 28px;
+    }
+    .folder-inner.white { background: var(--card-inner-white); }
+    .folder-inner.dark { background: var(--card-inner-dark); }
+
+    .screw {
+      position: absolute;
+      width: var(--screw-size); height: var(--screw-size);
+      border-radius: 50%;
+      background: var(--screw-bg);
+      border: 2px solid var(--screw-border);
+      z-index: 2;
+    }
+    .screw-tl { top: 10px; left: 10px; }
+    .screw-tr { top: 10px; right: 10px; }
+    .screw-bl { bottom: 10px; left: 10px; }
+    .screw-br { bottom: 10px; right: 10px; }
+
+    /* ---- SECTION TITLE BAND ---- */
+    .section-title-band {
+      background: var(--card-outer);
+      border: var(--card-border-w) solid var(--card-border);
+      border-radius: 12px;
+      display: inline-block;
+      padding: 6px 28px 4px;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 4;
+    }
+    .section-title-band h2 {
+      font-weight: 900;
+      font-size: 1.2rem;
+      color: var(--text-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0;
+    }
+
+    /* ---- FORM ELEMENTS ---- */
+    .codeit-input {
+      width: 100%; padding: 10px 16px; border: none;
+      border-radius: 20px; background: #E8E4DC;
+      font-family: var(--font); font-size: 0.9rem; font-weight: 500;
+      color: var(--text-dark); outline: none;
+    }
+    .codeit-input:focus { box-shadow: 0 0 0 3px rgba(245,166,35,0.3); }
+    .codeit-input::placeholder { color: #A09888; }
+    .codeit-select {
+      width: 100%; padding: 10px 16px; border: none;
+      border-radius: 20px; background: #E8E4DC;
+      font-family: var(--font); font-size: 0.9rem; font-weight: 500;
+      color: var(--text-dark); outline: none;
+      cursor: pointer; appearance: none; -webkit-appearance: none;
+      padding-right: 40px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%231E1E2E' d='M1.41.59 6 5.17 10.59.59 12 2l-6 6-6-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 12px 8px;
+    }
+    .codeit-select-green {
+      background: var(--accent-green); color: #fff;
+      font-weight: 700;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23FFFFFF' d='M1.41.59 6 5.17 10.59.59 12 2l-6 6-6-6z'/%3E%3C/svg%3E");
+    }
+    .codeit-select-rect {
+      border-radius: 12px;
+      border: 2px solid var(--card-border);
+      padding: 8px 38px 8px 12px;
+      min-width: 112px;
+      background-color: #F3EEE6;
+      box-shadow: 0 2px 0 rgba(30, 30, 46, 0.08);
+    }
+    .codeit-label {
+      display: block; font-weight: 700; font-size: 0.9rem;
+      color: var(--text-dark); margin-bottom: 8px;
+    }
+    .codeit-label-white { color: var(--text-white); }
+
+    /* ---- BUTTONS ---- */
+    .btn-codeit {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 32px;
+      background: var(--btn-orange);
+      color: var(--text-dark);
+      border: 3px solid var(--card-border);
+      border-radius: 14px;
+      font-family: var(--font); font-weight: 800; font-size: 0.95rem;
+      cursor: pointer; transition: all 0.2s; text-decoration: none;
+    }
+    .btn-codeit:hover {
+      background: var(--btn-orange-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      color: var(--text-dark);
+    }
+    .btn-codeit-sm { padding: 8px 20px; font-size: 0.85rem; border-radius: 10px; border-width: 2px; }
+    .btn-codeit-green { background: var(--accent-green); color: #fff; }
+    .btn-codeit-green:hover { background: #27AE60; color: #fff; }
+    .btn-codeit-red { background: var(--accent-red); color: #fff; }
+    .btn-codeit-red:hover { background: #C0392B; color: #fff; }
+
+    /* ---- TABLES ---- */
+    .codeit-table {
+      width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88rem;
+    }
+    .codeit-table thead th {
+      background: #F0F0F0; color: var(--text-dark);
+      font-weight: 800; font-size: 0.8rem;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 12px 16px;
+      border-bottom: 2px solid var(--card-border);
+    }
+    .codeit-table thead th:first-child { border-radius: 10px 0 0 0; }
+    .codeit-table thead th:last-child  { border-radius: 0 10px 0 0; }
+    .codeit-table tbody td {
+      padding: 12px 16px; border-bottom: 1px solid #E8E8E8; vertical-align: middle;
+    }
+    .codeit-table tbody tr:last-child td { border-bottom: none; }
+    .codeit-table tbody tr:hover { background: #FAFBFD; }
+
+    .delete-btn {
+      color: var(--accent-red); font-weight: 800; font-size: 0.85rem;
+      background: none; border: none; cursor: pointer;
+      text-decoration: none;
+    }
+    .delete-btn:hover { text-decoration: underline; color: #C0392B; }
+
+    /* ---- BADGES ---- */
+    .badge-present  { background: #D4EDDA; color: #155724; font-weight: 700; }
+    .badge-late     { background: #FFF3CD; color: #856404; font-weight: 700; }
+    .badge-absent   { background: #F8D7DA; color: #721C24; font-weight: 700; }
+    .badge-pending  { background: #CFE2FF; color: #084298; font-weight: 700; }
+    .badge-active   { background: #D4EDDA; color: #155724; font-weight: 700; }
+    .badge-rejected { background: #F8D7DA; color: #721C24; font-weight: 700; }
+
+    /* ---- MESSAGES ---- */
+    .messages-container {
+      position: relative; z-index: 10;
+      max-width: 600px; margin: 0 auto;
+      padding: 80px 20px 0;
+    }
+    .messages-container + .page-content { padding-top: 16px; }
+    .messages-container .alert {
+      border-radius: 14px; border: 2px solid var(--card-border);
+      font-size: 0.9rem; font-weight: 600;
+    }
+
+    .modal-backdrop {
+      z-index: 1990 !important;
+    }
+
+    .modal {
+      z-index: 2000 !important;
+    }
+
+    .modal-dialog {
+      z-index: 2001;
+    }
+
+    /* ---- STAT CARDS ---- */
     .stat-card {
-      border: none; border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      background: var(--card-outer);
+      border: var(--card-border-w) solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      position: relative; overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     }
     .stat-card .icon {
-      width: 48px; height: 48px; border-radius: 10px;
+      width: 48px; height: 48px; border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
       font-size: 1.3rem;
     }
+    .stat-card .stat-value {
+      font-size: 1.8rem; font-weight: 800; line-height: 1; margin-top: .6rem;
+    }
+    .stat-card .stat-label {
+      font-size: .82rem; color: #8892a5; font-weight: 600; margin-top: .25rem;
+    }
 
-    /* Badges */
-    .badge-present  { background: #d4edda; color: #155724; }
-    .badge-late     { background: #fff3cd; color: #856404; }
-    .badge-absent   { background: #f8d7da; color: #721c24; }
-    .badge-pending  { background: #cfe2ff; color: #084298; }
-    .badge-active   { background: #d4edda; color: #155724; }
-    .badge-rejected { background: #f8d7da; color: #721c24; }
+    /* ---- SCROLLBAR ---- */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 
-    /* Mobile */
+    /* ---- RESPONSIVE ---- */
+    @media (max-width: 992px) { .page-content { padding: 80px 20px 30px; } }
     @media (max-width: 768px) {
-      #sidebar { transform: translateX(-100%); }
-      #sidebar.open { transform: translateX(0); }
-      #main { margin-left: 0; }
-      .content { padding: 1rem; }
-      .stat-card { padding: .75rem !important; }
-      .stat-card .icon { width: 38px; height: 38px; font-size: 1rem; }
-      .stat-card .fw-bold.fs-4 { font-size: 1.2rem !important; }
+      .page-content { padding: 72px 12px 24px; }
+      .folder-inner { padding: 18px; }
+      .folder-tab { font-size: 0.9rem; padding: 3px 16px 1px; top: -24px; }
+      .folder-card { margin-top: 28px; }
+      .blob-1 { width: 300px; height: 300px; }
+      .blob-2 { width: 350px; height: 350px; }
       .table { font-size: .82rem; }
       .btn-sm { font-size: .75rem; padding: .25rem .5rem; }
-      .sidebar-close-btn { display: block; }
-      #topbar { padding: .65rem 1rem; }
-      #topbar .page-title { font-size: .95rem; }
-      #sidebarToggle { flex-shrink: 0; }
     }
-
-    #sidebarOverlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5); z-index: 999;
-      opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-    }
-    #sidebarOverlay.show { opacity: 1; pointer-events: auto; }
-    .sidebar-close-btn {
-      display: none; position: absolute; top: 1.1rem; right: 1rem;
-      background: none; border: none; color: #fff; font-size: 1.5rem;
+    @media (max-width: 576px) {
+      .page-content { padding: 66px 8px 20px; }
+      .folder-inner { padding: 14px; }
+      .nav-header { top: 10px; left: 12px; }
     }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
 <body>
-<div id="sidebarOverlay"></div>
 
-<!-- Sidebar -->
-<div id="sidebar">
-  <button class="sidebar-close-btn" id="sidebarCloseBtn"><i class="fa fa-xmark"></i></button>
-  <div class="brand">
-    <span>CODE</span>-IT
-    {% if request.session.admin_role == 'chairperson' %}
-      <span class="role-badge">Chair</span>
-    {% elif request.session.admin_role == 'vits' %}
-      <span class="role-badge">VITS</span>
-    {% elif request.session.admin_role == 'representative' %}
-      <span class="role-badge">Rep</span>
-    {% endif %}
+<!-- Background Blobs -->
+<div class="blob-bg">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="blob blob-4"></div>
+  <div class="blob blob-5"></div>
+  <div class="blob blob-6"></div>
+</div>
+
+<!-- Navigation Header -->
+<div class="nav-header">
+  <div class="user-card" id="userCard">
+    <div class="user-avatar">
+      <i class="fa fa-user"></i>
+    </div>
+    <div class="user-info">
+      <span class="user-name">
+        {{ request.session.admin_name|default:"Admin" }}
+        &bull;
+        <span class="role-tag">
+          {% if request.session.admin_role == 'chairperson' %}Chairperson
+          {% elif request.session.admin_role == 'vits' %}VITS
+          {% elif request.session.admin_role == 'representative' %}Rep
+          {% else %}Admin{% endif %}
+        </span>
+      </span>
+    </div>
+    <i class="fa fa-chevron-down nav-toggle-icon" id="navToggleIcon"></i>
   </div>
-  <nav>
+  <div class="nav-dropdown" id="navDropdown">
     {% if request.session.admin_role == 'chairperson' %}
       <a href="{% url 'admin_panel:chairperson_dashboard' %}" class="{% block nav_dashboard %}{% endblock %}">
         <i class="fa fa-gauge"></i> Dashboard
@@ -160,97 +446,88 @@
     <a href="{% url 'admin_panel:students' %}" class="{% block nav_students %}{% endblock %}">
       <i class="fa fa-users"></i> Students
     </a>
-  </nav>
-  <div class="sidebar-footer">
-    <i class="fa fa-circle-user me-1"></i>
-    {{ request.session.admin_name|default:"Admin" }}
-    &nbsp;&middot;&nbsp;
-    <a href="{% url 'admin_panel:logout' %}" class="text-danger text-decoration-none">Logout</a>
+    <hr />
+    <a href="{% url 'admin_panel:logout' %}" class="logout-link">
+      <i class="fa fa-right-from-bracket"></i> Logout
+    </a>
   </div>
 </div>
 
-<!-- Main -->
-<div id="main">
-  <div id="topbar">
-    <span class="page-title">{% block page_title %}Dashboard{% endblock %}</span>
-    <button class="btn btn-sm btn-outline-secondary d-md-none" id="sidebarToggle">
-      <i class="fa fa-bars"></i>
-    </button>
-  </div>
+<!-- Messages -->
+{% if messages %}
+<div class="messages-container">
+  {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show" role="alert">
+      <i class="fa fa-circle-info me-1"></i> {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
 
-  <div class="content">
-    {% if messages %}
-      {% for msg in messages %}
-        <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show" role="alert"
-             style="border-radius:10px; font-size:.9rem;">
-          {{ msg }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-      {% endfor %}
-    {% endif %}
-
-    {% block content %}{% endblock %}
-  </div>
+<!-- Page Content -->
+<div class="page-content">
+  {% block content %}{% endblock %}
 </div>
 
-<!-- Force Password Change Modal (no close, no escape) -->
+<!-- Force Password Change Modal -->
 {% if force_password_change %}
 <div id="forcePasswordOverlay" style="
   position:fixed; top:0; left:0; right:0; bottom:0;
   background:rgba(0,0,0,.7); z-index:9999;
   display:flex; align-items:center; justify-content:center;
 ">
-  <div style="
-    background:#fff; border-radius:16px; padding:2rem; width:100%; max-width:420px;
-    box-shadow:0 20px 60px rgba(0,0,0,.3); text-align:center;
-  ">
-    <div style="
-      width:60px; height:60px; border-radius:50%;
-      background:linear-gradient(135deg, #ff6a3d, #e85a2d);
-      display:flex; align-items:center; justify-content:center;
-      margin:0 auto 1rem; color:#fff; font-size:1.5rem;
-    ">
-      <i class="fa fa-shield-halved"></i>
+  <div class="folder-card" style="width:100%; max-width:440px; margin:0 20px;">
+    <div class="folder-tab">Security</div>
+    <div class="folder-body">
+      <span class="screw screw-tl"></span>
+      <span class="screw screw-tr"></span>
+      <span class="screw screw-bl"></span>
+      <span class="screw screw-br"></span>
+      <div class="folder-inner white" style="text-align:center; padding:32px;">
+        <div style="width:60px; height:60px; border-radius:50%;
+             background:var(--btn-orange); display:flex; align-items:center;
+             justify-content:center; margin:0 auto 16px; color:#fff; font-size:1.5rem;">
+          <i class="fa fa-shield-halved"></i>
+        </div>
+        <h5 style="font-weight:800; color:var(--text-dark); margin-bottom:8px;">Change Your Password</h5>
+        <p style="color:var(--text-muted); font-size:.85rem; margin-bottom:24px;">
+          For security, you must change your default password.
+          Use at least <strong>8 characters</strong> with at least <strong>1 special character</strong>.
+        </p>
+        <form method="post" action="{% url 'admin_panel:force_change_password' %}" id="forcePwForm">
+          {% csrf_token %}
+          <div style="margin-bottom:14px; text-align:left;">
+            <label class="codeit-label" style="font-size:.82rem;">New Password</label>
+            <div style="position:relative;">
+              <input type="password" name="new_password" class="codeit-input" id="forcePwNew"
+                     placeholder="Min 8 chars, 1 special" required minlength="8" />
+              <button type="button" onclick="toggleForcePw(this)" style="
+                position:absolute; right:14px; top:50%; transform:translateY(-50%);
+                cursor:pointer; color:#8B8070; background:none; border:none; font-size:.85rem;">
+                <i class="fa fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div style="margin-bottom:14px; text-align:left;">
+            <label class="codeit-label" style="font-size:.82rem;">Confirm Password</label>
+            <div style="position:relative;">
+              <input type="password" name="confirm_password" class="codeit-input" id="forcePwConfirm"
+                     placeholder="Re-enter password" required />
+              <button type="button" onclick="toggleForcePw(this)" style="
+                position:absolute; right:14px; top:50%; transform:translateY(-50%);
+                cursor:pointer; color:#8B8070; background:none; border:none; font-size:.85rem;">
+                <i class="fa fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div id="forcePwError" style="display:none; color:#E74C3C; font-size:.82rem; margin-bottom:12px; font-weight:600;"></div>
+          <button type="submit" class="btn-codeit" style="width:100%;">
+            <i class="fa fa-key"></i> Set New Password
+          </button>
+        </form>
+      </div>
     </div>
-    <h5 style="font-weight:700; color:#1a2238; margin-bottom:.5rem;">Change Your Password</h5>
-    <p style="color:#6b7588; font-size:.85rem; margin-bottom:1.5rem;">
-      For security, you must change your default password before continuing.
-      Use at least <strong>8 characters</strong> with at least <strong>1 special character</strong>.
-    </p>
-    <form method="post" action="{% url 'admin_panel:force_change_password' %}" id="forcePwForm">
-      {% csrf_token %}
-      <div class="mb-3 text-start">
-        <label class="form-label fw-semibold small">New Password</label>
-        <div class="position-relative">
-          <input type="password" name="new_password" class="form-control" id="forcePwNew"
-                 placeholder="Min 8 chars, 1 special" required minlength="8"
-                 style="border-radius:10px; border:2px solid #e4e7ed; padding:.65rem 1rem; padding-right:2.5rem;" />
-          <button type="button" class="pw-toggle-force" onclick="toggleForcePw(this)" style="
-            position:absolute; right:12px; top:50%; transform:translateY(-50%);
-            cursor:pointer; color:#aab0c0; background:none; border:none; font-size:.9rem;
-          "><i class="fa fa-eye"></i></button>
-        </div>
-      </div>
-      <div class="mb-3 text-start">
-        <label class="form-label fw-semibold small">Confirm Password</label>
-        <div class="position-relative">
-          <input type="password" name="confirm_password" class="form-control" id="forcePwConfirm"
-                 placeholder="Re-enter password" required
-                 style="border-radius:10px; border:2px solid #e4e7ed; padding:.65rem 1rem; padding-right:2.5rem;" />
-          <button type="button" class="pw-toggle-force" onclick="toggleForcePw(this)" style="
-            position:absolute; right:12px; top:50%; transform:translateY(-50%);
-            cursor:pointer; color:#aab0c0; background:none; border:none; font-size:.9rem;
-          "><i class="fa fa-eye"></i></button>
-        </div>
-      </div>
-      <div id="forcePwError" class="text-danger small mb-2" style="display:none;"></div>
-      <button type="submit" class="btn w-100" style="
-        background:linear-gradient(135deg, #ff6a3d, #e85a2d);
-        color:#fff; border:none; border-radius:10px; font-weight:600; padding:.7rem;
-      ">
-        <i class="fa fa-key me-2"></i>Set New Password
-      </button>
-    </form>
   </div>
 </div>
 <script>
@@ -268,7 +545,6 @@
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(pw)) { e.preventDefault(); err.textContent = 'Must contain at least 1 special character.'; err.style.display = 'block'; return; }
     if (pw !== cpw) { e.preventDefault(); err.textContent = 'Passwords do not match.'; err.style.display = 'block'; return; }
   });
-  // Block escape key
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && document.getElementById('forcePasswordOverlay')) e.preventDefault();
   });
@@ -277,19 +553,43 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  const toggleBtn = document.getElementById('sidebarToggle');
-  const closeBtn = document.getElementById('sidebarCloseBtn');
+  /* Navigation dropdown */
+  const userCard = document.getElementById('userCard');
+  const navDropdown = document.getElementById('navDropdown');
+  const navToggleIcon = document.getElementById('navToggleIcon');
 
-  function toggleSidebar() {
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('show');
+  if (userCard && navDropdown) {
+    userCard.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isOpen = navDropdown.classList.toggle('show');
+      if (navToggleIcon) navToggleIcon.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0)';
+    });
+    document.addEventListener('click', function() {
+      navDropdown.classList.remove('show');
+      if (navToggleIcon) navToggleIcon.style.transform = 'rotate(0)';
+    });
+    navDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
   }
 
-  toggleBtn?.addEventListener('click', toggleSidebar);
-  closeBtn?.addEventListener('click', toggleSidebar);
-  overlay?.addEventListener('click', toggleSidebar);
+  function cleanupModalBackdrops() {
+    window.requestAnimationFrame(() => {
+      const openModals = document.querySelectorAll('.modal.show');
+      const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+
+      if (openModals.length === 0) {
+        backdrops.forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+        return;
+      }
+
+      backdrops.slice(0, -1).forEach(backdrop => backdrop.remove());
+    });
+  }
+
+  document.addEventListener('shown.bs.modal', cleanupModalBackdrops);
+  document.addEventListener('hidden.bs.modal', cleanupModalBackdrops);
 </script>
 {% block extra_js %}{% endblock %}
 </body>

@@ -57,6 +57,7 @@ urlpatterns = [
 
     # Students
     path('students/',                        views.students_view,        name='students'),
+    path('students/bulk-approve/',           views.students_bulk_approve_view, name='students_bulk_approve'),
     path('students/<uuid:pk>/approve/',      views.student_approve_view, name='student_approve'),
     path('students/<uuid:pk>/reject/',       views.student_reject_view,  name='student_reject'),
     path('students/<uuid:pk>/delete/',       views.student_delete_view,  name='student_delete'),

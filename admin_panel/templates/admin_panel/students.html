@@ -1,182 +1,245 @@
 {% extends 'admin_panel/base.html' %}
 
 {% block title %}Students{% endblock %}
-{% block page_title %}Student Management{% endblock %}
 {% block nav_students %}active{% endblock %}
 
+{% block extra_head %}
+<style>
+  #idPhotoModal,
+  #deleteStudentModal,
+  #rejectModal {
+    z-index: 1060;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- Filter tabs -->
-<div class="d-flex gap-2 mb-3 flex-wrap">
-  <a href="?status=all"      class="btn btn-sm {% if status_filter == 'all' %}btn-dark{% else %}btn-outline-secondary{% endif %}">All</a>
-  <a href="?status=pending"  class="btn btn-sm {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline-primary{% endif %}">Pending</a>
-  <a href="?status=active"   class="btn btn-sm {% if status_filter == 'active' %}btn-success{% else %}btn-outline-success{% endif %}">Active</a>
-  <a href="?status=rejected" class="btn btn-sm {% if status_filter == 'rejected' %}btn-danger{% else %}btn-outline-danger{% endif %}">Rejected</a>
+<div class="section-title-band" style="margin-bottom:12px;"><h2>Student Management</h2></div>
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <a href="?status=all{% if section_filter %}&section={{ section_filter }}{% endif %}" class="btn-codeit btn-codeit-sm" style="font-size:.82rem;padding:6px 16px;{% if status_filter == 'all' %}background:var(--card-border);color:#fff;{% else %}background:#E0E0E0;color:var(--text-dark);{% endif %}">All</a>
+    <a href="?status=pending{% if section_filter %}&section={{ section_filter }}{% endif %}" class="btn-codeit btn-codeit-sm" style="font-size:.82rem;padding:6px 16px;{% if status_filter == 'pending' %}background:#3B82F6;color:#fff;border-color:#3B82F6;{% else %}background:#E0E0E0;color:var(--text-dark);{% endif %}">Pending</a>
+    <a href="?status=active{% if section_filter %}&section={{ section_filter }}{% endif %}" class="btn-codeit btn-codeit-sm" style="font-size:.82rem;padding:6px 16px;{% if status_filter == 'active' %}background:#22C55E;color:#fff;border-color:#22C55E;{% else %}background:#E0E0E0;color:var(--text-dark);{% endif %}">Active</a>
+    <a href="?status=rejected{% if section_filter %}&section={{ section_filter }}{% endif %}" class="btn-codeit btn-codeit-sm" style="font-size:.82rem;padding:6px 16px;{% if status_filter == 'rejected' %}background:#EF4444;color:#fff;border-color:#EF4444;{% else %}background:#E0E0E0;color:var(--text-dark);{% endif %}">Rejected</a>
+  </div>
+  <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+    <input type="hidden" name="status" value="{{ status_filter }}" />
+    <select name="section" class="codeit-select" style="max-width:220px;font-size:.82rem;padding:6px 14px;" onchange="this.form.submit()">
+      <option value="">All Sections</option>
+      {% for section in sections %}
+      <option value="{{ section.id }}" {% if section_filter == section.id|stringformat:"s" %}selected{% endif %}>{{ section.name }}</option>
+      {% endfor %}
+    </select>
+    <span style="font-size:.82rem;color:var(--text-muted);font-weight:700;">
+      {% if page_obj.paginator.count %}
+      Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+      {% else %}
+      No students found
+      {% endif %}
+    </span>
+  </form>
 </div>
 
-<div class="card border-0 shadow-sm">
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>Student</th>
-            <th class="d-none d-lg-table-cell">Section</th>
-            <th class="d-none d-lg-table-cell">Year</th>
-            <th>Verification</th>
-            <th>Status</th>
-            <th class="d-none d-xl-table-cell">Registered</th>
-            <th class="text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for student in students %}
-          <tr class="align-middle">
-            <td>
-              <div class="fw-semibold">{{ student.name }}</div>
-              <div class="text-muted font-monospace" style="font-size:.7rem;">{{ student.student_id }}</div>
-              <div class="d-lg-none text-muted small mt-1">
-                <i class="fa fa-users me-1"></i>{{ student.section.name }} &middot; Year {{ student.year_level }}
-              </div>
-            </td>
-            <td class="d-none d-lg-table-cell">{{ student.section.name }}</td>
-            <td class="d-none d-lg-table-cell">{{ student.year_level }}</td>
-            <td>
-              {% if student.id_photo_path %}
-                <button type="button" class="btn btn-sm btn-outline-info"
-                        data-bs-toggle="modal" data-bs-target="#idPhotoModal"
-                        data-student-name="{{ student.name }}"
-                        data-photo-url="{% if student.id_photo_path|slice:':1' == '/' %}{{ student.id_photo_path }}{% else %}/media/{{ student.id_photo_path }}{% endif %}">
-                  <i class="fa fa-image"></i><span class="d-none d-sm-inline ms-1">View ID</span>
-                </button>
-              {% else %}
-                <span class="text-muted small">No photo</span>
+{% if admin_role != 'representative' %}
+<form id="bulkApproveForm" method="post" action="{% url 'admin_panel:students_bulk_approve' %}">
+  {% csrf_token %}
+</form>
+{% endif %}
+
+<div class="folder-card">
+  <div class="folder-tab">Students</div>
+  <div class="folder-body">
+    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
+    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
+    <div class="folder-inner white" style="padding:0;overflow:hidden;border-radius:14px;">
+      {% if admin_role != 'representative' %}
+      <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #E8E8E8;">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:.82rem;color:var(--text-dark);margin:0;">
+          <input type="checkbox" id="selectAll" onclick="toggleAll(this)" />
+          Select all visible
+        </label>
+        <button type="submit" form="bulkApproveForm" id="bulkApproveButton" class="btn-codeit btn-codeit-sm btn-codeit-green" style="font-size:.82rem;padding:8px 18px;" disabled>
+          <i class="fa fa-check-double me-1"></i>Approve Selected (<span id="selectedCount">0</span>)
+        </button>
+      </div>
+      {% endif %}
+      <div class="table-responsive">
+        <table class="codeit-table">
+          <thead>
+            <tr>
+              {% if admin_role != 'representative' %}
+              <th style="width:52px;text-align:center;">#</th>
               {% endif %}
-            </td>
-            <td>
-              <span class="badge rounded-pill badge-{{ student.status }} px-3 py-2">
-                {{ student.status|upper }}
-              </span>
-              {% if student.status == 'rejected' and student.rejection_note %}
-                <div class="text-muted small mt-1">{{ student.rejection_note }}</div>
-              {% endif %}
-            </td>
-            <td class="small text-muted d-none d-xl-table-cell">{{ student.created_at|date:"M d, Y" }}</td>
-            <td class="text-center">
-              <div class="d-flex flex-wrap justify-content-center gap-1">
-                {% if admin_role != 'representative' %}
-                  {% if student.status == 'pending' or student.status == 'rejected' %}
-                  <form method="post" action="{% url 'admin_panel:student_approve' student.id %}" class="d-inline">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-success" title="Approve">
-                      <i class="fa fa-check me-1"></i><span class="d-none d-md-inline">Approve</span>
-                    </button>
-                  </form>
-                  {% endif %}
-
-                  {% if student.status == 'active' %}
-                  <form method="post" action="{% url 'admin_panel:revoke_qr' student.id %}" class="d-inline"
-                        onsubmit="return confirm('Revoke and regenerate QR for {{ student.name }}?');">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-warning" title="Revoke & Regenerate QR Code">
-                      <i class="fa fa-rotate me-1"></i><span class="d-none d-md-inline">Revoke QR</span>
-                    </button>
-                  </form>
-                  {% endif %}
-
-                  {% if student.status == 'pending' or student.status == 'active' %}
-                  <button class="btn btn-sm btn-outline-danger" title="Reject"
-                          data-bs-toggle="modal" data-bs-target="#rejectModal"
-                          data-student-id="{{ student.id }}"
-                          data-student-name="{{ student.name }}">
-                    <i class="fa fa-xmark me-1"></i><span class="d-none d-md-inline">Reject</span>
-                  </button>
-                  {% endif %}
-
-                  <button class="btn btn-sm btn-danger" title="Delete Student"
-                          data-bs-toggle="modal" data-bs-target="#deleteStudentModal"
-                          data-student-id="{{ student.id }}"
-                          data-student-name="{{ student.name }}">
-                    <i class="fa fa-trash me-1"></i><span class="d-none d-md-inline">Delete</span>
-                  </button>
+              <th>Student</th>
+              <th class="d-none d-lg-table-cell">Section</th>
+              <th class="d-none d-lg-table-cell">Year</th>
+              <th>Verification</th>
+              <th>Status</th>
+              <th class="d-none d-xl-table-cell">Registered</th>
+              <th style="text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in page_obj %}
+            <tr>
+              {% if admin_role != 'representative' %}
+              <td style="text-align:center;">
+                {% if student.status == 'pending' or student.status == 'rejected' %}
+                <input type="checkbox" name="student_ids" value="{{ student.id }}" class="student-check" form="bulkApproveForm" onchange="updateSelectedCount()" />
+                {% else %}
+                <span style="color:var(--text-muted);font-size:.82rem;">-</span>
                 {% endif %}
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="8" class="text-center text-muted py-4">No students found.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              </td>
+              {% endif %}
+              <td>
+                <div style="font-weight:700;">{{ student.name }}</div>
+                <div style="color:var(--text-muted);font-family:monospace;font-size:.7rem;">{{ student.student_id }}</div>
+                <div class="d-lg-none" style="color:var(--text-muted);font-size:.75rem;margin-top:2px;">
+                  <i class="fa fa-users me-1"></i>{{ student.section.name }} &middot; Year {{ student.year_level }}
+                </div>
+              </td>
+              <td class="d-none d-lg-table-cell">{{ student.section.name }}</td>
+              <td class="d-none d-lg-table-cell">{{ student.year_level }}</td>
+              <td>
+                {% if student.id_photo_path %}
+                  <button type="button" class="btn btn-sm btn-outline-info" style="border-radius:8px;font-weight:700;font-size:.75rem;"
+                          data-bs-toggle="modal" data-bs-target="#idPhotoModal"
+                          data-student-name="{{ student.name }}"
+                          data-photo-url="{% if student.id_photo_path|slice:':1' == '/' %}{{ student.id_photo_path }}{% else %}/media/{{ student.id_photo_path }}{% endif %}">
+                    <i class="fa fa-image"></i><span class="d-none d-sm-inline ms-1">View ID</span>
+                  </button>
+                {% else %}
+                  <span style="color:var(--text-muted);font-size:.82rem;">No photo</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge rounded-pill badge-{{ student.status }} px-3 py-2" style="font-size:.75rem;">{{ student.status|upper }}</span>
+                {% if student.status == 'rejected' and student.rejection_note %}
+                  <div style="color:var(--text-muted);font-size:.72rem;margin-top:2px;">{{ student.rejection_note }}</div>
+                {% endif %}
+              </td>
+              <td class="d-none d-xl-table-cell" style="font-size:.82rem;color:var(--text-muted);">{{ student.created_at|date:"M d, Y" }}</td>
+              <td style="text-align:center;">
+                <div class="d-flex flex-wrap justify-content-center gap-1">
+                  {% if admin_role != 'representative' %}
+                    {% if student.status == 'pending' or student.status == 'rejected' %}
+                    <form method="post" action="{% url 'admin_panel:student_approve' student.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-success" title="Approve" style="border-radius:8px;font-weight:700;font-size:.75rem;">
+                        <i class="fa fa-check me-1"></i><span class="d-none d-md-inline">Approve</span>
+                      </button>
+                    </form>
+                    {% endif %}
+
+                    {% if student.status == 'active' %}
+                    <form method="post" action="{% url 'admin_panel:revoke_qr' student.id %}" class="d-inline"
+                          onsubmit="return confirm('Revoke and regenerate QR for {{ student.name }}?');">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-outline-warning" title="Revoke & Regenerate QR Code" style="border-radius:8px;font-weight:700;font-size:.75rem;">
+                        <i class="fa fa-rotate me-1"></i><span class="d-none d-md-inline">Revoke QR</span>
+                      </button>
+                    </form>
+                    {% endif %}
+
+                    {% if student.status == 'pending' or student.status == 'active' %}
+                    <button class="btn btn-sm btn-outline-danger" title="Reject" style="border-radius:8px;font-weight:700;font-size:.75rem;"
+                            data-bs-toggle="modal" data-bs-target="#rejectModal"
+                            data-student-id="{{ student.id }}" data-student-name="{{ student.name }}">
+                      <i class="fa fa-xmark me-1"></i><span class="d-none d-md-inline">Reject</span>
+                    </button>
+                    {% endif %}
+
+                    <button class="btn btn-sm btn-danger" title="Delete Student" style="border-radius:8px;font-weight:700;font-size:.75rem;"
+                            data-bs-toggle="modal" data-bs-target="#deleteStudentModal"
+                            data-student-id="{{ student.id }}" data-student-name="{{ student.name }}">
+                      <i class="fa fa-trash me-1"></i><span class="d-none d-md-inline">Delete</span>
+                    </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="{% if admin_role != 'representative' %}8{% else %}7{% endif %}" style="text-align:center;color:var(--text-muted);padding:32px;">No students found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if page_obj.paginator.num_pages > 1 %}
+      <div style="display:flex;justify-content:center;align-items:center;gap:12px;padding:16px;flex-wrap:wrap;border-top:1px solid #E8E8E8;">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">&lt; Prev</a>
+        {% endif %}
+        <span style="font-weight:700;font-size:.85rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">Next &gt;</a>
+        {% endif %}
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
 
 <!-- ID Photo Modal -->
-<div class="modal fade" id="idPhotoModal" tabindex="-1">
+<div class="modal fade" id="idPhotoModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
+    <div class="modal-content" style="border-radius:18px;border:3px solid var(--card-border);">
       <div class="modal-header border-0">
-        <h5 class="modal-title fw-semibold"><i class="fa fa-id-card me-2" style="color:#ff6a3d;"></i>ID Verification</h5>
+        <h5 class="modal-title" style="font-weight:800;"><i class="fa fa-id-card me-2" style="color:var(--accent-orange);"></i>ID Verification</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body text-center">
-        <p class="fw-semibold mb-2" id="idPhotoStudentName"></p>
+        <p style="font-weight:700;margin-bottom:8px;" id="idPhotoStudentName"></p>
         <img id="idPhotoImage" src="" alt="Student ID Photo"
-             style="max-width:100%; max-height:400px; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.15);" />
+             style="max-width:100%;max-height:400px;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.15);" />
       </div>
       <div class="modal-footer border-0">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        <button class="btn-codeit btn-codeit-sm" data-bs-dismiss="modal" style="background:#999;color:#fff;">Close</button>
       </div>
     </div>
   </div>
 </div>
+
 <!-- Delete student modal -->
-<div class="modal fade" id="deleteStudentModal" tabindex="-1">
+<div class="modal fade" id="deleteStudentModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
+    <div class="modal-content" style="border-radius:18px;border:3px solid var(--card-border);">
       <div class="modal-header border-0">
-        <h5 class="modal-title fw-semibold text-danger"><i class="fa fa-triangle-exclamation me-2"></i>Delete Student</h5>
+        <h5 class="modal-title" style="font-weight:800;color:var(--accent-red);"><i class="fa fa-triangle-exclamation me-2"></i>Delete Student</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         Are you sure you want to permanently delete <strong id="deleteStudentName"></strong>?
-        <div class="alert alert-warning mt-2 mb-0 py-2 small">
+        <div class="alert alert-warning mt-2 mb-0 py-2 small" style="border-radius:10px;">
           <i class="fa fa-warning me-1"></i>This will also delete their QR token and all attendance records.
         </div>
       </div>
       <div class="modal-footer border-0">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-        <form id="deleteStudentForm" method="post">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger btn-sm">
-            <i class="fa fa-trash me-1"></i>Delete
-          </button>
-        </form>
+        <button class="btn-codeit btn-codeit-sm" data-bs-dismiss="modal" style="background:#999;color:#fff;">Cancel</button>
+        <form id="deleteStudentForm" method="post">{% csrf_token %}<button type="submit" class="btn-codeit btn-codeit-sm btn-codeit-red"><i class="fa fa-trash"></i> Delete</button></form>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Reject modal -->
-<div class="modal fade" id="rejectModal" tabindex="-1">
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
+    <div class="modal-content" style="border-radius:18px;border:3px solid var(--card-border);">
       <div class="modal-header border-0">
-        <h5 class="modal-title fw-semibold">Reject Student</h5>
+        <h5 class="modal-title" style="font-weight:800;color:var(--accent-red);">Reject Student</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="rejectForm" method="post">
         {% csrf_token %}
         <div class="modal-body">
           <p>Reject <strong id="rejectStudentName"></strong>?</p>
-          <label class="form-label fw-semibold">Reason <span class="text-muted fw-normal">(optional)</span></label>
-          <textarea name="rejection_note" class="form-control" rows="2" placeholder="e.g. Invalid ID photo"></textarea>
+          <label style="font-weight:700;font-size:.88rem;">Reason <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+          <textarea name="rejection_note" class="codeit-input" rows="2" placeholder="e.g. Invalid ID photo" style="border-radius:12px;margin-top:6px;"></textarea>
         </div>
         <div class="modal-footer border-0">
-          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+          <button class="btn-codeit btn-codeit-sm" data-bs-dismiss="modal" style="background:#999;color:#fff;">Cancel</button>
+          <button type="submit" class="btn-codeit btn-codeit-sm btn-codeit-red">Reject</button>
         </div>
       </form>
     </div>
@@ -186,7 +249,25 @@
 
 {% block extra_js %}
 <script>
-  // ID Photo modal
+  function updateSelectedCount() {
+    const checks = Array.from(document.querySelectorAll('.student-check'));
+    const checkedCount = checks.filter(check => check.checked).length;
+    const bulkApproveButton = document.getElementById('bulkApproveButton');
+    const selectedCount = document.getElementById('selectedCount');
+    const selectAll = document.getElementById('selectAll');
+
+    if (selectedCount) selectedCount.textContent = checkedCount;
+    if (bulkApproveButton) bulkApproveButton.disabled = checkedCount === 0;
+    if (selectAll && checks.length) selectAll.checked = checkedCount > 0 && checkedCount === checks.length;
+  }
+
+  function toggleAll(source) {
+    document.querySelectorAll('.student-check').forEach(check => {
+      check.checked = source.checked;
+    });
+    updateSelectedCount();
+  }
+
   document.getElementById('idPhotoModal')?.addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     document.getElementById('idPhotoStudentName').textContent = btn.dataset.studentName;
@@ -196,26 +277,26 @@
   document.getElementById('rejectModal')?.addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     document.getElementById('rejectStudentName').textContent = btn.dataset.studentName;
-    document.getElementById('rejectForm').action =
-      `/admin-panel/students/${btn.dataset.studentId}/reject/`;
+    document.getElementById('rejectForm').action = `/admin-panel/students/${btn.dataset.studentId}/reject/`;
   });
 
   document.getElementById('deleteStudentModal')?.addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     document.getElementById('deleteStudentName').textContent = btn.dataset.studentName;
-    document.getElementById('deleteStudentForm').action =
-      `/admin-panel/students/${btn.dataset.studentId}/delete/`;
+    document.getElementById('deleteStudentForm').action = `/admin-panel/students/${btn.dataset.studentId}/delete/`;
   });
 
-  // Prevent double submission on Approve and QR buttons
+  // Prevent double submission
   document.querySelectorAll('form').forEach(form => {
     form.addEventListener('submit', function() {
       const btn = this.querySelector('button[type="submit"]');
-      if (btn && (this.action.includes('approve') || this.action.includes('generate-qr'))) {
+      if (btn && (this.action.includes('approve') || this.action.includes('bulk-approve') || this.action.includes('generate-qr'))) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Processing...';
       }
     });
   });
+
+  updateSelectedCount();
 </script>
 {% endblock %}

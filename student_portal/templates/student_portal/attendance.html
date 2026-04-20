@@ -2,88 +2,119 @@
 
 {% block title %}My Attendance{% endblock %}
 {% block nav_attendance %}active{% endblock %}
-{% block page_title %}Attendance History{% endblock %}
 
 {% block content %}
-<!-- Summary row -->
-<div class="row g-3 mb-4">
-  <div class="col-4 col-lg-2">
-    <div class="stat-card text-center py-3">
-      <div class="stat-value" style="color:#22c55e; font-size:1.5rem;">{{ present }}</div>
-      <div class="stat-label">Present</div>
-    </div>
-  </div>
-  <div class="col-4 col-lg-2">
-    <div class="stat-card text-center py-3">
-      <div class="stat-value" style="color:#f59e0b; font-size:1.5rem;">{{ late }}</div>
-      <div class="stat-label">Late</div>
-    </div>
-  </div>
-  <div class="col-4 col-lg-2">
-    <div class="stat-card text-center py-3">
-      <div class="stat-value" style="color:#ef4444; font-size:1.5rem;">{{ absent }}</div>
-      <div class="stat-label">Absent</div>
+<!-- Attendance Stats -->
+<div class="folder-card">
+  <div class="folder-tab">Attendance</div>
+  <div class="folder-body">
+    <span class="screw screw-tl"></span>
+    <span class="screw screw-tr"></span>
+    <span class="screw screw-bl"></span>
+    <span class="screw screw-br"></span>
+    <div class="folder-inner white" style="padding:20px;">
+      <div class="row g-3 mb-3">
+        <div class="col-4">
+          <div class="stat-pill">
+            <div class="stat-icon present"><i class="fa fa-circle-check"></i></div>
+            <div class="stat-label present">Present</div>
+            <div style="font-weight:800; font-size:1.3rem; color:#22C55E;">{{ present }}</div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="stat-pill">
+            <div class="stat-icon late"><i class="fa fa-exclamation-circle"></i></div>
+            <div class="stat-label late">Late</div>
+            <div style="font-weight:800; font-size:1.3rem; color:#F59E0B;">{{ late }}</div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="stat-pill">
+            <div class="stat-icon absent"><i class="fa fa-circle-xmark"></i></div>
+            <div class="stat-label absent">Absent</div>
+            <div style="font-weight:800; font-size:1.3rem; color:#EF4444;">{{ absent }}</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Attendance table -->
-<div class="card-panel">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="fa fa-clipboard-list me-2" style="color:#ff6a3d;"></i> All Records</span>
-    <span class="text-muted" style="font-size:.82rem;">{{ logs|length }} total</span>
-  </div>
-  <div class="card-body p-0">
-    {% if logs %}
-      <div class="table-responsive">
-        <table class="table-modern">
-          <thead>
-            <tr>
-              <th>Event</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Scanned At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for log in logs %}
-            <tr>
-              <td style="font-weight:600;">{{ log.event.name }}</td>
-              <td>{{ log.event.date|date:"M d, Y" }}</td>
-              <td>
-                <span class="badge badge-{{ log.status }} px-3 py-1"
-                      style="border-radius:20px; font-size:.78rem;">
-                  {% if log.status == 'present' %}
-                    <i class="fa fa-circle-check me-1"></i>
-                  {% elif log.status == 'late' %}
-                    <i class="fa fa-clock me-1"></i>
+<!-- All Records -->
+<div class="folder-card" style="margin-top:40px;">
+  <div class="folder-tab">All Records</div>
+  <div class="folder-body">
+    <span class="screw screw-tl"></span>
+    <span class="screw screw-tr"></span>
+    <span class="screw screw-bl"></span>
+    <span class="screw screw-br"></span>
+    <div class="folder-inner white" style="padding:0; overflow:hidden; border-radius:14px;">
+      {% if page_obj.paginator.count %}
+        <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #E8E8E8;">
+          <div style="font-weight:800;font-size:0.88rem;color:var(--text-dark);">Attendance History</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);font-weight:700;">
+            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="codeit-table">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Scanned At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in page_obj %}
+              <tr>
+                <td style="font-weight:700;">{{ log.event.name }}</td>
+                <td>{{ log.event.date|date:"M d, Y" }}</td>
+                <td>
+                  <span class="badge badge-{{ log.status }} px-3 py-1"
+                        style="border-radius:20px; font-size:0.78rem;">
+                    {% if log.status == 'present' %}
+                      <i class="fa fa-circle-check me-1"></i>
+                    {% elif log.status == 'late' %}
+                      <i class="fa fa-clock me-1"></i>
+                    {% else %}
+                      <i class="fa fa-circle-xmark me-1"></i>
+                    {% endif %}
+                    {{ log.status|upper }}
+                  </span>
+                </td>
+                <td>
+                  {% if log.scanned_at %}
+                    {{ log.scanned_at|date:"g:i:s A" }}
                   {% else %}
-                    <i class="fa fa-circle-xmark me-1"></i>
+                    <span style="color:var(--text-muted);">&mdash;</span>
                   {% endif %}
-                  {{ log.status|upper }}
-                </span>
-              </td>
-              <td>
-                {% if log.scanned_at %}
-                  {{ log.scanned_at|date:"g:i:s A" }}
-                {% else %}
-                  <span class="text-muted">&mdash;</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="empty-state">
-        <i class="fa fa-inbox"></i>
-        <p>No attendance records yet.</p>
-        <p class="text-muted" style="font-size:.82rem;">
-          Records will appear here after your QR is scanned at events.
-        </p>
-      </div>
-    {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div style="display:flex;justify-content:center;align-items:center;gap:12px;padding:16px;flex-wrap:wrap;border-top:1px solid #E8E8E8;">
+          {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">&lt; Prev</a>
+          {% endif %}
+          <span style="font-weight:700;font-size:0.85rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+          {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">Next &gt;</a>
+          {% endif %}
+        </div>
+        {% endif %}
+      {% else %}
+        <div style="text-align:center; padding:48px 20px; color:var(--text-muted);">
+          <i class="fa fa-inbox" style="font-size:2.5rem; opacity:0.4; margin-bottom:12px; display:block;"></i>
+          <p style="font-weight:600; margin-bottom:4px;">No attendance records yet.</p>
+          <p style="font-size:0.82rem;">Records will appear here after your QR is scanned at events.</p>
+        </div>
+      {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}

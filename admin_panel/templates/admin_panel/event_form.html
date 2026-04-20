@@ -1,73 +1,58 @@
 {% extends 'admin_panel/base.html' %}
 
 {% block title %}{{ action }} Event{% endblock %}
-{% block page_title %}{{ action }} Event{% endblock %}
 {% block nav_events %}active{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-7 col-lg-6">
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white fw-semibold">
-        <i class="fa fa-calendar-plus me-2 text-secondary"></i>{{ action }} Event
-      </div>
-      <div class="card-body">
-        <form method="post">
-          {% csrf_token %}
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Event Name</label>
-            {{ form.name }}
-            {% if form.name.errors %}
-              <div class="text-danger small">{{ form.name.errors.0 }}</div>
-            {% endif %}
-          </div>
-
-          <div class="row g-3 mb-3">
-            <div class="col-6">
-              <label class="form-label fw-semibold">Date</label>
-              {{ form.date }}
-              {% if form.date.errors %}
-                <div class="text-danger small">{{ form.date.errors.0 }}</div>
-              {% endif %}
+    <div class="folder-card">
+      <div class="folder-tab">{{ action }} Event</div>
+      <div class="folder-body">
+        <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
+        <span class="screw screw-bl"></span><span class="screw screw-br"></span>
+        <div class="folder-inner" style="padding:28px;">
+          <form method="post">
+            {% csrf_token %}
+            <div style="margin-bottom:16px;">
+              <label class="codeit-label">Event Name</label>
+              {{ form.name }}
+              {% if form.name.errors %}<div style="color:#E74C3C;font-size:.75rem;margin-top:4px;font-weight:600;">{{ form.name.errors.0 }}</div>{% endif %}
             </div>
-            <div class="col-6">
-              <label class="form-label fw-semibold">{{ form.start_time.label }}</label>
-              {{ form.start_time }}
-              <div class="form-text">Leave blank for manual start.</div>
-              {% if form.start_time.errors %}
-                <div class="text-danger small">{{ form.start_time.errors.0 }}</div>
-              {% endif %}
+            <div class="row g-3" style="margin-bottom:16px;">
+              <div class="col-6">
+                <label class="codeit-label">Date</label>
+                {{ form.date }}
+                {% if form.date.errors %}<div style="color:#E74C3C;font-size:.75rem;margin-top:4px;font-weight:600;">{{ form.date.errors.0 }}</div>{% endif %}
+              </div>
+              <div class="col-6">
+                <label class="codeit-label">{{ form.start_time.label }}</label>
+                {{ form.start_time }}
+                <div style="color:rgba(30,30,46,.45);font-size:.75rem;margin-top:4px;">Leave blank for manual start.</div>
+                {% if form.start_time.errors %}<div style="color:#E74C3C;font-size:.75rem;margin-top:4px;font-weight:600;">{{ form.start_time.errors.0 }}</div>{% endif %}
+              </div>
+              <div class="col-6">
+                <label class="codeit-label">{{ form.end_time.label }}</label>
+                {{ form.end_time }}
+                <div style="color:rgba(30,30,46,.45);font-size:.75rem;margin-top:4px;">Leave blank for manual end.</div>
+                {% if form.end_time.errors %}<div style="color:#E74C3C;font-size:.75rem;margin-top:4px;font-weight:600;">{{ form.end_time.errors.0 }}</div>{% endif %}
+              </div>
             </div>
-            <div class="col-6">
-              <label class="form-label fw-semibold">{{ form.end_time.label }}</label>
-              {{ form.end_time }}
-              <div class="form-text">Leave blank for manual end. Auto-switches to Exit Mode.</div>
-              {% if form.end_time.errors %}
-                <div class="text-danger small">{{ form.end_time.errors.0 }}</div>
-              {% endif %}
+            <div style="margin-bottom:20px;">
+              <label class="codeit-label">{{ form.late_cutoff_mins.label }}</label>
+              <div class="d-flex align-items-center gap-2">
+                {{ form.late_cutoff_mins }}
+                <span style="font-weight:700;font-size:.88rem;color:var(--text-dark);">minutes</span>
+              </div>
+              <div style="color:rgba(30,30,46,.45);font-size:.75rem;margin-top:4px;">Students who scan after this window are marked <strong>Late</strong>.</div>
+              {% if form.late_cutoff_mins.errors %}<div style="color:#E74C3C;font-size:.75rem;margin-top:4px;font-weight:600;">{{ form.late_cutoff_mins.errors.0 }}</div>{% endif %}
             </div>
-          </div>
-
-          <div class="mb-4">
-            <label class="form-label fw-semibold">{{ form.late_cutoff_mins.label }}</label>
-            <div class="input-group">
-              {{ form.late_cutoff_mins }}
-              <span class="input-group-text">minutes</span>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn-codeit"><i class="fa fa-save me-1"></i>{{ action }} Event</button>
+              <a href="{% url 'admin_panel:events' %}" class="btn-codeit" style="background:#999;color:#fff;">Cancel</a>
             </div>
-            <div class="form-text">Students who scan after this window are marked <strong>Late</strong>.</div>
-            {% if form.late_cutoff_mins.errors %}
-              <div class="text-danger small">{{ form.late_cutoff_mins.errors.0 }}</div>
-            {% endif %}
-          </div>
-
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn text-white" style="background:#ff6a3d;">
-              <i class="fa fa-save me-1"></i>{{ action }} Event
-            </button>
-            <a href="{% url 'admin_panel:events' %}" class="btn btn-outline-secondary">Cancel</a>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   </div>

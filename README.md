@@ -34,6 +34,11 @@ University attendance tracking system with QR code scanning, event management, a
 11. **Activity log**- Meron ng activity log na chairman lang nakakaaccess nakikita nya dito kung ano yung denelete, create, accept ng mga admins meron nadin tong filter na pwede mong isearch yung name ng admin para makita mo ano ginawa nila.
 12. **HTTPS** - gumagana na yung cam kasi nakakuha na nang certificate sa certbot ng azure para mas secure na kasi kanina di gumagana dahil naka HTTP lang
 13. **Fixed Login "Kick-Out" Bug** - since bawal mag login pag same broweser ang admin panel and chairperson dahil same lang naman sila ng session id na kapag pumunta kadon nag aauto logout inayos ko sya na if same browser yung gamit then for example nasa admin ka clinick mo chairperson mag aauto balik ka sa admin.
+14. **Overall UI/UX Polish** - Na-fix na natin yung z-index issues pag may binuksang modal na nagiging unclickable buttons, at yung "scan" button tinanggal ko sa *closed events*. Center aligned narin yung mga Donut Chart. Tapos sa Activity logs, di na uma-overlap ang mga title bands.
+15. **Pagination System** - Para di ka maumay kaka-scroll pag sobrang dami ng records, nag add ako ng Pagination sa lahat ng Data Tables like ung Logs, Students, Events, and Sections view natin. Set yan to 25 items per page display.
+16. **Advanced Table Filters & Batch Management** - Sa Student Management at Activity Logs, nadagdagan ng Date Range, Section filters, at may Checkbox "Select All" nang kasama pang *bulk approve*. Sa Admins Sections Overview, may Year Level menu filter narin.
+17. **QR Secure & Display** - Na-fix ko yung missing Token variable view sa dashboard kaya lalabas na yung actual na QR ID if Verified na. Tinago ko rin yung literal na text UUID ng QR nila kase di naman nila need basahin yun for security.
+18. **Session Expiry Indicator** - Nag add ako ng Live Countdown timer "Session" para sa portal ng students na mag-wa-warn kapag onting oras nalang bago mag expire yung browser auth nila.
 ---
 
 ## 🔗 Updated Endpoints

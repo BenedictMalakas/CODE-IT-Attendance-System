@@ -4,6 +4,7 @@ from functools import wraps
 
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.utils import timezone as dj_timezone
 
 from myapp.models import Student, Event, QRToken, AttendanceLog, Section
@@ -18,11 +19,18 @@ def hash_password(raw: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
+def build_pagination_query(request):
+    query = request.GET.copy()
+    query.pop('page', None)
+    return query.urlencode()
+
+
 def student_required(view_func):
     """Redirect to login if there is no active student session."""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.session.get('student_id'):
+            messages.warning(request, 'Your session has expired. Please log in again.')
             return redirect('student_portal:login')
         return view_func(request, *args, **kwargs)
     return wrapper
@@ -47,8 +55,9 @@ def login_view(request):
     if get_current_student(request):
         return redirect('student_portal:dashboard')
     elif request.session.get('student_id'):
-        # ID is in session but not in DB (likely deleted) - clear session
-        request.session.flush()
+        # Only clear student keys, don't flush entire session (protects admin sessions)
+        for key in ['student_id', 'student_name']:
+            request.session.pop(key, None)
 
     form = StudentLoginForm()
     if request.method == 'POST':
@@ -78,6 +87,7 @@ def register_view(request):
     if request.session.get('student_id'):
         return redirect('student_portal:dashboard')
 
+    sections = Section.objects.all().order_by('year_level', 'name')
     form = StudentRegisterForm()
     if request.method == 'POST':
         form = StudentRegisterForm(request.POST)
@@ -95,7 +105,7 @@ def register_view(request):
                     section = Section.objects.get(id=section_id)
                 except Section.DoesNotExist:
                     messages.error(request, 'Invalid section selected.')
-                    return render(request, 'student_portal/register.html', {'form': form})
+                    return render(request, 'student_portal/register.html', {'form': form, 'sections': sections})
 
                 # Handle ID photo upload
                 id_photo_path = ''
@@ -109,7 +119,7 @@ def register_view(request):
                     
                     if ext not in ['png', 'jpg', 'jpeg', 'webp']:
                         messages.error(request, 'Invalid file type. Only PNG, JPG, and WebP are allowed.')
-                        return render(request, 'student_portal/register.html', {'form': form})
+                        return render(request, 'student_portal/register.html', {'form': form, 'sections': sections})
 
                     safe_id = sid.replace('-', '_')
                     filename = f"id_photos/id_{safe_id}.{ext}"
@@ -140,7 +150,7 @@ def register_view(request):
                 )
                 return redirect('student_portal:login')
 
-    return render(request, 'student_portal/register.html', {'form': form})
+    return render(request, 'student_portal/register.html', {'form': form, 'sections': sections})
 
 
 def logout_view(request):
@@ -165,9 +175,11 @@ def dashboard_view(request):
     total_present = logs.filter(status='present').count()
     total_late    = logs.filter(status='late').count()
     total_absent  = logs.filter(status='absent').count()
+    qr_token = QRToken.objects.filter(student=student).first()
 
     context = {
         'student':       student,
+        'qr_token':      qr_token,
         'upcoming_events': events,
         'total_present': total_present,
         'total_late':    total_late,
@@ -215,13 +227,17 @@ def attendance_view(request):
         .select_related('event')
         .order_by('-event__date', '-scanned_at')
     )
+    paginator = Paginator(logs, 25)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
 
     return render(request, 'student_portal/attendance.html', {
         'student': student,
-        'logs':    logs,
+        'logs':    page_obj,
+        'page_obj': page_obj,
         'present': logs.filter(status='present').count(),
         'late':    logs.filter(status='late').count(),
         'absent':  logs.filter(status='absent').count(),
+        'pagination_query': build_pagination_query(request),
     })
 
 

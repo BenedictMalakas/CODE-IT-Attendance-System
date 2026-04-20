@@ -11,6 +11,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone as dj_timezone
 from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.core.mail import send_mail
 from django.conf import settings
@@ -132,6 +133,65 @@ def build_section_tiles_with_attendance(event=None):
     return tiles
 
 
+def build_pagination_query(request):
+    """Preserve current filters while swapping page numbers."""
+    query = request.GET.copy()
+    query.pop('page', None)
+    return query.urlencode()
+
+
+def ensure_student_qr(student):
+    """Create a QR token for a student when one does not already exist."""
+    import qrcode
+    from io import BytesIO
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+
+    existing = QRToken.objects.filter(student=student).first()
+    if existing:
+        saved_path = existing.qr_path or ''
+        if saved_path.startswith('/media/'):
+            saved_path = saved_path[len('/media/'):]
+        full_path = default_storage.path(saved_path) if saved_path and hasattr(default_storage, 'path') else saved_path
+        return existing, False, full_path
+
+    token = str(uuid.uuid4())
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(token)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color='black', back_color='white')
+
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+
+    safe_sid = student.student_id.replace('-', '_')
+    filename = f'qr_{safe_sid}.png'
+    relative_path = f'qr_codes/{filename}'
+
+    if default_storage.exists(relative_path):
+        default_storage.delete(relative_path)
+
+    saved_path = default_storage.save(relative_path, ContentFile(buffer.read()))
+    qr_relative = f'/media/{saved_path}'
+    full_path = default_storage.path(saved_path) if hasattr(default_storage, 'path') else saved_path
+
+    qr_token = QRToken.objects.create(
+        id=uuid.uuid4(),
+        student=student,
+        token=token,
+        qr_path=qr_relative,
+    )
+    return qr_token, True, full_path
+
+
+def activate_student_and_prepare_qr(student):
+    student.status = 'active'
+    student.rejection_note = None
+    student.save(update_fields=['status', 'rejection_note'])
+    return ensure_student_qr(student)
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
@@ -146,7 +206,9 @@ def login_view(request):
             return redirect('admin_panel:chairperson_dashboard')
         return redirect('admin_panel:dashboard')
     elif request.session.get('admin_id'):
-        request.session.flush()
+        # Only clear admin keys, don't flush entire session
+        for key in ['admin_id', 'admin_name', 'admin_role', 'force_password_change']:
+            request.session.pop(key, None)
 
     form = LoginForm()
     if request.method == 'POST':
@@ -281,7 +343,7 @@ def _vits_dashboard(request):
     total_logs       = AttendanceLog.objects.count()
     now              = ph_now()
     today            = now.date()
-    today_events     = Event.objects.filter(date=today, status='active')
+    today_events     = Event.objects.filter(date=today).order_by('start_time', 'name')
     recent_events    = Event.objects.order_by('-date', '-start_time')[:5]
 
     # Dashboard section overview: only show stats for active events (check-in phase)
@@ -489,7 +551,19 @@ def sections_manage_view(request):
         else:
             messages.error(request, 'Please fill in all fields.')
         return redirect('admin_panel:sections_manage')
-    return render(request, 'admin_panel/sections_manage.html', {'sections': sections_list})
+    year_filter = request.GET.get('year', 'all')
+    if year_filter in {'1', '2', '3', '4'}:
+        sections_list = [section for section in sections_list if str(section.year_level) == year_filter]
+
+    paginator = Paginator(sections_list, 25)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'admin_panel/sections_manage.html', {
+        'sections': page_obj,
+        'page_obj': page_obj,
+        'year_filter': year_filter,
+        'pagination_query': build_pagination_query(request),
+    })
 
 
 @role_required('chairperson')
@@ -617,8 +691,12 @@ def events_view(request):
     auto_update_event_statuses()
     role = request.session.get('admin_role')
     events = Event.objects.order_by('-date', '-start_time')
+    paginator = Paginator(events, 25)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
     return render(request, 'admin_panel/events.html', {
-        'events': events,
+        'events': page_obj,
+        'page_obj': page_obj,
+        'pagination_query': build_pagination_query(request),
         'admin_role': role,
         'force_password_change': request.session.get('force_password_change', False),
     })
@@ -951,6 +1029,8 @@ def attendance_view(request, event_id):
         section_ids = get_rep_section_ids(admin)
         logs = logs.filter(student__section_id__in=section_ids)
 
+    all_logs = logs
+
     # Check if event has ended
     event_ended = event.status in ('ended', 'closed')
 
@@ -962,7 +1042,7 @@ def attendance_view(request, event_id):
     checkin_tiles = []
     for sec in sections:
         total = all_students.filter(section=sec).count()
-        sec_logs = logs.filter(student__section=sec)
+        sec_logs = all_logs.filter(student__section=sec)
         present = sec_logs.filter(status='present').count()
         late = sec_logs.filter(status='late').count()
         absent = total - (present + late)
@@ -981,7 +1061,7 @@ def attendance_view(request, event_id):
     if event.status in ('ended', 'closed'):
         for sec in sections:
             total = all_students.filter(section=sec).count()
-            sec_logs = logs.filter(student__section=sec)
+            sec_logs = all_logs.filter(student__section=sec)
             checked_out = sec_logs.filter(scanned_out_at__isnull=False).count()
             missed_exit = total - checked_out
             if missed_exit < 0:
@@ -1003,7 +1083,7 @@ def attendance_view(request, event_id):
             final_present = 0
             final_absent = 0
             for st in sec_students:
-                log = logs.filter(student=st).first()
+                log = all_logs.filter(student=st).first()
                 checked_in = log and log.status in ('present', 'late') if log else False
                 checked_out = log and log.scanned_out_at is not None if log else False
                 is_final_present = checked_in and checked_out
@@ -1037,14 +1117,17 @@ def attendance_view(request, event_id):
     # Collect unique year levels and sections for dropdown filters
     year_levels = sorted(set(s.year_level for s in sections))
     section_names = [s.name for s in sections]
+    paginator = Paginator(all_logs, 25)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
 
     context = {
         'event':       event,
-        'logs':        logs,
-        'present':     logs.filter(status='present').count(),
-        'late':        logs.filter(status='late').count(),
-        'absent':      logs.filter(status='absent').count(),
-        'total':       logs.count(),
+        'logs':        page_obj,
+        'page_obj':    page_obj,
+        'present':     all_logs.filter(status='present').count(),
+        'late':        all_logs.filter(status='late').count(),
+        'absent':      all_logs.filter(status='absent').count(),
+        'total':       all_logs.count(),
         'event_ended': event_ended,
         'admin_role':  role,
         # Section overviews
@@ -1054,6 +1137,7 @@ def attendance_view(request, event_id):
         'student_final_list': student_final_list,
         'year_levels':   year_levels,
         'section_names': section_names,
+        'pagination_query': build_pagination_query(request),
     }
     return render(request, 'admin_panel/attendance.html', context)
 
@@ -1287,19 +1371,32 @@ def students_view(request):
     role  = request.session.get('admin_role')
 
     status_filter = request.GET.get('status', 'all')
-    students      = Student.objects.select_related('section').order_by('-created_at')
+    section_filter = request.GET.get('section', '')
+    students = Student.objects.select_related('section').order_by('-created_at')
+    sections = Section.objects.all().order_by('year_level', 'name')
 
     if role == 'representative':
         section_ids = get_rep_section_ids(admin)
         students = students.filter(section_id__in=section_ids)
+        sections = sections.filter(id__in=section_ids)
 
     if status_filter in ('pending', 'active', 'rejected'):
         students = students.filter(status=status_filter)
 
+    if section_filter:
+        students = students.filter(section_id=section_filter)
+
+    paginator = Paginator(students, 25)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
     return render(request, 'admin_panel/students.html', {
-        'students':      students,
+        'students':      page_obj,
+        'page_obj':      page_obj,
+        'sections':      sections,
         'status_filter': status_filter,
+        'section_filter': section_filter,
         'admin_role':    role,
+        'pagination_query': build_pagination_query(request),
         'force_password_change': request.session.get('force_password_change', False),
     })
 
@@ -1307,59 +1404,47 @@ def students_view(request):
 @role_required('chairperson', 'vits')
 @require_POST
 @transaction.atomic
+def students_bulk_approve_view(request):
+    student_ids = request.POST.getlist('student_ids')
+    if not student_ids:
+        messages.info(request, 'Select at least one student to approve.')
+        return redirect('admin_panel:students')
+
+    approved_count = 0
+    qr_created_count = 0
+    students = Student.objects.filter(id__in=student_ids).select_related('section')
+
+    for student in students:
+        if student.status in ('pending', 'rejected'):
+            _, qr_created, _ = activate_student_and_prepare_qr(student)
+            approved_count += 1
+            qr_created_count += int(qr_created)
+
+    if approved_count == 0:
+        messages.info(request, 'No selected students were eligible for approval.')
+    else:
+        log_activity(
+            request,
+            "Students Approved",
+            "Bulk Student Approval",
+            f"Approved {approved_count} student(s) in bulk."
+        )
+        messages.success(
+            request,
+            f'Approved {approved_count} student(s). Generated {qr_created_count} new QR code(s).'
+        )
+
+    return redirect('admin_panel:students')
+
+
+@role_required('chairperson', 'vits')
+@require_POST
+@transaction.atomic
 def student_approve_view(request, pk):
-    import os
-    import qrcode
-    from io import BytesIO
     from django.core.mail import EmailMessage
 
-    # Get the student record (removed select_for_update for better compatibility)
     student = get_object_or_404(Student, id=pk)
-    student.status         = 'active'
-    student.rejection_note = None
-    student.save()
-
-    # --- Auto-generate QR code on approval ---
-    qr_created = False
-    qr_file_path = ''
-
-    if not QRToken.objects.filter(student=student).exists():
-        token = str(uuid.uuid4())
-
-        # Generate the QR in memory using BytesIO
-        qr = qrcode.QRCode(version=1, box_size=10, border=4)
-        qr.add_data(token)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color='black', back_color='white')
-        
-        # Save to buffer
-        buffer = BytesIO()
-        img.save(buffer, format='PNG')
-        buffer.seek(0)
-
-        safe_sid = student.student_id.replace('-', '_')
-        filename = f'qr_{safe_sid}.png'
-        relative_path = f'qr_codes/{filename}'
-
-        # Save to storage (Azure/WhiteNoise friendly)
-        from django.core.files.storage import default_storage
-        from django.core.files.base import ContentFile
-        
-        if default_storage.exists(relative_path):
-            default_storage.delete(relative_path)
-        
-        saved_path = default_storage.save(relative_path, ContentFile(buffer.read()))
-        qr_relative = f'/media/{saved_path}'
-        full_path   = default_storage.path(saved_path) if hasattr(default_storage, 'path') else saved_path
-
-        QRToken.objects.create(
-            id=uuid.uuid4(),
-            student=student,
-            token=token,
-            qr_path=qr_relative,
-        )
-        qr_created = True
-        qr_file_path = full_path
+    _, qr_created, qr_file_path = activate_student_and_prepare_qr(student)
 
     # --- Email QR code to student ---
     if qr_created and student.email and qr_file_path:
@@ -1543,22 +1628,34 @@ def activity_logs_view(request):
     # Simple filtering
     action_query = request.GET.get('action_type', '')
     admin_query  = request.GET.get('admin_id', '')
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
 
     if action_query:
         logs = logs.filter(action=action_query)
     if admin_query:
         logs = logs.filter(admin_id=admin_query)
+    if date_from:
+        logs = logs.filter(created_at__date__gte=date_from)
+    if date_to:
+        logs = logs.filter(created_at__date__lte=date_to)
 
     # For filter dropdowns
     action_types = ActivityLog.objects.values_list('action', flat=True).distinct().order_by('action')
     admins       = Admin.objects.filter(is_active=True).order_by('name')
+    paginator = Paginator(logs, 25)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
 
     context = {
-        'logs':         logs,
+        'logs':         page_obj,
+        'page_obj':     page_obj,
         'action_types': action_types,
         'admins':       admins,
         'selected_action': action_query,
         'selected_admin':  admin_query,
+        'date_from':    date_from,
+        'date_to':      date_to,
+        'pagination_query': build_pagination_query(request),
         'admin_name':   request.session.get('admin_name', 'Admin'),
         'admin_role':   'chairperson',
     }

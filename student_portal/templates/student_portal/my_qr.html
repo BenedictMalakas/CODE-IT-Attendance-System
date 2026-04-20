@@ -2,80 +2,91 @@
 
 {% block title %}My QR Code{% endblock %}
 {% block nav_qr %}active{% endblock %}
-{% block page_title %}My QR Code{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-center">
-  <div style="width:100%; max-width:480px;">
-    <div class="card-panel text-center">
-      <div class="card-header">
-        <i class="fa fa-qrcode me-2" style="color:#ff6a3d;"></i> Your QR Code
-      </div>
-      <div class="card-body py-4">
-        {% if qr_token %}
-          <!-- QR Code display -->
-          <div id="qr-container" style="display:inline-block; padding:1.5rem; background:#fff;
-               border-radius:16px; box-shadow: 0 4px 20px rgba(0,0,0,.08); margin-bottom:1.5rem;">
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-md-8">
+    <div class="folder-card">
+      <div class="folder-tab">Your QR Code</div>
+      <div class="folder-body">
+        <span class="screw screw-tl"></span>
+        <span class="screw screw-tr"></span>
+        <span class="screw screw-bl"></span>
+        <span class="screw screw-br"></span>
+        <div class="folder-inner" style="text-align:center;">
+          {% if qr_token %}
             {% if qr_token.qr_path %}
-              <img src="{{ qr_token.qr_path }}" alt="QR Code"
-                   style="width:240px; height:240px; display:block; margin:0 auto; image-rendering:pixelated;"
-                   id="qr-img">
+              <div class="qr-frame" style="margin:0 auto 20px;">
+                <img src="{{ qr_token.qr_path }}" alt="QR Code"
+                     style="width:240px; height:240px;" id="qr-img" />
+              </div>
             {% else %}
-              <div style="width:240px; height:240px; display:flex; align-items:center; justify-content:center; background:#f8f9fb; border-radius:10px;">
-                <span style="color:#a0a8ba; font-size:.85rem;">QR not generated yet</span>
+              <div style="width:240px; height:240px; margin:0 auto 20px; border-radius:14px;
+                   background:rgba(255,255,255,0.15); display:flex; align-items:center;
+                   justify-content:center; flex-direction:column; gap:8px;">
+                <i class="fa fa-qrcode" style="font-size:3rem; color:rgba(255,255,255,0.4);"></i>
+                <span style="color:rgba(255,255,255,0.5); font-size:0.85rem; font-weight:600;">
+                  QR not generated yet
+                </span>
               </div>
             {% endif %}
-          </div>
 
-          <div style="margin-top:.5rem;">
-            <p style="font-size:.82rem; color:#8892a5; margin-bottom:.25rem;">Token</p>
-            <code style="background:#f0f2f5; padding:.4rem .8rem; border-radius:8px;
-                  font-size:.78rem; word-break:break-all; display:inline-block; max-width:100%;">
-              {{ qr_token.token }}
-            </code>
-          </div>
+            <!-- Token display -->
+            <div style="margin-bottom:20px;">
+              <span style="font-size:0.82rem; color:rgba(30,30,46,0.6); font-weight:600;">Token</span><br/>
+              <code style="background:rgba(255,255,255,0.3); padding:6px 14px; border-radius:10px;
+                    font-size:0.75rem; word-break:break-all; display:inline-block; max-width:100%;
+                    margin-top:4px; color:var(--text-dark); font-weight:600;">
+                {{ qr_token.token }}
+              </code>
+            </div>
 
-          <hr style="margin:1.5rem 0; border-color:#edf0f4;">
+            <hr style="border-color:rgba(255,255,255,0.2); margin:16px 0;" />
 
-          <div class="row text-start" style="max-width:360px; margin:0 auto;">
-            <div class="col-6 mb-2">
-              <span style="font-size:.78rem; color:#8892a5;">Name</span><br>
-              <strong style="font-size:.9rem; white-space:nowrap;">{{ student.first_name }} {{ student.last_name }}</strong>
+            <!-- Student info summary -->
+            <div class="row text-start" style="max-width:360px; margin:0 auto;">
+              <div class="col-6 mb-3">
+                <span style="font-size:0.78rem; color:rgba(30,30,46,0.5); font-weight:600;">Name</span><br/>
+                <strong style="font-size:0.9rem;">{{ student.first_name }} {{ student.last_name }}</strong>
+              </div>
+              <div class="col-6 mb-3">
+                <span style="font-size:0.78rem; color:rgba(30,30,46,0.5); font-weight:600;">Student ID</span><br/>
+                <strong style="font-size:0.9rem;">{{ student.student_id }}</strong>
+              </div>
+              <div class="col-6">
+                <span style="font-size:0.78rem; color:rgba(30,30,46,0.5); font-weight:600;">Section</span><br/>
+                <strong style="font-size:0.9rem;">{{ student.section.name }}</strong>
+              </div>
+              <div class="col-6">
+                <span style="font-size:0.78rem; color:rgba(30,30,46,0.5); font-weight:600;">Status</span><br/>
+                <span class="badge badge-{{ student.status }} px-3 py-1"
+                      style="border-radius:20px; font-size:0.78rem;">{{ student.status|upper }}</span>
+              </div>
             </div>
-            <div class="col-6 mb-2">
-              <span style="font-size:.78rem; color:#8892a5;">Student ID</span><br>
-              <strong style="font-size:.9rem;">{{ student.student_id }}</strong>
-            </div>
-            <div class="col-6">
-              <span style="font-size:.78rem; color:#8892a5;">Section</span><br>
-              <strong style="font-size:.9rem;">{{ student.section.name }}</strong>
-            </div>
-            <div class="col-6">
-              <span style="font-size:.78rem; color:#8892a5;">Status</span><br>
-              <span class="badge badge-{{ student.status }} px-3 py-1">{{ student.status|upper }}</span>
-            </div>
-          </div>
 
-          {% if qr_token.qr_path %}
-          <div class="mt-4">
-            <a href="{{ qr_token.qr_path }}" download="CODE-IT_QR_{{ student.student_id }}.png"
-               class="btn btn-accent">
-              <i class="fa fa-download me-2"></i>Download QR
-            </a>
-          </div>
+            {% if qr_token.qr_path %}
+            <div style="margin-top:24px;">
+              <a href="{{ qr_token.qr_path }}" download="CODE-IT_QR_{{ student.student_id }}.png"
+                 class="btn-codeit">
+                <i class="fa fa-download"></i> Download QR
+              </a>
+            </div>
+            {% endif %}
+
+          {% else %}
+            <!-- No QR yet -->
+            <div style="padding:40px 20px;">
+              <div style="width:100px; height:100px; margin:0 auto 20px; border-radius:50%;
+                   background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center;">
+                <i class="fa fa-qrcode" style="font-size:2.5rem; color:rgba(255,255,255,0.4);"></i>
+              </div>
+              <h5 style="font-weight:800; color:var(--text-dark);">No QR Code Yet</h5>
+              <p style="color:rgba(30,30,46,0.6); font-size:0.9rem; max-width:300px; margin:8px auto 0;">
+                Your QR code will be generated once your account is approved by an admin.
+              </p>
+            </div>
           {% endif %}
-        {% else %}
-          <div class="empty-state">
-            <div style="width:100px; height:100px; margin:0 auto 1.2rem; border-radius:50%;
-                 background:rgba(255,106,61,.08); display:flex; align-items:center; justify-content:center;">
-              <i class="fa fa-qrcode" style="font-size:2.5rem; color:#ff6a3d;"></i>
-            </div>
-            <h5 style="font-weight:700; color:#1a2238;">No QR Code Yet</h5>
-            <p style="color:#8892a5; font-size:.9rem; max-width:300px; margin:0 auto;">
-              Your QR code will be generated once your account is approved by an admin.
-            </p>
-          </div>
-        {% endif %}
+        </div>
       </div>
     </div>
   </div>

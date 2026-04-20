@@ -1,7 +1,6 @@
 {% extends 'admin_panel/base.html' %}
 
 {% block title %}Chairperson Dashboard{% endblock %}
-{% block page_title %}Chairperson Dashboard{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
 
 {% block extra_head %}
@@ -10,48 +9,36 @@
 
 {% block content %}
 <!-- Stat cards -->
-<div class="row g-2 mb-3">
+<div class="row g-3 mb-4">
   <div class="col-6 col-lg-3">
-    <div class="card stat-card p-2">
-      <div class="d-flex align-items-center gap-2">
-        <div class="icon" style="background:#e8f4fd; width:36px; height:36px; flex-shrink:0;"><i class="fa fa-calendar-days text-primary" style="font-size:.85rem;"></i></div>
-        <div>
-          <div class="fw-bold fs-5">{{ total_events }}</div>
-          <div class="text-muted" style="font-size:.75rem;">Total Events</div>
-        </div>
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:rgba(59,130,246,.12); color:#3B82F6;"><i class="fa fa-calendar-days"></i></div>
+        <div><div class="stat-value" style="color:#3B82F6;">{{ total_events }}</div><div class="stat-label">Total Events</div></div>
       </div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="card stat-card p-2">
-      <div class="d-flex align-items-center gap-2">
-        <div class="icon" style="background:#e9f9ee; width:36px; height:36px; flex-shrink:0;"><i class="fa fa-users text-success" style="font-size:.85rem;"></i></div>
-        <div>
-          <div class="fw-bold fs-5">{{ total_students }}</div>
-          <div class="text-muted" style="font-size:.75rem;">Active Students</div>
-        </div>
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:rgba(34,197,94,.12); color:#22C55E;"><i class="fa fa-users"></i></div>
+        <div><div class="stat-value" style="color:#22C55E;">{{ total_students }}</div><div class="stat-label">Active Students</div></div>
       </div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="card stat-card p-2">
-      <div class="d-flex align-items-center gap-2">
-        <div class="icon" style="background:#fff8e1; width:36px; height:36px; flex-shrink:0;"><i class="fa fa-layer-group text-warning" style="font-size:.85rem;"></i></div>
-        <div>
-          <div class="fw-bold fs-5">{{ total_sections }}</div>
-          <div class="text-muted" style="font-size:.75rem;">Sections</div>
-        </div>
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:rgba(245,158,11,.12); color:#F59E0B;"><i class="fa fa-layer-group"></i></div>
+        <div><div class="stat-value" style="color:#F59E0B;">{{ total_sections }}</div><div class="stat-label">Sections</div></div>
       </div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="card stat-card p-2">
-      <div class="d-flex align-items-center gap-2">
-        <div class="icon" style="background:#fce8f3; width:36px; height:36px; flex-shrink:0;"><i class="fa fa-user-shield" style="color:#c0399e; font-size:.85rem;"></i></div>
-        <div>
-          <div class="fw-bold fs-5">{{ total_admins }}</div>
-          <div class="text-muted" style="font-size:.75rem;">Officers & Reps</div>
-        </div>
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon" style="background:rgba(168,85,247,.12); color:#A855F7;"><i class="fa fa-user-shield"></i></div>
+        <div><div class="stat-value" style="color:#A855F7;">{{ total_admins }}</div><div class="stat-label">Officers & Reps</div></div>
       </div>
     </div>
   </div>
@@ -59,128 +46,115 @@
 
 <!-- Chart -->
 {% if all_events %}
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
-    <span style="font-size:.9rem;"><i class="fa fa-chart-line me-2 text-secondary"></i>Attendance Summary</span>
-    <div class="d-flex gap-2 flex-wrap">
-      <select id="chartType" class="form-select form-select-sm" style="max-width:130px;">
-        <option value="bar">Bar Graph</option>
-        <option value="line">Line Graph</option>
-        <option value="doughnut">Donut Chart</option>
-      </select>
-      <select id="eventSelect" class="form-select form-select-sm" style="max-width:240px;">
-        {% for evt in all_events %}
-          <option value="{{ evt.id }}">{{ evt.name }} — {{ evt.date }}</option>
-        {% endfor %}
-      </select>
-    </div>
-  </div>
-  <div class="card-body py-2">
-    <div id="chartContainer" style="max-width:320px; max-height:220px; margin:0 auto;">
-      <canvas id="attendanceChart"></canvas>
+<div class="folder-card">
+  <div class="folder-tab">Attendance Summary</div>
+  <div class="folder-body">
+    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
+    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
+    <div class="folder-inner white" style="padding:20px;">
+      <div class="d-flex gap-2 flex-wrap mb-3 justify-content-center">
+        <select id="chartType" class="codeit-select" style="max-width:140px;padding:6px 14px;font-size:.82rem;">
+          <option value="bar">Bar Graph</option><option value="line">Line Graph</option><option value="doughnut">Donut Chart</option>
+        </select>
+        <select id="eventSelect" class="codeit-select" style="max-width:260px;padding:6px 14px;font-size:.82rem;">
+          {% for evt in all_events %}<option value="{{ evt.id }}">{{ evt.name }} — {{ evt.date }}</option>{% endfor %}
+        </select>
+      </div>
+      <div id="chartContainer" style="width:280px;height:280px;max-width:280px;max-height:280px;margin:0 auto;position:relative;">
+        <canvas id="attendanceChart"></canvas>
+      </div>
     </div>
   </div>
 </div>
 {% endif %}
 
-<!-- Section tiles with attendance -->
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-header bg-white fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
-    <span style="font-size:.9rem;"><i class="fa fa-th-large me-2 text-secondary"></i>Sections Overview</span>
-    <div class="d-flex align-items-center gap-2">
-      {% if active_events %}
-      <form method="get" action="" class="d-inline">
-        <select name="event_id" class="form-select form-select-sm" style="max-width:240px;" onchange="this.form.submit();">
-          <option value="">— Select Active Event —</option>
-          {% for evt in active_events %}
-            <option value="{{ evt.id }}" {% if selected_event_id == evt.id|stringformat:"s" %}selected{% endif %}>
-              {{ evt.name }} — {{ evt.date }}
-            </option>
-          {% endfor %}
-        </select>
-      </form>
-      {% endif %}
-      <a href="{% url 'admin_panel:sections_manage' %}" class="btn btn-sm btn-outline-secondary">Manage</a>
-    </div>
-  </div>
-  <div class="card-body py-2">
-    <div class="row g-2">
-      {% for tile in section_tiles %}
-      <div class="col-6 col-md-4 col-lg-3">
-        <div class="card border p-2 text-center" style="border-radius:10px;">
-          <div class="fw-bold" style="font-size:.9rem;">{{ tile.section.name }}</div>
-          <div class="text-muted" style="font-size:.7rem;">Year {{ tile.section.year_level }}</div>
-          <div class="mt-1">
-            <span class="badge bg-success px-2" style="font-size:.65rem;">{{ tile.active_students }} students</span>
-          </div>
-          <div class="mt-1 d-flex justify-content-center gap-1 flex-wrap">
-            <span class="badge badge-present px-2 py-1" style="font-size:.65rem;">
-              <i class="fa fa-check me-1"></i>{{ tile.present }}
-            </span>
-            <span class="badge badge-late px-2 py-1" style="font-size:.65rem;">
-              <i class="fa fa-clock me-1"></i>{{ tile.late }}
-            </span>
-            <span class="badge badge-absent px-2 py-1" style="font-size:.65rem;">
-              <i class="fa fa-xmark me-1"></i>{{ tile.absent }}
-            </span>
+<!-- Section tiles -->
+<div class="folder-card" style="margin-top:40px;">
+  <div class="folder-tab">Sections Overview</div>
+  <div class="folder-body">
+    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
+    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
+    <div class="folder-inner white" style="padding:20px;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <select id="sectionYearFilter" class="codeit-select codeit-select-rect" style="max-width:160px;font-size:.82rem;">
+            <option value="1">1st Year</option>
+            <option value="2">2nd Year</option>
+            <option value="3">3rd Year</option>
+            <option value="4">4th Year</option>
+            <option value="all">All Years</option>
+          </select>
+        {% if active_events %}
+        <form method="get" action="" style="display:inline;">
+          <select name="event_id" class="codeit-select" style="max-width:260px;padding:6px 14px;font-size:.82rem;" onchange="this.form.submit();">
+            <option value="">— Select Active Event —</option>
+            {% for evt in active_events %}
+              <option value="{{ evt.id }}" {% if selected_event_id == evt.id|stringformat:"s" %}selected{% endif %}>{{ evt.name }} — {{ evt.date }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+        </div>
+        <a href="{% url 'admin_panel:sections_manage' %}" class="btn-codeit btn-codeit-sm" style="font-size:.78rem;padding:4px 14px;">Manage</a>
+      </div>
+      <div class="row g-2">
+        {% for tile in section_tiles %}
+        <div class="col-6 col-md-4 col-lg-3 section-tile" data-year="{{ tile.section.year_level }}">
+          <div style="border:2px solid var(--card-border);border-radius:14px;padding:12px;text-align:center;background:#FAFBFD;">
+            <div style="font-weight:800;font-size:.9rem;">{{ tile.section.name }}</div>
+            <div style="font-size:.7rem;color:var(--text-muted);">Year {{ tile.section.year_level }}</div>
+            <div style="margin-top:6px;"><span class="badge bg-success px-2" style="font-size:.65rem;">{{ tile.active_students }} students</span></div>
+            <div style="margin-top:6px;display:flex;justify-content:center;gap:4px;flex-wrap:wrap;">
+              <span class="badge badge-present px-2 py-1" style="font-size:.65rem;"><i class="fa fa-check me-1"></i>{{ tile.present }}</span>
+              <span class="badge badge-late px-2 py-1" style="font-size:.65rem;"><i class="fa fa-clock me-1"></i>{{ tile.late }}</span>
+              <span class="badge badge-absent px-2 py-1" style="font-size:.65rem;"><i class="fa fa-xmark me-1"></i>{{ tile.absent }}</span>
+            </div>
           </div>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
     </div>
   </div>
 </div>
 
 <!-- Quick links -->
-<div class="row g-2">
+<div class="row g-3" style="margin-top:20px;">
   <div class="col-md-3">
-    <a href="{% url 'admin_panel:admins_manage' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:10px;">
-      <div class="d-flex align-items-center gap-3">
-        <div style="background:rgba(255,106,61,.1); width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-          <i class="fa fa-user-gear" style="color:#ff6a3d; font-size:1.1rem;"></i>
-        </div>
-        <div>
-          <div class="fw-bold" style="font-size:.9rem;">Admins</div>
-          <div class="text-muted" style="font-size:.7rem;">Officers & Reps</div>
+    <a href="{% url 'admin_panel:admins_manage' %}" style="text-decoration:none;">
+      <div class="stat-card">
+        <div class="d-flex align-items-center gap-3">
+          <div class="icon" style="background:rgba(245,166,35,.12); color:var(--accent-orange);"><i class="fa fa-user-gear"></i></div>
+          <div><div style="font-weight:800;font-size:.9rem;color:var(--text-dark);">Admins</div><div class="stat-label">Officers & Reps</div></div>
         </div>
       </div>
     </a>
   </div>
   <div class="col-md-3">
-    <a href="{% url 'admin_panel:events' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:10px;">
-      <div class="d-flex align-items-center gap-3">
-        <div style="background:#e8f4fd; width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-          <i class="fa fa-calendar-days text-primary" style="font-size:1.1rem;"></i>
-        </div>
-        <div>
-          <div class="fw-bold" style="font-size:.9rem;">Events</div>
-          <div class="text-muted" style="font-size:.7rem;">Schedules & Status</div>
+    <a href="{% url 'admin_panel:events' %}" style="text-decoration:none;">
+      <div class="stat-card">
+        <div class="d-flex align-items-center gap-3">
+          <div class="icon" style="background:rgba(59,130,246,.12); color:#3B82F6;"><i class="fa fa-calendar-days"></i></div>
+          <div><div style="font-weight:800;font-size:.9rem;color:var(--text-dark);">Events</div><div class="stat-label">Schedules & Status</div></div>
         </div>
       </div>
     </a>
   </div>
   <div class="col-md-3">
-    <a href="{% url 'admin_panel:students' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:10px;">
-      <div class="d-flex align-items-center gap-3">
-        <div style="background:#e9f9ee; width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-          <i class="fa fa-users text-success" style="font-size:1.1rem;"></i>
-        </div>
-        <div>
-          <div class="fw-bold" style="font-size:.9rem;">Students</div>
-          <div class="text-muted" style="font-size:.7rem;">Approvals & Portal</div>
+    <a href="{% url 'admin_panel:students' %}" style="text-decoration:none;">
+      <div class="stat-card">
+        <div class="d-flex align-items-center gap-3">
+          <div class="icon" style="background:rgba(34,197,94,.12); color:#22C55E;"><i class="fa fa-users"></i></div>
+          <div><div style="font-weight:800;font-size:.9rem;color:var(--text-dark);">Students</div><div class="stat-label">Approvals & Portal</div></div>
         </div>
       </div>
     </a>
   </div>
   <div class="col-md-3">
-    <a href="{% url 'admin_panel:activity_logs' %}" class="card border-0 shadow-sm p-3 text-decoration-none text-dark" style="border-radius:10px;">
-      <div class="d-flex align-items-center gap-3">
-        <div style="background:#fce8f3; width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-          <i class="fa fa-clipboard-list" style="color:#c0399e; font-size:1.1rem;"></i>
-        </div>
-        <div>
-          <div class="fw-bold" style="font-size:.9rem;">Activity Logs</div>
-          <div class="text-muted" style="font-size:.7rem;">System Audit Trail</div>
+    <a href="{% url 'admin_panel:activity_logs' %}" style="text-decoration:none;">
+      <div class="stat-card">
+        <div class="d-flex align-items-center gap-3">
+          <div class="icon" style="background:rgba(168,85,247,.12); color:#A855F7;"><i class="fa fa-clipboard-list"></i></div>
+          <div><div style="font-weight:800;font-size:.9rem;color:var(--text-dark);">Activity Logs</div><div class="stat-label">System Audit Trail</div></div>
         </div>
       </div>
     </a>
@@ -192,98 +166,56 @@
 <script>
   const chartCtx = document.getElementById('attendanceChart')?.getContext('2d');
   let chart = null;
+  let cachedData = null;
 
   function buildChart(type, data) {
     if (chart) chart.destroy();
-
     const container = document.getElementById('chartContainer');
     if (container) {
       if (type === 'doughnut') {
-        container.style.maxWidth = '320px';
-        container.style.maxHeight = '220px';
+        container.style.width = '280px';
+        container.style.height = '280px';
+        container.style.maxWidth = '280px';
+        container.style.maxHeight = '280px';
       } else {
+        container.style.width = '100%';
+        container.style.height = '350px';
         container.style.maxWidth = '100%';
         container.style.maxHeight = '350px';
       }
     }
-
     if (type === 'doughnut') {
-      const totalPresent = data.present.reduce((a, b) => a + b, 0);
-      const totalLate    = data.late.reduce((a, b) => a + b, 0);
-      const totalAbsent  = data.absent.reduce((a, b) => a + b, 0);
-      chart = new Chart(chartCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Present', 'Late', 'Absent'],
-          datasets: [{
-            data: [totalPresent, totalLate, totalAbsent],
-            backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
-            borderWidth: 2,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          cutout: '55%',
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } },
-        },
-      });
+      const tp = data.present.reduce((a,b)=>a+b,0), tl = data.late.reduce((a,b)=>a+b,0), ta = data.absent.reduce((a,b)=>a+b,0);
+      chart = new Chart(chartCtx, { type:'doughnut', data:{labels:['Present','Late','Absent'],datasets:[{data:[tp,tl,ta],backgroundColor:['#22C55E','#F59E0B','#EF4444'],borderWidth:2}]}, options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:8,font:{size:11,family:'Outfit'}}}}} });
     } else {
-      chart = new Chart(chartCtx, {
-        type: type,
-        data: {
-          labels: data.labels,
-          datasets: [
-            {
-              label: 'Present', data: data.present,
-              borderColor: '#28a745', backgroundColor: type === 'bar' ? '#28a745' : 'rgba(40,167,69,.1)',
-              tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 4 : 0,
-            },
-            {
-              label: 'Late', data: data.late,
-              borderColor: '#ffc107', backgroundColor: type === 'bar' ? '#ffc107' : 'rgba(255,193,7,.1)',
-              tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 4 : 0,
-            },
-            {
-              label: 'Absent', data: data.absent,
-              borderColor: '#dc3545', backgroundColor: type === 'bar' ? '#dc3545' : 'rgba(220,53,69,.1)',
-              tension: 0.3, fill: type === 'line', pointRadius: type === 'line' ? 4 : 0,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } },
-          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-        },
-      });
+      chart = new Chart(chartCtx, { type, data:{labels:data.labels,datasets:[
+        {label:'Present',data:data.present,borderColor:'#22C55E',backgroundColor:type==='bar'?'#22C55E':'rgba(34,197,94,.1)',tension:.3,fill:type==='line',pointRadius:type==='line'?4:0},
+        {label:'Late',data:data.late,borderColor:'#F59E0B',backgroundColor:type==='bar'?'#F59E0B':'rgba(245,158,11,.1)',tension:.3,fill:type==='line',pointRadius:type==='line'?4:0},
+        {label:'Absent',data:data.absent,borderColor:'#EF4444',backgroundColor:type==='bar'?'#EF4444':'rgba(239,68,68,.1)',tension:.3,fill:type==='line',pointRadius:type==='line'?4:0},
+      ]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:8,font:{size:11,family:'Outfit'}}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}} });
     }
   }
 
-  let cachedData = null;
-
   function loadChart(eventId) {
-    const chartType = document.getElementById('chartType')?.value || 'bar';
-    fetch(`{% url 'admin_panel:chart_data' %}?event_id=${eventId}`)
-      .then(r => r.json())
-      .then(data => {
-        cachedData = data;
-        buildChart(chartType, data);
-      });
+    const ct = document.getElementById('chartType')?.value || 'bar';
+    fetch(`{% url 'admin_panel:chart_data' %}?event_id=${eventId}`).then(r=>r.json()).then(d=>{cachedData=d;buildChart(ct,d);});
   }
 
-  const eventSelect = document.getElementById('eventSelect');
-  const chartTypeSelect = document.getElementById('chartType');
+  const es = document.getElementById('eventSelect'), cts = document.getElementById('chartType');
+  const sectionYearFilter = document.getElementById('sectionYearFilter');
+  if(es){es.addEventListener('change',()=>loadChart(es.value));loadChart(es.value);}
+  if(cts){cts.addEventListener('change',()=>{if(cachedData)buildChart(cts.value,cachedData);});}
 
-  if (eventSelect) {
-    eventSelect.addEventListener('change', () => loadChart(eventSelect.value));
-    loadChart(eventSelect.value);
-  }
-  if (chartTypeSelect) {
-    chartTypeSelect.addEventListener('change', () => {
-      if (cachedData) buildChart(chartTypeSelect.value, cachedData);
+  function applySectionYearFilter() {
+    const selectedYear = sectionYearFilter?.value || '1';
+    document.querySelectorAll('.section-tile').forEach(tile => {
+      tile.style.display = selectedYear === 'all' || tile.dataset.year === selectedYear ? '' : 'none';
     });
+  }
+
+  if (sectionYearFilter) {
+    sectionYearFilter.addEventListener('change', applySectionYearFilter);
+    applySectionYearFilter();
   }
 </script>
 {% endblock %}

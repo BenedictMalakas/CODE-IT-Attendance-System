@@ -1,135 +1,163 @@
 {% extends 'admin_panel/base.html' %}
 
 {% block title %}Activity Logs{% endblock %}
-{% block page_title %}Audit Trail / Activity Logs{% endblock %}
 {% block nav_activity %}active{% endblock %}
 
-{% block content %}
-<div class="container-fluid">
-    <!-- Filters -->
-    <div class="card mb-4 stat-card p-3">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label fw-semibold small">Action Type</label>
-                <select name="action_type" class="form-select" style="border-radius:10px;">
-                    <option value="">All Actions</option>
-                    {% for action in action_types %}
-                        <option value="{{ action }}" {% if action == selected_action %}selected{% endif %}>{{ action }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold small">Performed By</label>
-                <select name="admin_id" class="form-select" style="border-radius:10px;">
-                    <option value="">All Admins</option>
-                    {% for admin in admins %}
-                        <option value="{{ admin.id }}" {% if admin.id|stringformat:"s" == selected_admin %}selected{% endif %}>{{ admin.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-4 d-flex gap-2">
-                <button type="submit" class="btn btn-primary w-100" style="border-radius:10px; background-color:#1a2238; border:none;">
-                    <i class="fa fa-filter me-2"></i>Filter
-                </button>
-                <a href="{% url 'admin_panel:activity_logs' %}" class="btn btn-outline-secondary w-100" style="border-radius:10px;">
-                    Reset
-                </a>
-                <button type="button" class="btn btn-outline-danger w-100" style="border-radius:10px;" data-bs-toggle="modal" data-bs-target="#clearLogsModal">
-                    <i class="fa fa-trash-can me-2"></i>Clear
-                </button>
-            </div>
-        </form>
-    </div>
+{% block extra_head %}
+<style>
+  .bg-success-subtle { background-color: #d1e7dd; color: #0f5132 !important; }
+  .bg-danger-subtle { background-color: #f8d7da; color: #842029 !important; }
+  .bg-primary-subtle { background-color: #cfe2ff; color: #084298 !important; }
+</style>
+{% endblock %}
 
-    <!-- Logs Table -->
-    <div class="card stat-card">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead style="background:#f8f9fa;">
-                        <tr>
-                            <th class="ps-4">Timestamp</th>
-                            <th>Admin</th>
-                            <th>Action</th>
-                            <th>Target</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in logs %}
-                        <tr>
-                            <td class="ps-4 small text-muted">
-                                {{ log.created_at|date:"Y-m-d" }}<br>
-                                <span class="fw-bold">{{ log.created_at|date:"h:i:s A" }}</span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-sm me-2 d-flex align-items-center justify-content-center bg-light rounded-circle" style="width:32px; height:32px;">
-                                        <i class="fa fa-user-shield text-secondary small"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-bold small">{{ log.admin.name|default:"System / Unknown" }}</div>
-                                        <div class="text-muted small" style="font-size: .7rem;">{{ log.admin.get_role_display|default:"N/A" }}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge {% if 'Deleted' in log.action or 'Removed' in log.action or 'Rejected' in log.action %}bg-danger-subtle text-danger{% elif 'Created' in log.action or 'Added' in log.action or 'Approved' in log.action %}bg-success-subtle text-success{% else %}bg-primary-subtle text-primary{% endif %}" style="font-size: .75rem; border-radius: 6px;">
-                                    {{ log.action }}
-                                </span>
-                            </td>
-                            <td class="small">{{ log.target|default:"—" }}</td>
-                            <td class="small text-muted" style="max-width: 300px;">{{ log.description|default:"—" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">
-                                <i class="fa fa-clipboard-list fa-3x mb-3 d-block opacity-25"></i>
-                                No activity logs found.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+{% block content %}
+<div class="section-title-band" style="margin-bottom:16px;"><h2>Audit Trail / Activity Logs</h2></div>
+
+<!-- Filters -->
+<div class="folder-card">
+  <div class="folder-tab">Filters</div>
+  <div class="folder-body">
+    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
+    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
+    <div class="folder-inner white" style="padding:20px;">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="codeit-label" style="font-size:.82rem;">Action Type</label>
+          <select name="action_type" class="codeit-select" style="font-size:.88rem;">
+            <option value="">All Actions</option>
+            {% for action in action_types %}
+              <option value="{{ action }}" {% if action == selected_action %}selected{% endif %}>{{ action }}</option>
+            {% endfor %}
+          </select>
         </div>
+        <div class="col-md-3">
+          <label class="codeit-label" style="font-size:.82rem;">Performed By</label>
+          <select name="admin_id" class="codeit-select" style="font-size:.88rem;">
+            <option value="">All Admins</option>
+            {% for admin in admins %}
+              <option value="{{ admin.id }}" {% if admin.id|stringformat:"s" == selected_admin %}selected{% endif %}>{{ admin.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="codeit-label" style="font-size:.82rem;">Date From</label>
+          <input type="date" name="date_from" value="{{ date_from }}" class="codeit-input" style="font-size:.88rem;" />
+        </div>
+        <div class="col-md-3">
+          <label class="codeit-label" style="font-size:.82rem;">Date To</label>
+          <input type="date" name="date_to" value="{{ date_to }}" class="codeit-input" style="font-size:.88rem;" />
+        </div>
+        <div class="col-12 d-flex gap-2 justify-content-end flex-wrap">
+          <button type="submit" class="btn-codeit btn-codeit-sm" style="flex:1;font-size:.82rem;padding:8px 0;">
+            <i class="fa fa-filter me-1"></i>Filter
+          </button>
+          <a href="{% url 'admin_panel:activity_logs' %}" class="btn-codeit btn-codeit-sm" style="flex:1;font-size:.82rem;padding:8px 0;background:#999;color:#fff;">Reset</a>
+          <button type="button" class="btn-codeit btn-codeit-sm btn-codeit-red" style="flex:1;font-size:.82rem;padding:8px 0;" data-bs-toggle="modal" data-bs-target="#clearLogsModal">
+            <i class="fa fa-trash-can me-1"></i>Clear
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 
-<style>
-    .bg-success-subtle { background-color: #d1e7dd; color: #0f5132 !important; }
-    .bg-danger-subtle { background-color: #f8d7da; color: #842029 !important; }
-    .bg-primary-subtle { background-color: #cfe2ff; color: #084298 !important; }
-    .table td { vertical-align: middle; padding: 1rem .75rem; }
-    .table thead th { font-weight: 600; text-transform: uppercase; font-size: .7rem; letter-spacing: .5px; border-bottom: 2px solid #edf2f9; color: #6e84a3; padding: 1rem .75rem; }
-</style>
-
-<!-- Clear Logs Confirmation Modal -->
-<div class="modal fade" id="clearLogsModal" tabindex="-1" aria-labelledby="clearLogsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius:16px; border:none; box-shadow:0 10px 40px rgba(0,0,0,.1);">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="clearLogsModalLabel">Clear Audit Trail?</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-4">
-                <div class="text-center mb-4">
-                    <div class="d-inline-flex align-items-center justify-content-center bg-danger-subtle rounded-circle mb-3" style="width:70px; height:70px;">
-                        <i class="fa fa-triangle-exclamation text-danger fs-2"></i>
-                    </div>
-                    <p class="mb-0 text-muted">Are you sure you want to clear all activity logs? This action <strong>cannot be undone</strong> and will remove the entire history of admin actions.</p>
-                </div>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light w-100" style="border-radius:10px; font-weight:600;" data-bs-dismiss="modal">Cancel</button>
-                <form action="{% url 'admin_panel:activity_logs_clear' %}" method="POST" class="w-100">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger w-100" style="border-radius:10px; font-weight:600;">
-                        Yes, Clear Everything
-                    </button>
-                </form>
-            </div>
+<!-- Logs Table -->
+<div class="folder-card" style="margin-top:40px;">
+  <div class="folder-tab">Logs</div>
+  <div class="folder-body">
+    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
+    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
+    <div class="folder-inner white" style="padding:0;overflow:hidden;border-radius:14px;">
+      <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #E8E8E8;">
+        <div style="font-weight:800;font-size:.88rem;color:var(--text-dark);">System Audit Trail</div>
+        <div style="font-size:.82rem;color:var(--text-muted);font-weight:700;">
+          {% if page_obj.paginator.count %}
+          Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+          {% else %}
+          No matching log entries
+          {% endif %}
         </div>
+      </div>
+      <div class="table-responsive">
+        <table class="codeit-table">
+          <thead>
+            <tr><th style="padding-left:20px;">Timestamp</th><th>Admin</th><th>Action</th><th>Target</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            {% for log in page_obj %}
+            <tr>
+              <td style="padding-left:20px;font-size:.82rem;color:var(--text-muted);">
+                {{ log.created_at|date:"Y-m-d" }}<br>
+                <span style="font-weight:700;">{{ log.created_at|date:"h:i:s A" }}</span>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div style="width:32px;height:32px;border-radius:50%;background:#F0F2F5;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa fa-user-shield" style="color:var(--text-muted);font-size:.75rem;"></i>
+                  </div>
+                  <div>
+                    <div style="font-weight:700;font-size:.85rem;">{{ log.admin.name|default:"System / Unknown" }}</div>
+                    <div style="color:var(--text-muted);font-size:.7rem;">{{ log.admin.get_role_display|default:"N/A" }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge {% if 'Deleted' in log.action or 'Removed' in log.action or 'Rejected' in log.action %}bg-danger-subtle text-danger{% elif 'Created' in log.action or 'Added' in log.action or 'Approved' in log.action %}bg-success-subtle text-success{% else %}bg-primary-subtle text-primary{% endif %}" style="font-size:.75rem;border-radius:8px;">
+                  {{ log.action }}
+                </span>
+              </td>
+              <td style="font-size:.85rem;">{{ log.target|default:"—" }}</td>
+              <td style="font-size:.85rem;color:var(--text-muted);max-width:300px;">{{ log.description|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" style="text-align:center;padding:48px;color:var(--text-muted);">
+                <i class="fa fa-clipboard-list" style="font-size:2.5rem;opacity:.25;margin-bottom:12px;display:block;"></i>
+                No activity logs found.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if page_obj.paginator.num_pages > 1 %}
+      <div style="display:flex;justify-content:center;align-items:center;gap:12px;padding:16px;flex-wrap:wrap;border-top:1px solid #E8E8E8;">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">&lt; Prev</a>
+        {% endif %}
+        <span style="font-weight:700;font-size:.85rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">Next &gt;</a>
+        {% endif %}
+      </div>
+      {% endif %}
     </div>
+  </div>
+</div>
+
+<!-- Clear Logs Modal -->
+<div class="modal fade" id="clearLogsModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:18px;border:3px solid var(--card-border);">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title" style="font-weight:800;">Clear Audit Trail?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body py-4 text-center">
+        <div style="width:70px;height:70px;border-radius:50%;background:#F8D7DA;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <i class="fa fa-triangle-exclamation" style="color:#EF4444;font-size:1.8rem;"></i>
+        </div>
+        <p style="color:var(--text-muted);margin:0;">Are you sure you want to clear all activity logs? This action <strong>cannot be undone</strong> and will remove the entire history of admin actions.</p>
+      </div>
+      <div class="modal-footer border-0 pt-0 flex-column gap-2">
+        <button type="button" class="btn-codeit w-100" data-bs-dismiss="modal" style="background:#E0E0E0;color:var(--text-dark);">Cancel</button>
+        <form action="{% url 'admin_panel:activity_logs_clear' %}" method="POST" class="w-100">
+          {% csrf_token %}
+          <button type="submit" class="btn-codeit btn-codeit-red w-100">Yes, Clear Everything</button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

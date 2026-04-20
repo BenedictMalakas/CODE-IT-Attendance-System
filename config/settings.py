@@ -198,3 +198,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = False   # Azure handles this at the SSL settings level
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
+
+# Student sessions should expire after 30 minutes of inactivity.
+SESSION_COOKIE_AGE = 1800
+SESSION_SAVE_EVERY_REQUEST = True
