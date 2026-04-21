@@ -104,7 +104,8 @@ def build_section_tiles_with_attendance(event=None):
     Absent = Total Students in Section - (Present + Late)
     If no event is selected/active, all stats are 0.
     """
-    sections = Section.objects.all().order_by('year_level', 'name')
+    from myapp.utils import get_sorted_sections
+    sections = get_sorted_sections()
 
     tiles = []
     for sec in sections:
@@ -502,7 +503,8 @@ def chart_data_api(request):
     except Event.DoesNotExist:
         return JsonResponse({'error': 'Event not found'}, status=404)
 
-    sections = Section.objects.all().order_by('year_level', 'name')
+    from myapp.utils import get_sorted_sections
+    sections = get_sorted_sections()
     labels = [s.name for s in sections]
     present_data = []
     late_data = []
@@ -605,7 +607,8 @@ def section_delete_view(request, pk):
 @role_required('chairperson')
 def admins_manage_view(request):
     admins = Admin.objects.filter(is_active=True).exclude(role='chairperson').order_by('role', 'name')
-    sections = Section.objects.all().order_by('year_level', 'name')
+    from myapp.utils import get_sorted_sections
+    sections = get_sorted_sections()
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -1055,7 +1058,8 @@ def attendance_view(request, event_id):
     event_ended = event.status in ('ended', 'closed')
 
     # ── BUILD SECTION OVERVIEWS ──
-    sections = Section.objects.all().order_by('year_level', 'name')
+    from myapp.utils import get_sorted_sections
+    sections = get_sorted_sections()
     all_students = Student.objects.filter(status='active').select_related('section')
 
     # --- CHECK-IN OVERVIEW (Start Event phase) ---
@@ -1393,7 +1397,8 @@ def students_view(request):
     status_filter = request.GET.get('status', 'all')
     section_filter = request.GET.get('section', '')
     students = Student.objects.select_related('section').order_by('-created_at')
-    sections = Section.objects.all().order_by('year_level', 'name')
+    from myapp.utils import get_sorted_sections
+    sections = get_sorted_sections()
 
     if role == 'representative':
         section_ids = get_rep_section_ids(admin)

@@ -102,7 +102,8 @@ def register_view(request):
     if request.session.get('student_id'):
         return redirect('student_portal:dashboard')
 
-    sections = Section.objects.all().order_by('year_level', 'name')
+    from myapp.utils import get_sorted_sections
+    sections = get_sorted_sections()
     form = StudentRegisterForm()
     if request.method == 'POST':
         form = StudentRegisterForm(request.POST)

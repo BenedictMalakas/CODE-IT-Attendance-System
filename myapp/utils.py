@@ -61,3 +61,15 @@ def verify_password(raw_password: str, stored_hash: str) -> bool:
     # New Django hash verification
     from django.contrib.auth.hashers import check_password
     return check_password(raw_password, stored_hash)
+
+def get_sorted_sections():
+    """Fetches all sections and sorts them numerically (e.g., BSIT 1-2 before BSIT 1-10)."""
+    from .models import Section
+    sections = list(Section.objects.all())
+    def sort_key(s):
+        try:
+            return (s.year_level, int(s.name.split('-')[-1]))
+        except (ValueError, IndexError):
+            return (s.year_level, s.name)
+    sections.sort(key=sort_key)
+    return sections
