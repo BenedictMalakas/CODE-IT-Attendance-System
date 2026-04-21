@@ -213,8 +213,8 @@ SESSION_SAVE_EVERY_REQUEST = True
 # Cache configuration for login rate limiting & DDoS protection
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'codeit-rate-limit',
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'codeit_cache_table',
     }
 }
 
