@@ -13,10 +13,15 @@ from django.http import HttpResponse, JsonResponse
 
 
 def get_client_ip(request):
-    """Extract real client IP, respecting Azure's proxy headers."""
+    """Extract real client IP, resisting X-Forwarded-For spoofing."""
+    real_ip = request.META.get('HTTP_X_REAL_IP')
+    if real_ip:
+        return real_ip.strip()
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
-        return x_forwarded_for.split(',')[0].strip()
+        # Take the LAST IP in the chain (the one appended by our trusted proxy/Azure)
+        # Avoids grabbing the 0th index which is easily spoofed by attackers
+        return x_forwarded_for.split(',')[-1].strip()
     return request.META.get('REMOTE_ADDR', '0.0.0.0')
 
 
