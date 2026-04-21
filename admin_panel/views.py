@@ -16,9 +16,10 @@ from django.db.models import Count, Q
 from django.core.mail import send_mail
 from django.conf import settings
 from django.db import transaction
+from django.contrib.auth.hashers import make_password
 
 from myapp.models import Admin, Student, Event, QRToken, AttendanceLog, Section, AdminSection, ActivityLog
-from myapp.utils import log_activity
+from myapp.utils import log_activity, get_client_ip, is_ip_locked, track_login_failure, clear_login_failures, verify_password
 from .forms import LoginForm, EventForm
 
 import zoneinfo
@@ -28,9 +29,6 @@ PH_TZ = zoneinfo.ZoneInfo("Asia/Manila")
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def hash_password(raw: str) -> str:
-    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def ph_now():
@@ -210,6 +208,11 @@ def login_view(request):
         for key in ['admin_id', 'admin_name', 'admin_role', 'force_password_change']:
             request.session.pop(key, None)
 
+    ip = get_client_ip(request)
+    if is_ip_locked(ip):
+        messages.error(request, 'Too many failed attempts. Try again after 15 minutes.')
+        return render(request, 'admin_panel/login.html', {'form': LoginForm()})
+
     form = LoginForm()
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -217,24 +220,35 @@ def login_view(request):
             email       = form.cleaned_data['email']
             password    = form.cleaned_data['password']
             chosen_role = form.cleaned_data['role']
-            pw_hash     = hash_password(password)
             try:
-                admin = Admin.objects.get(email=email, password_hash=pw_hash, is_active=True)
-                # Chairperson uses the hidden endpoint, not this form
-                if admin.role == 'chairperson':
-                    messages.error(request, 'Invalid email or password.')
-                elif admin.role != chosen_role:
-                    role_display = admin.get_role_display()
-                    messages.error(request, f'This account is registered as a {role_display}. Please select the correct role.')
+                admin = Admin.objects.get(email=email, is_active=True)
+                if verify_password(password, admin.password_hash):
+                    # Chairperson uses the hidden endpoint, not this form
+                    if admin.role == 'chairperson':
+                        messages.error(request, 'Invalid email or password.')
+                    elif admin.role != chosen_role:
+                        role_display = admin.get_role_display()
+                        messages.error(request, f'This account is registered as a {role_display}. Please select the correct role.')
+                    else:
+                        clear_login_failures(ip)
+                        # Transparent hash migration
+                        if not admin.password_hash.startswith('pbkdf2_'):
+                            admin.password_hash = make_password(password)
+                            admin.save(update_fields=['password_hash'])
+
+                        # Flush any existing session before creating new one
+                        request.session.flush()
+                        request.session['admin_id']   = str(admin.id)
+                        request.session['admin_name'] = admin.name
+                        request.session['admin_role'] = admin.role
+                        request.session['force_password_change'] = admin.force_password_change
+                        request.session.cycle_key()
+                        return redirect('admin_panel:dashboard')
                 else:
-                    # Flush any existing session before creating new one
-                    request.session.flush()
-                    request.session['admin_id']   = str(admin.id)
-                    request.session['admin_name'] = admin.name
-                    request.session['admin_role'] = admin.role
-                    request.session['force_password_change'] = admin.force_password_change
-                    return redirect('admin_panel:dashboard')
+                    track_login_failure(ip)
+                    messages.error(request, 'Invalid email or password.')
             except Admin.DoesNotExist:
+                track_login_failure(ip)
                 messages.error(request, 'Invalid email or password.')
 
     return render(request, 'admin_panel/login.html', {'form': form})
@@ -270,16 +284,7 @@ def force_change_password_view(request):
         messages.error(request, 'Passwords do not match.')
         return redirect('admin_panel:dashboard')
 
-    # Ensure it's not the same as the default password (lastname_@2026#)
-    # Extract last name from admin.name (last word)
-    name_parts = admin.name.strip().split()
-    last_name = name_parts[-1] if name_parts else ''
-    default_pw = f"{last_name}_@2026#"
-    if new_pw == default_pw:
-        messages.error(request, 'You cannot use the default password. Please choose a new one.')
-        return redirect('admin_panel:dashboard')
-
-    admin.password_hash = hash_password(new_pw)
+    admin.password_hash = make_password(new_pw)
     admin.force_password_change = False
     admin.save()
     request.session['force_password_change'] = False
@@ -301,20 +306,36 @@ def chairperson_login_view(request):
         messages.info(request, 'You are already logged in. Redirecting to your dashboard.')
         return redirect('admin_panel:dashboard')
 
+    ip = get_client_ip(request)
+    if is_ip_locked(ip):
+        messages.error(request, 'Too many failed attempts. Try again after 15 minutes.')
+        return render(request, 'admin_panel/chairperson_login.html')
+
     if request.method == 'POST':
         email    = request.POST.get('email', '').strip()
         password = request.POST.get('password', '').strip()
-        pw_hash  = hash_password(password)
         try:
-            admin = Admin.objects.get(email=email, password_hash=pw_hash, is_active=True, role='chairperson')
-            # Flush any existing session before creating new one
-            request.session.flush()
-            request.session['admin_id']   = str(admin.id)
-            request.session['admin_name'] = admin.name
-            request.session['admin_role'] = admin.role
-            request.session['force_password_change'] = False
-            return redirect('admin_panel:chairperson_dashboard')
+            admin = Admin.objects.get(email=email, is_active=True, role='chairperson')
+            if verify_password(password, admin.password_hash):
+                clear_login_failures(ip)
+                # Transparent hash migration
+                if not admin.password_hash.startswith('pbkdf2_'):
+                    admin.password_hash = make_password(password)
+                    admin.save(update_fields=['password_hash'])
+
+                # Flush any existing session before creating new one
+                request.session.flush()
+                request.session['admin_id']   = str(admin.id)
+                request.session['admin_name'] = admin.name
+                request.session['admin_role'] = admin.role
+                request.session['force_password_change'] = False
+                request.session.cycle_key()
+                return redirect('admin_panel:chairperson_dashboard')
+            else:
+                track_login_failure(ip)
+                messages.error(request, 'Invalid credentials.')
         except Admin.DoesNotExist:
+            track_login_failure(ip)
             messages.error(request, 'Invalid credentials.')
 
     return render(request, 'admin_panel/chairperson_login.html')
@@ -599,16 +620,15 @@ def admins_manage_view(request):
             elif Admin.objects.filter(email=email).exists():
                 messages.error(request, 'An admin with that email already exists.')
             else:
-                # Auto-generate password: lastname_@2026#
-                name_parts = name.strip().split()
-                last_name = name_parts[-1] if name_parts else 'user'
-                default_password = f"{last_name}_@2026#"
+                # Auto-generate secure password
+                import secrets
+                default_password = secrets.token_urlsafe(12)
 
                 new_admin = Admin.objects.create(
                     id=uuid.uuid4(),
                     name=name,
                     email=email,
-                    password_hash=hash_password(default_password),
+                    password_hash=make_password(default_password),
                     role=role,
                     is_active=True,
                     force_password_change=True,  # Must change on first login

@@ -24,3 +24,36 @@ def log_activity(request, action, target=None, description=None):
         target=target,
         description=description
     )
+
+from django.core.cache import cache
+
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+def is_ip_locked(ip):
+    return cache.get(f'login_fail_{ip}', 0) >= 5
+
+def track_login_failure(ip):
+    key = f'login_fail_{ip}'
+    count = cache.get(key, 0) + 1
+    cache.set(key, count, timeout=900)  # 15 minutes lockout
+
+def clear_login_failures(ip):
+    cache.delete(f'login_fail_{ip}')
+
+def verify_password(raw_password: str, stored_hash: str) -> bool:
+    """Verifies a password against either raw SHA-256 or PBKDF2 formats"""
+    if not stored_hash:
+        return False
+    # Legacy SHA-256 verification (exactly 64 hex characters)
+    if len(stored_hash) == 64 and all(c in '0123456789abcdefABCDEF' for c in stored_hash):
+        import hashlib
+        return hashlib.sha256(raw_password.encode()).hexdigest() == stored_hash
+    # New Django hash verification
+    from django.contrib.auth.hashers import check_password
+    return check_password(raw_password, stored_hash)

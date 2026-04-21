@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-s5#lxjf)g3*f*@3a0*c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net', 'codeit-attendance.azurewebsites.net', 'localhost', '127.0.0.1', '52.253.95.130', 'codeit-attendancesystem.me', '*']
+ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net', 'codeit-attendance.azurewebsites.net', 'localhost', '127.0.0.1', '52.253.95.130', 'codeit-attendancesystem.me']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net',
@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'config.middleware.DDoSProtectionMiddleware',  # DDoS protection (must be first)
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -173,8 +174,8 @@ WHITENOISE_USE_FINDERS = True
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS — allow frontend to connect during development
-CORS_ALLOW_ALL_ORIGINS = True  # Lock this down in production!
+# CORS — open in dev, locked down in production
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allows all origins when DEBUG=True (localhost)
 
 # DRF settings
 REST_FRAMEWORK = {
@@ -196,9 +197,37 @@ DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'noreply@code-it.edu')
 # Azure HTTPS Support
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = False   # Azure handles this at the SSL settings level
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+
+# Dynamically set secure cookies based on DEBUG.
+# Localhost (DEBUG=True => False), Production (DEBUG=False => True)
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True      # Prevent JS access
+CSRF_COOKIE_HTTPONLY = True         # Prevent JS access
+SESSION_COOKIE_SAMESITE = 'Lax'     # CSRF Protection
 
 # Student sessions should expire after 30 minutes of inactivity.
 SESSION_COOKIE_AGE = 1800
 SESSION_SAVE_EVERY_REQUEST = True
+
+# Cache configuration for login rate limiting & DDoS protection
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'codeit-rate-limit',
+    }
+}
+
+# ---------------------------------------------------------------------------
+# DDoS Protection Configuration
+# ---------------------------------------------------------------------------
+DDOS_RATE_LIMIT     = 100   # Max requests per IP per time window
+DDOS_RATE_WINDOW    = 60    # Time window in seconds (1 minute)
+DDOS_BLOCK_DURATION = 300   # Block offending IP for 5 minutes
+DDOS_MAX_BODY_SIZE  = 10    # Max upload body size in MB
+DDOS_WHITELIST_IPS  = ['127.0.0.1']  # Localhost bypasses DDoS checks for dev
+
+# Security headers (in addition to those added by middleware)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'

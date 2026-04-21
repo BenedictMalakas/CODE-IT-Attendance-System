@@ -148,7 +148,7 @@
           </div>
 
           <div class="col-12">
-            <label class="codeit-label">Student ID Photo</label>
+            <label class="codeit-label">Student ID Photo <span style="opacity:0.6; font-size:0.8em; font-weight:500;">(Max 5MB)</span></label>
             <div class="file-upload-area">
               <label class="file-upload-btn" for="idPhotoInput">
                 <i class="fa fa-camera me-1"></i>Choose File
@@ -167,6 +167,10 @@
                      required style="padding-right:2.8rem;" id="pw1" />
               <button type="button" class="pw-toggle" onclick="togglePw(this)"><i class="fa fa-eye"></i></button>
             </div>
+            <div id="pwIndicator" style="font-size:.72rem; margin-top:4px; font-weight:600; color:var(--text-muted);">
+              Min 8 chars, 1 special character required.
+            </div>
+            {% if form.password.errors %}<div style="color:#E74C3C;font-size:.72rem;margin-top:2px;font-weight:600;">{{ form.password.errors.0 }}</div>{% endif %}
           </div>
           <div class="col-6">
             <label class="codeit-label">Confirm Password</label>
@@ -223,12 +227,49 @@
   // File upload display
   function handleFileSelect(input) {
     const name = input.files.length ? input.files[0].name : 'No file chosen';
-    document.getElementById('fileName').textContent = name;
+    const fileNameEl = document.getElementById('fileName');
+    fileNameEl.textContent = name;
+    fileNameEl.style.color = 'var(--text-muted)';
     if (input.files[0] && input.files[0].size > 5 * 1024 * 1024) {
-      document.getElementById('fileName').textContent = 'File too large (max 5MB)';
-      document.getElementById('fileName').style.color = '#E74C3C';
+      fileNameEl.textContent = 'File too large (max 5MB)';
+      fileNameEl.style.color = '#E74C3C';
       input.value = '';
     }
+  }
+
+  // Password live feedback & validation
+  const pwInput = document.getElementById('pw1');
+  const pwIndicator = document.getElementById('pwIndicator');
+  if (pwInput && pwIndicator) {
+    pwInput.addEventListener('input', function() {
+      const val = this.value;
+      if (val.length === 0) {
+        pwIndicator.style.color = 'var(--text-muted)';
+        pwIndicator.textContent = 'Min 8 chars, 1 special character required.';
+      } else {
+        const hasLength = val.length >= 8;
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(val);
+        
+        if (!hasLength || !hasSpecial) {
+          pwIndicator.style.color = '#E74C3C'; // Red
+          pwIndicator.textContent = 'Weak password: Must be at least 8 chars and contain 1 special character.';
+        } else {
+          pwIndicator.style.color = '#0A5C36'; // Dark Green for better contrast
+          pwIndicator.textContent = 'Strong password.';
+        }
+      }
+    });
+
+    document.getElementById('registerForm')?.addEventListener('submit', function(e) {
+      const val = pwInput.value;
+      const hasLength = val.length >= 8;
+      const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(val);
+      if (!hasLength || !hasSpecial) {
+        e.preventDefault();
+        pwIndicator.style.color = '#E74C3C';
+        pwIndicator.textContent = 'Please meet the password requirements before submitting.';
+      }
+    });
   }
 
   // Name sanitization

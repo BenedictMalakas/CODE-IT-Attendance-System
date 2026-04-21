@@ -1,4 +1,3 @@
-import hashlib
 import uuid
 from functools import wraps
 
@@ -6,19 +5,16 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.utils import timezone as dj_timezone
+from django.contrib.auth.hashers import make_password
 
 from myapp.models import Student, Event, QRToken, AttendanceLog, Section
+from myapp.utils import get_client_ip, is_ip_locked, track_login_failure, clear_login_failures, verify_password
 from .forms import StudentLoginForm, StudentRegisterForm
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def hash_password(raw: str) -> str:
-    return hashlib.sha256(raw.encode()).hexdigest()
-
-
 def build_pagination_query(request):
     query = request.GET.copy()
     query.pop('page', None)
@@ -58,6 +54,12 @@ def login_view(request):
         # Only clear student keys, don't flush entire session (protects admin sessions)
         for key in ['student_id', 'student_name']:
             request.session.pop(key, None)
+        request.session.cycle_key()
+
+    ip = get_client_ip(request)
+    if is_ip_locked(ip):
+        messages.error(request, 'Too many failed attempts. Try again after 15 minutes.')
+        return render(request, 'student_portal/login.html', {'form': StudentLoginForm()})
 
     form = StudentLoginForm()
     if request.method == 'POST':
@@ -65,19 +67,32 @@ def login_view(request):
         if form.is_valid():
             student_id_val = form.cleaned_data['student_id']
             password       = form.cleaned_data['password']
-            pw_hash        = hash_password(password)
+            
             try:
-                student = Student.objects.get(student_id=student_id_val, password_hash=pw_hash)
-                if student.status == 'pending':
-                    messages.warning(request, 'Your account is still pending approval.')
-                elif student.status == 'rejected':
-                    note = student.rejection_note or 'No reason provided.'
-                    messages.error(request, f'Your registration was rejected: {note}')
+                student = Student.objects.get(student_id=student_id_val)
+                if verify_password(password, student.password_hash):
+                    clear_login_failures(ip)
+                    
+                    # Transparently upgrade legacy hash
+                    if not student.password_hash.startswith('pbkdf2_'):
+                        student.password_hash = make_password(password)
+                        student.save(update_fields=['password_hash'])
+
+                    if student.status == 'pending':
+                        messages.warning(request, 'Your account is still pending approval.')
+                    elif student.status == 'rejected':
+                        note = student.rejection_note or 'No reason provided.'
+                        messages.error(request, f'Your registration was rejected: {note}')
+                    else:
+                        request.session['student_id']   = str(student.id)
+                        request.session['student_name'] = student.name
+                        request.session.cycle_key()
+                        return redirect('student_portal:dashboard')
                 else:
-                    request.session['student_id']   = str(student.id)
-                    request.session['student_name'] = student.name
-                    return redirect('student_portal:dashboard')
+                    track_login_failure(ip)
+                    messages.error(request, 'Invalid Student ID or password.')
             except Student.DoesNotExist:
+                track_login_failure(ip)
                 messages.error(request, 'Invalid Student ID or password.')
 
     return render(request, 'student_portal/login.html', {'form': form})
@@ -139,7 +154,7 @@ def register_view(request):
                     section=section,
                     year_level=year_level,
                     email=form.cleaned_data['email'],
-                    password_hash=hash_password(form.cleaned_data['password']),
+                    password_hash=make_password(form.cleaned_data['password']),
                     id_photo_path=id_photo_path,
                     status='pending',
                     rejection_note='',
@@ -301,7 +316,7 @@ def profile_view(request):
             elif new_pw != confirm:
                 messages.error(request, 'Passwords do not match.')
             else:
-                student.password_hash = hash_password(new_pw)
+                student.password_hash = make_password(new_pw)
                 student.save()
                 messages.success(request, 'Password updated successfully.')
                 return redirect('student_portal:profile')
