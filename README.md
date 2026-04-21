@@ -39,6 +39,55 @@ University attendance tracking system with QR code scanning, event management, a
 16. **Advanced Table Filters & Batch Management** - Sa Student Management at Activity Logs, nadagdagan ng Date Range, Section filters, at may Checkbox "Select All" nang kasama pang *bulk approve*. Sa Admins Sections Overview, may Year Level menu filter narin.
 17. **QR Secure & Display** - Na-fix ko yung missing Token variable view sa dashboard kaya lalabas na yung actual na QR ID if Verified na. Tinago ko rin yung literal na text UUID ng QR nila kase di naman nila need basahin yun for security.
 18. **Session Expiry Indicator** - Nag add ako ng Live Countdown timer "Session" para sa portal ng students na mag-wa-warn kapag onting oras nalang bago mag expire yung browser auth nila.
+19. *Password Encryption Upgrade* - 
+
+Before - yung unang ginawa natin is naka SHA-256 which is good naman pero kapag kasi nakuha data base natin possible na mahulaan password gamit yung rainbow tables, rainbow tables andon nakalagay mga naka encrypt na basic password like password123 syf83hwianf so kaya sya mahulaan pag nagka access sa data base
+
+After - gumamit na tayo ngayon ng PBKDF2-SHA256 so eto hashing padin pero may random hash na sya each user for example syf83hwianf sa password 123 madadagdagan sya ng syf83hwianf-ytiahsif so mahihirapan i-crack mga password kahit nagkaaccess na sa database
+
+20. **Random Admin Passwords**-
+Before -  {lastname}_@2026# ganito lang yung format so pag kilala mo kung sinong admin or what possible na makapasok kahit sino lalo na pag dipa nala-log in magandang ginawa natin dito is using one time password na magpapalit 
+
+After - Mas secure na sya crytographycally random na yung password na isesend sa gmail nung mga admin gamit yung python secret module
+
+21. **15 minute login lockout**
+Before: kahit ilang try pwede sa password concern ko is kapag may nagpasok ng bot na kaya mag generate nang maraming pass possible na ma crack 
+
+After - Ngayon nilagyan ko sya nang after 5 failed attempt magkakaroon ka ng 15 minutes cooldown bago makapag try ulit
+
+22. **Session Fixation Protection** - 
+Before- before kasi yung system nadin hindi nagbabago session id nya so pag may hacker na nakanakaw nung session cookie pag nagsend sya sayo ng fake link madali nalang sya makakapasok without using your password kasi nga session cookie yon so mahirap sya lalo na pag sa public wifi.
+
+After - request.session.cycle_key()  sinisira nito yung old session id tas gagawa sta bago pero naka keep padin log in data so pagnanakaw session cookie wala din since nagbago nga
+
+23. **Secure Cookie Setting** - 
+Before- yung system kasi natin naka on yung SESSION_COOKIE_SECURE = False meaning nakakpagsend tayo ng login cookie sa HTTP which is delikado lalo na sa public tas merong sniffing traffic na nangyari so bali para syang naka tap sa calls then makikita nila password email pati yung session cookie
+
+After - 
+**HTTPS only** - para dina magsend ng plain cookie sa HTTP
+**HttpOnly** -  since before wala tong  SESSION_COOKIE_HTTPONLY = True kapag merong nag inject sa site natin ng malicious script mababasa nya or makukuha nya yung cookies na pwedeng makuha lahat ng data na priniprevent natin
+**SameSite=Lax** -  because of this naka tied lang sa specific domain yung system natin so kahit na may mapindot namalicious website walang mangyayari hindi nya maaaccept yung mga nakatagong request sa malicious site
+
+24. **DDoS Protection Middleware**- 
+Before - walang humaharang sa server natin sa pag flood ng request so pwedeng magrequest ng ilang libong beses na magcacause ng pagkasira nung server, lalo na ngayon usong uso since madaming gumagamit ng mga bot para magrequest ng magrequest
+
+After - ngayon merong ng custom middle middleware config/middleware.py meron tong 3 layers na humaharang
+
+**IP Block**	- Instantly rejects IPs that were already flagged	Blocked for 5 min
+**Body size** - Rejects oversized uploads/payloads	Max 10MB eto yung nangyayari nung nakaraan na nagkakaerror pag sobra yung na a- upload 
+**Rate Limit**	* -Counts requests per IP per minute	100 req/min, then blocked
+
+25. **Additional Protection** - 
+**Refferer Policy** - before kasi nakikita ng mga external site full URL nung system natin which is risky now pag accidentally tayo makapindot ng external site ang mangyayari is //school.com eto nalang makikita hindi na yung kadugtong na mahaba
+**Permissions Policy** -  hinaharangan mga unathorized access  sa camera pati location APIs para if ever na may makapasok wala lang din mangyayari sakanila
+
+**CORS_ALLOW_ALL_ORIGINS = DEBUG** - 	Before, pwede makagawa ng API calls kahit na anong website sa sytem natin now hindi na nakaset na sya na domain lang natin
+**Removed '' from ALLOWED_HOSTS** - 	Before, any domain pwedeng mag point sa server natin para syang call center na lahat sinasagot nya kahit scam na so now meron na syang caller id na specific domain lang sinasagot nya
+
+**X-Content-Type-Options: nosniff** - Since naka camera tayo sa scan mahirap na pag wala tayo neto since creative mga hackers for example yung hacker may hidden code na nilagay mag eexecute sya  which is priniprevent natin
+
+**X-Frame-Options** - priniprevent neto yung clickjacking or yung paglagay ng website natin sakanila basically ang nangyayari dito para syang invisible layer na akala mo andon kapa sa system natin pag nag click ka hack kana, so since meron tayo nito pag may nag try satin ng clickjacking instead na yung portal makita error makikita nila.
+
 ---
 
 ## 🔗 Updated Endpoints
