@@ -80,8 +80,8 @@ import logging
 from dotenv import load_dotenv
 import dj_database_url
 
-# Load the exact same .env file used by your SQLAlchemy setup
-env_path = BASE_DIR.parent / 'Data base proj' / '.env'
+# Load the local .env file
+env_path = BASE_DIR / '.env'
 load_dotenv(env_path, override=True)  # override=True ensures it always loads
 
 # Database
