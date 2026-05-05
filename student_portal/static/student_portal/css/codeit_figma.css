@@ -92,7 +92,7 @@ a {
   font-size: 16px;
   font-weight: 400;
   line-height: 1;
-  text-transform: uppercase;
+  
 }
 
 .sidebar-nav a i {
@@ -156,7 +156,7 @@ a {
   font-size: 16px;
   font-weight: 500;
   line-height: 1.25;
-  text-transform: uppercase;
+  
 }
 
 .portal-panel,
@@ -233,7 +233,7 @@ a {
   color: #000;
   font-size: 12px;
   font-weight: 400;
-  text-transform: uppercase;
+  
 }
 
 .portal-grid-2 {
@@ -266,7 +266,7 @@ a {
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
-  text-transform: uppercase;
+  
 }
 
 .portal-table th {
@@ -292,7 +292,7 @@ a {
   box-shadow: var(--shadow);
   font-weight: 500;
   text-decoration: none;
-  text-transform: uppercase;
+  
 }
 
 .portal-btn:hover {
@@ -322,7 +322,7 @@ a {
   background: transparent;
   font-size: 13px;
   font-weight: 500;
-  text-transform: uppercase;
+  
 }
 
 .portal-badge.present,
@@ -368,7 +368,7 @@ a {
   height: 84%;
   color: #000;
   text-align: center;
-  text-transform: uppercase;
+  
 }
 
 .qr-fallback i {
@@ -396,7 +396,7 @@ a {
   font-size: 31px;
   font-weight: 700;
   line-height: 1.1;
-  text-transform: uppercase;
+  
 }
 
 .upcoming-event-card p {
@@ -404,7 +404,7 @@ a {
   color: #ffb200;
   font-size: 24px;
   font-weight: 700;
-  text-transform: uppercase;
+  
 }
 
 .profile-shell {
@@ -453,7 +453,7 @@ a {
   font-size: 24px;
   font-weight: 700;
   text-align: center;
-  text-transform: uppercase;
+  
 }
 
 .profile-row {
@@ -468,7 +468,7 @@ a {
   box-shadow: var(--shadow);
   padding: 0 16px;
   font-size: 24px;
-  text-transform: uppercase;
+  
 }
 
 .profile-row span:first-child {
@@ -481,14 +481,14 @@ a {
   font-size: 24px;
   font-weight: 700;
   text-align: center;
-  text-transform: uppercase;
+  
 }
 
 .form-label {
   margin-bottom: 12px;
   color: #000;
   font-size: 16px;
-  text-transform: uppercase;
+  
 }
 
 .form-control,

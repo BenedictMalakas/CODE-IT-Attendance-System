@@ -72,13 +72,14 @@
 
               {% if event.status == 'pending' %}
               <a href="{% url 'admin_panel:event_edit' event.id %}" class="figma-icon-btn" title="Edit"><i class="fa fa-pen"></i></a>
+              {% endif %}
+
               <button type="button" class="figma-icon-btn figma-icon-btn--delete"
                       data-bs-toggle="modal" data-bs-target="#deleteModal"
                       data-event-id="{{ event.id }}" data-event-name="{{ event.name }}"
-                      title="Delete">
+                      title="Delete Event">
                 <i class="fa fa-trash"></i>
               </button>
-              {% endif %}
 
             </div>
           </td>

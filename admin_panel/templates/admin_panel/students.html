@@ -81,23 +81,14 @@
             <td class="text-center">
               <div class="figma-action-row">
                 {% if student.status == 'pending' or student.status == 'rejected' %}
-                <form method="post" action="{% url 'admin_panel:student_approve' student.id %}">
-                  {% csrf_token %}
-                  <button class="figma-icon-btn" title="Approve"><i class="fa fa-check"></i></button>
-                </form>
+                  <button type="submit" formaction="{% url 'admin_panel:student_approve' student.id %}" class="figma-icon-btn" title="Approve"><i class="fa fa-check"></i></button>
                 {% endif %}
                 {% if student.status == 'active' %}
-                <form method="post" action="{% url 'admin_panel:generate_qr' student.id %}">
-                  {% csrf_token %}
-                  <button class="figma-icon-btn" title="Regenerate QR Code"><i class="fa fa-qrcode"></i></button>
-                </form>
-                <form method="post" action="{% url 'admin_panel:revoke_qr' student.id %}">
-                  {% csrf_token %}
-                  <button class="figma-icon-btn figma-icon-btn--link" title="Revoke & Reissue QR"
+                  <button type="submit" formaction="{% url 'admin_panel:generate_qr' student.id %}" class="figma-icon-btn" title="Regenerate QR Code"><i class="fa fa-qrcode"></i></button>
+                  <button type="submit" formaction="{% url 'admin_panel:revoke_qr' student.id %}" class="figma-icon-btn figma-icon-btn--link" title="Revoke & Reissue QR"
                           onclick="return confirm('Revoke and regenerate QR for {{ student.name }}?')">
                     <i class="fa fa-rotate"></i>
                   </button>
-                </form>
                 {% endif %}
                 {% if student.status == 'pending' or student.status == 'active' %}
                 <button class="figma-icon-btn figma-icon-btn--danger" title="Reject"

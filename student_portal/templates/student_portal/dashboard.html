@@ -30,7 +30,7 @@
       <h2 class="portal-subtitle" style="font-size:26px; font-weight:700; color:#000;">Quick Actions</h2>
     </div>
     <div class="p-4 text-center">
-      <h3 style="margin:18px 0; color:var(--orange); font-size:26px; font-weight:700; text-transform:uppercase;">Scan Your QR Code</h3>
+      <h3 style="margin:18px 0; color:var(--orange); font-size:26px; font-weight:700; ">Scan Your QR Code</h3>
       <div class="qr-frame mb-4">
         {% if qr_token and qr_token.qr_path %}
           <img src="{{ qr_token.qr_path }}" alt="Student QR code" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">

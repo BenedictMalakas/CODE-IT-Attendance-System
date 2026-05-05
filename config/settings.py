@@ -48,6 +48,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'config.middleware.DDoSProtectionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -101,7 +102,7 @@ else:
     DATABASES = {
         'default': dj_database_url.parse(
             DATABASE_URL,
-            conn_max_age=600,
+            conn_max_age=0,
             conn_health_checks=True,
         )
     }
@@ -167,3 +168,14 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')       # your Gmail address
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '') # Gmail App Password
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'noreply@code-it.edu')
+
+# File Upload Security — max 5 MB per upload
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024    # 5 MB
+
+# DDoS Protection Settings
+DDOS_RATE_LIMIT = 100        # Max requests per window
+DDOS_RATE_WINDOW = 60       # Window in seconds
+DDOS_BLOCK_DURATION = 300   # Block duration in seconds
+DDOS_MAX_BODY_SIZE = 10     # Max body size in MB
+DDOS_WHITELIST_IPS = ['127.0.0.1']

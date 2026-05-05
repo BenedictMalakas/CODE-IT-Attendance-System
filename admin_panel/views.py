@@ -318,7 +318,7 @@ def dashboard_view(request):
 
     # Build section cards filtered by selected event
     section_cards = []
-    for section in Section.objects.order_by('year_level', 'name')[:13]:
+    for section in Section.objects.order_by('year_level', 'name'):
         students = Student.objects.filter(section=section)
         if selected_event:
             section_logs = AttendanceLog.objects.filter(student__section=section, event=selected_event)
@@ -589,9 +589,6 @@ def event_edit_view(request, pk):
 @require_POST
 def event_delete_view(request, pk):
     event = get_object_or_404(Event, id=pk)
-    if event.status != 'pending':
-        messages.error(request, f'Only pending events can be deleted. "{event.name}" is {event.status}.')
-        return redirect('admin_panel:events')
     name = event.name
     log_activity(request, 'EVENT_DELETED', target=name, description=f'Deleted event "{name}"')
     event.delete()

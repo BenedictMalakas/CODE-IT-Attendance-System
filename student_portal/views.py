@@ -12,6 +12,7 @@ from django.core.cache import cache
 
 from myapp.models import Student, Section, Event, QRToken, AttendanceLog
 from .forms import StudentLoginForm, StudentRegisterForm
+from .file_security import validate_upload
 
 
 # ---------------------------------------------------------------------------
@@ -150,20 +151,20 @@ def register_view(request):
                 id_photo_path = ''
                 if 'id_photo' in request.FILES:
                     photo = request.FILES['id_photo']
-                    ext   = photo.name.split('.')[-1].lower()
-                    if ext in ['png', 'jpg', 'jpeg', 'webp']:
-                        import os
-                        from django.conf import settings
-                        from django.core.files.storage import default_storage
-                        safe_id  = sid.replace('-', '_')
-                        filename = f'id_photos/id_{safe_id}.{ext}'
-                        if default_storage.exists(filename):
-                            default_storage.delete(filename)
-                        saved_path    = default_storage.save(filename, photo)
-                        id_photo_path = f'/media/{saved_path}'
-                    else:
-                        messages.error(request, 'Invalid file type. Only PNG, JPG, and WebP are allowed.')
+                    is_valid, error_msg = validate_upload(photo)
+                    if not is_valid:
+                        messages.error(request, error_msg)
                         return render(request, 'student_portal/register.html', {'form': form, 'sections': sections})
+
+                    import os
+                    from django.core.files.storage import default_storage
+                    ext      = os.path.splitext(photo.name)[1].lower()
+                    safe_id  = sid.replace('-', '_')
+                    filename = f'id_photos/id_{safe_id}{ext}'
+                    if default_storage.exists(filename):
+                        default_storage.delete(filename)
+                    saved_path    = default_storage.save(filename, photo)
+                    id_photo_path = f'/media/{saved_path}'
 
                 Student.objects.create(
                     id=uuid.uuid4(),
@@ -304,15 +305,17 @@ def profile_view(request):
             if not pic:
                 messages.error(request, 'No file selected.')
                 return redirect('student_portal:profile')
-            ext = pic.name.split('.')[-1].lower()
-            if ext not in ['png', 'jpg', 'jpeg', 'webp']:
-                messages.error(request, 'Invalid file type. Only PNG, JPG, and WebP are allowed.')
+
+            is_valid, error_msg = validate_upload(pic)
+            if not is_valid:
+                messages.error(request, error_msg)
                 return redirect('student_portal:profile')
+
             import os, time
-            from django.conf import settings
             from django.core.files.storage import default_storage
+            ext       = os.path.splitext(pic.name)[1].lower()
             timestamp = int(time.time())
-            filename  = f'id_photos/profile_{student.id}_{timestamp}.{ext}'
+            filename  = f'id_photos/profile_{student.id}_{timestamp}{ext}'
             if default_storage.exists(filename):
                 default_storage.delete(filename)
             saved_path            = default_storage.save(filename, pic)

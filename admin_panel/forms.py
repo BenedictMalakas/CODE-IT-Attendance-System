@@ -27,6 +27,21 @@ class EventForm(forms.ModelForm):
             'end_time':         'End time',
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        date = cleaned_data.get('date')
+        start_time = cleaned_data.get('start_time')
+
+        if date and start_time:
+            from django.utils import timezone
+            from datetime import datetime
+            
+            event_datetime = timezone.make_aware(datetime.combine(date, start_time))
+            if event_datetime < timezone.now():
+                raise forms.ValidationError('You cannot create an event that has already started or is in the past.')
+
+        return cleaned_data
+
 
 class AdminRegisterForm(forms.Form):
     name = forms.CharField(

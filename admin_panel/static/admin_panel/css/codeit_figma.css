@@ -100,7 +100,7 @@ a {
   font-size: 16px;
   font-weight: 400;
   line-height: 1;
-  text-transform: uppercase;
+  
 }
 
 .sidebar-nav a i {
@@ -164,7 +164,7 @@ a {
   font-size: 16px;
   font-weight: 500;
   line-height: 1.25;
-  text-transform: uppercase;
+  
 }
 
 .figma-panel,
@@ -271,7 +271,7 @@ a {
   font-size: 12px;
   font-weight: 400;
   line-height: 1.1;
-  text-transform: uppercase;
+  
 }
 
 .figma-grid-2,
@@ -312,7 +312,7 @@ a {
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
-  text-transform: uppercase;
+  
 }
 
 .figma-table th {
@@ -415,7 +415,7 @@ a {
   font-size: 16px;
   font-weight: 400;
   text-decoration: none;
-  text-transform: uppercase;
+  
   transition: background 0.15s ease, color 0.15s ease;
 }
 
@@ -443,7 +443,7 @@ a {
   font-weight: 400;
   line-height: 1;
   text-decoration: none;
-  text-transform: uppercase;
+  
   cursor: pointer;
 }
 
@@ -484,7 +484,7 @@ a {
   padding: 2px 10px;
   font-size: 13px;
   font-weight: 500;
-  text-transform: uppercase;
+  
 }
 
 .figma-badge.present,
@@ -521,7 +521,7 @@ a {
   color: #000;
   font-size: 16px;
   font-weight: 400;
-  text-transform: uppercase;
+  
 }
 
 .form-control,
@@ -539,7 +539,7 @@ textarea {
   font-family: 'Geist', 'Segoe UI', system-ui, sans-serif;
   font-size: 16px !important;
   font-weight: 400;
-  text-transform: uppercase;
+  
 }
 
 input[type="checkbox"],
@@ -581,7 +581,7 @@ textarea::placeholder {
   box-shadow: var(--shadow);
   color: var(--muted);
   font-size: 16px;
-  text-transform: uppercase;
+  
 }
 
 .section-card-grid {
@@ -615,7 +615,7 @@ textarea::placeholder {
   font-size: 20px;
   font-weight: 600;
   line-height: 1;
-  text-transform: uppercase;
+  
 }
 
 .section-card--sm h3 {
@@ -680,7 +680,7 @@ textarea::placeholder {
   margin: 0;
   font-size: 13px;
   font-weight: 500;
-  text-transform: uppercase;
+  
   color: var(--orange);
 }
 
@@ -743,7 +743,7 @@ textarea::placeholder {
   font-family: 'Geist', 'Segoe UI', system-ui, sans-serif;
   font-size: 18px;
   font-weight: 500;
-  text-transform: uppercase;
+  
 }
 
 @media (max-width: 1100px) {
