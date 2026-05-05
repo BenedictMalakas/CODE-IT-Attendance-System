@@ -16,28 +16,37 @@
     <form method="post">
       {% csrf_token %}
 
+      {% if form.errors %}
+        <div class="alert alert-danger mb-4">
+          <p><strong>Please fix the following errors:</strong></p>
+          <ul class="mb-0">
+            {% for field, errors in form.errors.items %}
+              {% for error in errors %}
+                <li>{% if field != '__all__' %}{{ field|title }}: {% endif %}{{ error }}</li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
       <div class="mb-5">
         <label class="form-label">Event Name</label>
         {{ form.name }}
-        {% if form.name.errors %}<div class="text-danger small mt-2">{{ form.name.errors.0 }}</div>{% endif %}
       </div>
 
       <div class="mb-5" style="max-width:493px;">
         <label class="form-label">Date</label>
         {{ form.date }}
-        {% if form.date.errors %}<div class="text-danger small mt-2">{{ form.date.errors.0 }}</div>{% endif %}
       </div>
 
       <div class="figma-form-grid mb-5">
         <div>
           <label class="form-label">Start Time</label>
           {{ form.start_time }}
-          {% if form.start_time.errors %}<div class="text-danger small mt-2">{{ form.start_time.errors.0 }}</div>{% endif %}
         </div>
         <div>
           <label class="form-label">End Time</label>
           {{ form.end_time }}
-          {% if form.end_time.errors %}<div class="text-danger small mt-2">{{ form.end_time.errors.0 }}</div>{% endif %}
         </div>
       </div>
 
@@ -47,7 +56,6 @@
           <div style="flex:1;">{{ form.late_cutoff_mins }}</div>
           <span class="figma-addon">Minutes</span>
         </div>
-        {% if form.late_cutoff_mins.errors %}<div class="text-danger small mt-2">{{ form.late_cutoff_mins.errors.0 }}</div>{% endif %}
       </div>
 
       <button type="submit" class="figma-btn" style="min-width:320px;">

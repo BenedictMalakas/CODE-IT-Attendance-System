@@ -872,6 +872,7 @@ def scan_qr_api(request, event_id):
                 'message': f'{student.name} already checked out at {existing.scanned_out_at.strftime("%I:%M:%S %p")}.',
                 'student_name': student.name,
                 'student_id':   student.student_id,
+                'photo_url':    student.id_photo_path,
                 'status':       'checkout',
             })
         existing.scanned_out_at = now
@@ -882,6 +883,7 @@ def scan_qr_api(request, event_id):
             'student_name': student.name,
             'student_id':   student.student_id,
             'section':      student.section.name,
+            'photo_url':    student.id_photo_path,
             'status':       'checkout',
             'scanned_at':   now.strftime('%I:%M:%S %p'),
         })
@@ -904,6 +906,7 @@ def scan_qr_api(request, event_id):
                 'message':         f'{student.name} already recorded as {existing.status.upper()}.',
                 'student_name':    student.name,
                 'student_id':      student.student_id,
+                'photo_url':       student.id_photo_path,
                 'status':          existing.status,
             })
         # Was pre-marked absent → update to present/late
@@ -926,6 +929,7 @@ def scan_qr_api(request, event_id):
         'student_name': student.name,
         'student_id':   student.student_id,
         'section':      student.section.name,
+        'photo_url':    student.id_photo_path,
         'status':       status,
         'scanned_at':   now.strftime('%I:%M:%S %p'),
     })

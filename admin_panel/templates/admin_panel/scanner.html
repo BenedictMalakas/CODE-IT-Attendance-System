@@ -24,6 +24,13 @@
     background: rgba(255,255,255,0.62);
     box-shadow: var(--codeit-ring);
   }
+  .result-photo {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    object-fit: cover;
+    display: block;
+  }
 </style>
 {% endblock %}
 
@@ -189,24 +196,33 @@
     const status = document.getElementById('resultStatus');
     const time   = document.getElementById('resultTime');
 
-    if (data.success) {
+    if (data.success || data.already_scanned) {
+      if (data.photo_url) {
+        icon.style.background = 'transparent';
+        icon.style.boxShadow  = 'none';
+        icon.innerHTML = `<img src="${data.photo_url}" class="result-photo" alt="Student" />`;
+      } else {
+        icon.style.background = ''; // restore default from CSS
+        icon.style.boxShadow  = ''; 
+        if (data.checkout) {
+          icon.innerHTML = '<i class="fa fa-door-open"></i>';
+        } else {
+          icon.innerHTML = data.status === 'present' ? '<i class="fa fa-check"></i>' : '<i class="fa fa-clock"></i>';
+        }
+      }
+      
       if (data.checkout) {
-        icon.innerHTML = '<i class="fa fa-door-open"></i>';
         status.innerHTML = statusBadge('checkout');
       } else {
-        icon.innerHTML = data.status === 'present' ? '<i class="fa fa-check"></i>' : '<i class="fa fa-clock"></i>';
-        status.innerHTML = statusBadge(data.status);
+        status.innerHTML = statusBadge(data.status || 'present');
       }
+
       name.textContent = data.student_name;
-      sub.textContent  = data.student_id + ' | ' + data.section;
-      time.textContent = (data.checkout ? 'Checked out at ' : 'Scanned at ') + data.scanned_at;
-    } else if (data.already_scanned) {
-      icon.innerHTML   = '<i class="fa fa-circle-info"></i>';
-      name.textContent = data.student_name || 'Already Recorded';
-      sub.textContent  = data.student_id  || '';
-      status.innerHTML = statusBadge(data.status || 'present');
-      time.textContent = data.message;
+      sub.textContent  = data.student_id + (data.section ? ' | ' + data.section : '');
+      time.textContent = data.message || ((data.checkout ? 'Checked out at ' : 'Scanned at ') + data.scanned_at);
     } else {
+      icon.style.background = '';
+      icon.style.boxShadow  = '';
       icon.innerHTML   = '<i class="fa fa-xmark"></i>';
       name.textContent = 'Scan Failed';
       sub.textContent  = '';

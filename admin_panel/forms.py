@@ -31,14 +31,31 @@ class EventForm(forms.ModelForm):
         cleaned_data = super().clean()
         date = cleaned_data.get('date')
         start_time = cleaned_data.get('start_time')
+        end_time = cleaned_data.get('end_time')
 
         if date and start_time:
             from django.utils import timezone
-            from datetime import datetime
+            from datetime import datetime, timedelta
             
-            event_datetime = timezone.make_aware(datetime.combine(date, start_time))
-            if event_datetime < timezone.now():
-                raise forms.ValidationError('You cannot create an event that has already started or is in the past.')
+            # Current time in the project's timezone (Asia/Manila)
+            now_local = timezone.localtime(timezone.now())
+            
+            # Event start time in the project's timezone
+            event_start_dt = timezone.make_aware(datetime.combine(date, start_time))
+            
+            # Allow a small 2-minute buffer for form submission time
+            if event_start_dt < (now_local - timedelta(minutes=2)):
+                self.add_error('start_time', 'You cannot create an event with a start time that has already passed.')
+
+        if start_time and end_time:
+            if end_time <= start_time:
+                self.add_error('end_time', 'The end time must be later than the start time.')
+            
+            # If it's today, also check if end time is already in the past
+            if date and date == timezone.localtime(timezone.now()).date():
+                event_end_dt = timezone.make_aware(datetime.combine(date, end_time))
+                if event_end_dt < timezone.localtime(timezone.now()):
+                    self.add_error('end_time', 'The end time cannot be in the past.')
 
         return cleaned_data
 

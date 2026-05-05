@@ -52,6 +52,29 @@
       font-size: 28px;
     }
 
+    /* ── Password eye toggle ── */
+    .pw-wrapper {
+      position: relative;
+    }
+    .pw-wrapper .form-control {
+      padding-right: 44px;
+    }
+    .pw-toggle {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; padding: 4px;
+      color: #888; cursor: pointer; font-size: 16px;
+      line-height: 1; z-index: 2;
+      transition: color 0.18s ease;
+    }
+    .pw-toggle:hover { color: #130257; }
+
+    /* Hide browser's built-in password reveal (Edge / Chrome) */
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-webkit-credentials-auto-fill-button {
+      display: none !important;
+    }
+
     /* ── Liquid splash ── */
     .splash-overlay {
       position: fixed; inset: 0; z-index: 10000;
@@ -135,13 +158,15 @@
       100% { opacity: 0.58; transform: scale(1); }
     }
 
-    /* Post-login loading — liquid vessel only */
+    /* Post-login loading — liquid vessel centered */
     .login-loading {
       position: fixed; inset: 0; z-index: 10001;
-      display: none; place-items: center;
+      display: none;
+      justify-content: center;
+      align-items: center;
       background: #fff;
     }
-    .login-loading.active { display: grid; }
+    .login-loading.active { display: flex; }
     .login-loading .splash-vessel {
       position: relative; left: auto; top: auto;
       transform: none;
@@ -194,7 +219,12 @@
       </div>
       <div class="mb-4">
         <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
-        {{ form.password }}
+        <div class="pw-wrapper">
+          {{ form.password }}
+          <button type="button" class="pw-toggle" id="pwToggle" aria-label="Toggle password visibility">
+            <i class="fa fa-eye"></i>
+          </button>
+        </div>
       </div>
       <button class="figma-btn w-100" type="submit">
         <i class="fa fa-shield-halved"></i> Enter dashboard
@@ -203,6 +233,23 @@
   </main>
 
   <script>
+    /* ── Password eye toggle ── */
+    const pwToggle = document.getElementById('pwToggle');
+    if (pwToggle) {
+      pwToggle.addEventListener('click', () => {
+        const input = pwToggle.parentElement.querySelector('input');
+        const icon = pwToggle.querySelector('i');
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+          input.type = 'password';
+          icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+      });
+    }
+
+    /* ── Splash screen ── */
     const SPLASH_KEY = 'codeit_chair_splash_shown';
     const splash = document.getElementById('splashOverlay');
 
@@ -217,6 +264,7 @@
       }
     }
 
+    /* ── Post-login loading ── */
     const loginLoading = document.getElementById('loginLoading');
     if (loginLoading) {
       document.querySelectorAll('form[method="post"]').forEach(form => {
