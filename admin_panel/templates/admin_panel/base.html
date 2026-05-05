@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,590 +7,115 @@
   <title>{% block title %}Admin Panel{% endblock %} | CODE-IT</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="{% static 'admin_panel/css/codeit_figma.css' %}" rel="stylesheet" />
   <style>
-    /* ================================================================
-       CODE-IT ADMIN DESIGN SYSTEM — "Folder-Tab Neobrutalism"
-       ================================================================ */
-    :root {
-      --bg-base:        #111840;
-      --blob-purple:    #3D2C6B;
-      --blob-blue:      #2E4A8C;
-      --blob-orange:    #D68B35;
-      --blob-dark:      #1A1540;
-
-      --card-border:    #1E1E2E;
-      --card-outer:     #FFFFFF;
-      --card-inner:     linear-gradient(145deg, #7B8ED8 0%, #9DAAE8 60%, #A8B5F0 100%);
-      --card-inner-dark: linear-gradient(145deg, #1A1E3D 0%, #242850 100%);
-      --card-inner-white:#FFFFFF;
-      --card-radius:    18px;
-      --card-border-w:  3px;
-
-      --accent-orange:  #F5A623;
-      --btn-orange:     #E89430;
-      --btn-orange-hover:#D07A20;
-      --accent-green:   #2ECC71;
-      --accent-red:     #E74C3C;
-
-      --screw-size:     14px;
-      --screw-bg:       radial-gradient(circle at 35% 35%, #E8E8E8, #A0A0A0);
-      --screw-border:   #808080;
-
-      --font:           'Outfit', 'Segoe UI', system-ui, sans-serif;
-      --text-dark:      #1E1E2E;
-      --text-white:     #FFFFFF;
-      --text-muted:     #6B7588;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: var(--font);
-      background: var(--bg-base);
-      min-height: 100vh;
-      overflow-x: hidden;
-      color: var(--text-dark);
-      position: relative;
-      isolation: isolate;
-    }
-
-    /* ---- BLOB BACKGROUND ---- */
-    .blob-bg {
-      position: fixed; top:0; left:0; width:100%; height:100%;
-      z-index:-1; pointer-events:none; overflow:hidden;
-    }
-    .blob,
-    .blob * {
-      pointer-events: none !important;
-    }
-    .blob { position: absolute; border-radius: 50%; }
-    .blob-1 { width:600px; height:600px; background:var(--blob-blue); top:-100px; left:-120px; opacity:0.85; }
-    .blob-2 { width:550px; height:550px; background:var(--blob-purple); top:-60px; right:-80px; opacity:0.8; }
-    .blob-3 { width:500px; height:500px; background:var(--blob-blue); top:35%; right:-100px; opacity:0.7; }
-    .blob-4 { width:480px; height:480px; background:var(--blob-orange); bottom:-120px; left:10%; opacity:0.75; }
-    .blob-5 { width:520px; height:520px; background:var(--blob-purple); bottom:-100px; right:20%; opacity:0.6; }
-    .blob-6 { width:400px; height:400px; background:var(--blob-orange); top:20%; left:40%; opacity:0.4; }
-
-    /* ---- NAVIGATION HEADER ---- */
-    .nav-header {
-      position: fixed; top: 16px; left: 20px;
-      z-index: 1000;
-    }
-    .user-card {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--card-outer);
-      border: var(--card-border-w) solid var(--card-border);
-      border-radius: 14px;
-      padding: 8px 18px 8px 10px;
-      cursor: pointer;
-      transition: box-shadow 0.2s, transform 0.15s;
-      user-select: none;
-    }
-    .user-card:hover {
-      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-      transform: translateY(-1px);
-    }
-    .user-avatar {
-      width: 36px; height: 36px; border-radius: 10px;
-      background: linear-gradient(135deg, #7B8ED8, #5B6FC1);
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 1rem;
-    }
-    .user-info { display: flex; flex-direction: column; line-height: 1.2; }
-    .user-name {
-      font-weight: 800; font-size: 0.9rem; color: var(--text-dark);
-      white-space: nowrap;
-    }
-    .user-name .role-tag {
-      font-weight: 700; color: var(--accent-orange);
-      font-size: 0.8rem;
-    }
-
-    .nav-toggle-icon {
-      font-size: 0.7rem; color: var(--text-muted);
-      transition: transform 0.2s;
-    }
-    .nav-dropdown {
-      position: absolute; top: calc(100% + 8px); left: 0;
-      background: var(--card-outer);
-      border: var(--card-border-w) solid var(--card-border);
-      border-radius: 14px;
-      min-width: 240px;
-      padding: 8px 0;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
-      opacity: 0; visibility: hidden;
-      transform: translateY(-8px);
-      transition: all 0.2s ease;
-    }
-    .nav-dropdown.show {
-      opacity: 1; visibility: visible;
-      transform: translateY(0);
-    }
-    .nav-dropdown a {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 20px;
-      color: var(--text-dark);
-      text-decoration: none;
-      font-weight: 600; font-size: 0.9rem;
-      transition: background 0.15s;
-    }
-    .nav-dropdown a:hover { background: #f0f2f5; }
-    .nav-dropdown a.active {
-      color: var(--accent-orange);
-      background: rgba(245,166,35,0.08);
-    }
-    .nav-dropdown a i { width: 18px; text-align: center; }
-    .nav-dropdown hr { margin: 4px 16px; border: none; border-top: 1px solid #e4e7ed; }
-    .nav-dropdown .logout-link { color: #E74C3C; }
-    .nav-dropdown .logout-link:hover { background: rgba(231,76,60,0.06); }
-
-    /* ---- PAGE CONTENT ---- */
-    .page-content {
-      position: relative;
-      padding: 80px 32px 40px;
-      max-width: 1300px;
-      margin: 0 auto;
-    }
-
-    /* ---- FOLDER-TAB CARD SYSTEM ---- */
-    .folder-card { position: relative; margin-top: 32px; }
-    .folder-tab {
-      position: absolute;
-      top: -26px; left: 24px;
-      background: var(--card-outer);
-      border: var(--card-border-w) solid var(--card-border);
-      border-bottom: var(--card-border-w) solid var(--card-outer);
-      border-radius: 12px 12px 0 0;
-      padding: 4px 22px 2px;
-      font-weight: 800; font-size: 1.05rem;
-      color: var(--accent-orange);
-      z-index: 3; letter-spacing: 0.3px;
-    }
-    .folder-body {
-      background: var(--card-outer);
-      border: var(--card-border-w) solid var(--card-border);
-      border-radius: var(--card-radius);
-      padding: 14px;
-      position: relative;
-    }
-    .folder-inner {
-      background: var(--card-inner);
-      border-radius: 14px;
-      padding: 28px;
-    }
-    .folder-inner.white { background: var(--card-inner-white); }
-    .folder-inner.dark { background: var(--card-inner-dark); }
-
-    .screw {
-      position: absolute;
-      width: var(--screw-size); height: var(--screw-size);
-      border-radius: 50%;
-      background: var(--screw-bg);
-      border: 2px solid var(--screw-border);
-      z-index: 2;
-    }
-    .screw-tl { top: 10px; left: 10px; }
-    .screw-tr { top: 10px; right: 10px; }
-    .screw-bl { bottom: 10px; left: 10px; }
-    .screw-br { bottom: 10px; right: 10px; }
-
-    /* ---- SECTION TITLE BAND ---- */
-    .section-title-band {
-      background: var(--card-outer);
-      border: var(--card-border-w) solid var(--card-border);
-      border-radius: 12px;
-      display: inline-block;
-      padding: 6px 28px 4px;
-      margin-bottom: 12px;
-      position: relative;
-      z-index: 4;
-    }
-    .section-title-band h2 {
-      font-weight: 900;
-      font-size: 1.2rem;
-      color: var(--text-dark);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin: 0;
-    }
-
-    /* ---- FORM ELEMENTS ---- */
-    .codeit-input {
-      width: 100%; padding: 10px 16px; border: none;
-      border-radius: 20px; background: #E8E4DC;
-      font-family: var(--font); font-size: 0.9rem; font-weight: 500;
-      color: var(--text-dark); outline: none;
-    }
-    .codeit-input:focus { box-shadow: 0 0 0 3px rgba(245,166,35,0.3); }
-    .codeit-input::placeholder { color: #A09888; }
-    .codeit-select {
-      width: 100%; padding: 10px 16px; border: none;
-      border-radius: 20px; background: #E8E4DC;
-      font-family: var(--font); font-size: 0.9rem; font-weight: 500;
-      color: var(--text-dark); outline: none;
-      cursor: pointer; appearance: none; -webkit-appearance: none;
-      padding-right: 40px;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%231E1E2E' d='M1.41.59 6 5.17 10.59.59 12 2l-6 6-6-6z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      background-size: 12px 8px;
-    }
-    .codeit-select-green {
-      background-color: var(--accent-green); color: #fff;
-      font-weight: 700;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23FFFFFF' d='M1.41.59 6 5.17 10.59.59 12 2l-6 6-6-6z'/%3E%3C/svg%3E");
-    }
-    .codeit-select-rect {
-      border-radius: 12px;
-      border: 2px solid var(--card-border);
-      padding: 8px 38px 8px 12px;
-      min-width: 112px;
-      background-color: #F3EEE6;
-      box-shadow: 0 2px 0 rgba(30, 30, 46, 0.08);
-    }
-    .codeit-label {
-      display: block; font-weight: 700; font-size: 0.9rem;
-      color: var(--text-dark); margin-bottom: 8px;
-    }
-    .codeit-label-white { color: var(--text-white); }
-
-    /* ---- BUTTONS ---- */
-    .btn-codeit {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 12px 32px;
-      background: var(--btn-orange);
-      color: var(--text-dark);
-      border: 3px solid var(--card-border);
-      border-radius: 14px;
-      font-family: var(--font); font-weight: 800; font-size: 0.95rem;
-      cursor: pointer; transition: all 0.2s; text-decoration: none;
-    }
-    .btn-codeit:hover {
-      background: var(--btn-orange-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-      color: var(--text-dark);
-    }
-    .btn-codeit-sm { padding: 8px 20px; font-size: 0.85rem; border-radius: 10px; border-width: 2px; }
-    .btn-codeit-green { background: var(--accent-green); color: #fff; }
-    .btn-codeit-green:hover { background: #27AE60; color: #fff; }
-    .btn-codeit-red { background: var(--accent-red); color: #fff; }
-    .btn-codeit-red:hover { background: #C0392B; color: #fff; }
-
-    /* ---- TABLES ---- */
-    .codeit-table {
-      width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88rem;
-    }
-    .codeit-table thead th {
-      background: #F0F0F0; color: var(--text-dark);
-      font-weight: 800; font-size: 0.8rem;
-      text-transform: uppercase; letter-spacing: 0.5px;
-      padding: 12px 16px;
-      border-bottom: 2px solid var(--card-border);
-    }
-    .codeit-table thead th:first-child { border-radius: 10px 0 0 0; }
-    .codeit-table thead th:last-child  { border-radius: 0 10px 0 0; }
-    .codeit-table tbody td {
-      padding: 12px 16px; border-bottom: 1px solid #E8E8E8; vertical-align: middle;
-    }
-    .codeit-table tbody tr:last-child td { border-bottom: none; }
-    .codeit-table tbody tr:hover { background: #FAFBFD; }
-
-    .delete-btn {
-      color: var(--accent-red); font-weight: 800; font-size: 0.85rem;
-      background: none; border: none; cursor: pointer;
-      text-decoration: none;
-    }
-    .delete-btn:hover { text-decoration: underline; color: #C0392B; }
-
-    /* ---- BADGES ---- */
-    .badge-present  { background: #D4EDDA; color: #155724; font-weight: 700; }
-    .badge-late     { background: #FFF3CD; color: #856404; font-weight: 700; }
-    .badge-absent   { background: #F8D7DA; color: #721C24; font-weight: 700; }
-    .badge-pending  { background: #CFE2FF; color: #084298; font-weight: 700; }
-    .badge-active   { background: #D4EDDA; color: #155724; font-weight: 700; }
-    .badge-rejected { background: #F8D7DA; color: #721C24; font-weight: 700; }
-
-    /* ---- MESSAGES ---- */
-    .messages-container {
-      position: relative; z-index: 10;
-      max-width: 600px; margin: 0 auto;
-      padding: 80px 20px 0;
-    }
-    .messages-container + .page-content { padding-top: 16px; }
-    .messages-container .alert {
-      border-radius: 14px; border: 2px solid var(--card-border);
-      font-size: 0.9rem; font-weight: 600;
-    }
-
-    .modal-backdrop {
-      z-index: 1990 !important;
-    }
-
-    .modal {
-      z-index: 2000 !important;
-    }
-
-    .modal-dialog {
-      z-index: 2001;
-    }
-
-    /* ---- STAT CARDS ---- */
-    .stat-card {
-      background: var(--card-outer);
-      border: var(--card-border-w) solid var(--card-border);
-      border-radius: 16px;
-      padding: 20px;
-      position: relative; overflow: hidden;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    }
-    .stat-card .icon {
-      width: 48px; height: 48px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem;
-    }
-    .stat-card .stat-value {
-      font-size: 1.8rem; font-weight: 800; line-height: 1; margin-top: .6rem;
-    }
-    .stat-card .stat-label {
-      font-size: .82rem; color: #8892a5; font-weight: 600; margin-top: .25rem;
-    }
-
-    /* ---- SCROLLBAR ---- */
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
-
-    /* ---- RESPONSIVE ---- */
-    @media (max-width: 992px) { .page-content { padding: 80px 20px 30px; } }
-    @media (max-width: 768px) {
-      .page-content { padding: 72px 12px 24px; }
-      .folder-inner { padding: 18px; }
-      .folder-tab { font-size: 0.9rem; padding: 3px 16px 1px; top: -24px; }
-      .folder-card { margin-top: 28px; }
-      .blob-1 { width: 300px; height: 300px; }
-      .blob-2 { width: 350px; height: 350px; }
-      .table { font-size: .82rem; }
-      .btn-sm { font-size: .75rem; padding: .25rem .5rem; }
-    }
-    @media (max-width: 576px) {
-      .page-content { padding: 66px 8px 20px; }
-      .folder-inner { padding: 14px; }
-      .nav-header { top: 10px; left: 12px; }
-    }
+    #sidebar { --sidebar-logo-url: url("{% static 'student_portal/img/codeit_logo.png' %}"); }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
-<body>
-
-<!-- Background Blobs -->
-<div class="blob-bg">
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
-  <div class="blob blob-3"></div>
-  <div class="blob blob-4"></div>
-  <div class="blob blob-5"></div>
-  <div class="blob blob-6"></div>
-</div>
-
-<!-- Navigation Header -->
-<div class="nav-header">
-  <div class="user-card" id="userCard">
-    <div class="user-avatar">
-      <i class="fa fa-user"></i>
-    </div>
-    <div class="user-info">
-      <span class="user-name">
-        {{ request.session.admin_name|default:"Admin" }}
-        &bull;
-        <span class="role-tag">
-          {% if request.session.admin_role == 'chairperson' %}Chairperson
-          {% elif request.session.admin_role == 'vits' %}VITS
-          {% elif request.session.admin_role == 'representative' %}Rep
-          {% else %}Admin{% endif %}
-        </span>
-      </span>
-    </div>
-    <i class="fa fa-chevron-down nav-toggle-icon" id="navToggleIcon"></i>
+<body class="admin-role-{{ request.session.admin_role|default:'vits' }}">
+<aside id="sidebar" aria-label="Main navigation">
+  <div class="sidebar-brand">
+    <img src="{% static 'student_portal/img/codeit_logo.png' %}" alt="CODE-IT logo" />
   </div>
-  <div class="nav-dropdown" id="navDropdown">
-    {% if request.session.admin_role == 'chairperson' %}
-      <a href="{% url 'admin_panel:chairperson_dashboard' %}" class="{% block nav_dashboard %}{% endblock %}">
-        <i class="fa fa-gauge"></i> Dashboard
-      </a>
-    {% else %}
-      <a href="{% url 'admin_panel:dashboard' %}" class="{% block nav_dashboard_other %}{% endblock %}">
-        <i class="fa fa-gauge"></i> Dashboard
-      </a>
-    {% endif %}
-    {% if request.session.admin_role == 'chairperson' %}
-    <a href="{% url 'admin_panel:sections_manage' %}" class="{% block nav_sections %}{% endblock %}">
-      <i class="fa fa-layer-group"></i> Sections
+  <nav class="sidebar-nav">
+    <a href="{% url 'admin_panel:dashboard' %}" class="{% block nav_dashboard %}{% endblock %}">
+      <i class="fa fa-table-columns"></i> Dashboard
     </a>
-    {% endif %}
-    {% if request.session.admin_role == 'chairperson' %}
-      <a href="{% url 'admin_panel:admins_manage' %}" class="{% block nav_admins %}{% endblock %}">
-        <i class="fa fa-user-gear"></i> Officers & Reps
+    {# Students — VITS #}
+    {% if request.session.admin_role == 'vits' %}
+      <a href="{% url 'admin_panel:students' %}" class="{% block nav_students %}{% endblock %}">
+        <i class="fa fa-user-graduate"></i> Students
       </a>
-      <a href="{% url 'admin_panel:activity_logs' %}" class="{% block nav_activity %}{% endblock %}">
-        <i class="fa fa-clipboard-list"></i> Activity Logs
+    {% endif %}
+    {# Students — Chairperson #}
+    {% if request.session.admin_role == 'chairperson' %}
+      <a href="{% url 'admin_panel:students' %}" class="{% block nav_students_chair %}{% endblock %}">
+        <i class="fa fa-user-graduate"></i> Students
+      </a>
+    {% endif %}
+    {# Section + Officers — Chairperson and Representative #}
+    {% if request.session.admin_role != 'vits' %}
+      <a href="{% url 'admin_panel:sections_manage' %}" class="{% block nav_sections %}{% endblock %}">
+        <i class="fa fa-tablet-screen-button"></i> Section
+      </a>
+      <a href="{% url 'admin_panel:admins_manage' %}" class="{% block nav_admins %}{% endblock %}">
+        <i class="fa fa-user-shield"></i> Officers &amp; Reps
       </a>
     {% endif %}
     <a href="{% url 'admin_panel:events' %}" class="{% block nav_events %}{% endblock %}">
-      <i class="fa fa-calendar-days"></i> Events
+      <i class="fa fa-calendar-plus"></i> Events
     </a>
-    <a href="{% url 'admin_panel:students' %}" class="{% block nav_students %}{% endblock %}">
-      <i class="fa fa-users"></i> Students
+    {% if request.session.admin_role == 'chairperson' or request.session.admin_role == 'vits' %}
+    <a href="{% url 'admin_panel:activity_logs' %}" class="{% block nav_activity %}{% endblock %}">
+      <i class="fa fa-clock-rotate-left"></i> Activity Logs
     </a>
-    <hr />
-    <a href="{% url 'admin_panel:logout' %}" class="logout-link">
-      <i class="fa fa-right-from-bracket"></i> Logout
-    </a>
+    {% endif %}
+  </nav>
+  <div class="sidebar-footer">
+    <span><i class="fa fa-circle-user me-1"></i>{{ request.session.admin_name|default:"Admin" }}</span>
+    <span class="text-uppercase">{{ request.session.admin_role|default:"vits" }}</span>
+    <a href="{% url 'admin_panel:logout' %}">Logout</a>
   </div>
-</div>
+</aside>
 
-<!-- Messages -->
-{% if messages %}
-<div class="messages-container">
-  {% for msg in messages %}
-    <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show" role="alert">
-      <i class="fa fa-circle-info me-1"></i> {{ msg }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-  {% endfor %}
-</div>
-{% endif %}
+<main id="main">
+  <div id="topbar" class="d-md-none">
+    <span style="font-family:'Geist',sans-serif; font-weight:600; font-size:15px; color:var(--violet); letter-spacing:0.02em;">
+      <i class="fa fa-shield-halved me-1"></i> CODE-IT Admin
+    </span>
+    <button class="figma-icon-btn" id="sidebarToggle" type="button" aria-label="Toggle navigation">
+      <i class="fa fa-bars"></i>
+    </button>
+  </div>
 
-<!-- Page Content -->
-<div class="page-content">
-  {% block content %}{% endblock %}
-</div>
+  <!-- Mobile sidebar overlay -->
+  <div id="sidebarOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:1095;"></div>
 
-<!-- Force Password Change Modal -->
-{% if force_password_change %}
-<div id="forcePasswordOverlay" style="
-  position:fixed; top:0; left:0; right:0; bottom:0;
-  background:rgba(0,0,0,.7); z-index:9999;
-  display:flex; align-items:center; justify-content:center;
-">
-  <div class="folder-card" style="width:100%; max-width:440px; margin:0 20px;">
-    <div class="folder-tab">Security</div>
-    <div class="folder-body">
-      <span class="screw screw-tl"></span>
-      <span class="screw screw-tr"></span>
-      <span class="screw screw-bl"></span>
-      <span class="screw screw-br"></span>
-      <div class="folder-inner white" style="text-align:center; padding:32px;">
-        <div style="width:60px; height:60px; border-radius:50%;
-             background:var(--btn-orange); display:flex; align-items:center;
-             justify-content:center; margin:0 auto 16px; color:#fff; font-size:1.5rem;">
-          <i class="fa fa-shield-halved"></i>
+  <div class="content">
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show" role="alert">
+          {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        <h5 style="font-weight:800; color:var(--text-dark); margin-bottom:8px;">Change Your Password</h5>
-        <p style="color:var(--text-muted); font-size:.85rem; margin-bottom:24px;">
-          For security, you must change your default password.
-          Use at least <strong>8 characters</strong> with at least <strong>1 special character</strong>.
-        </p>
-        <form method="post" action="{% url 'admin_panel:force_change_password' %}" id="forcePwForm">
-          {% csrf_token %}
-          <div style="margin-bottom:14px; text-align:left;">
-            <label class="codeit-label" style="font-size:.82rem;">New Password</label>
-            <div style="position:relative;">
-              <input type="password" name="new_password" class="codeit-input" id="forcePwNew"
-                     placeholder="Min 8 chars, 1 special" required minlength="8" />
-              <button type="button" onclick="toggleForcePw(this)" style="
-                position:absolute; right:14px; top:50%; transform:translateY(-50%);
-                cursor:pointer; color:#8B8070; background:none; border:none; font-size:.85rem;">
-                <i class="fa fa-eye"></i>
-              </button>
-            </div>
-          </div>
-          <div style="margin-bottom:14px; text-align:left;">
-            <label class="codeit-label" style="font-size:.82rem;">Confirm Password</label>
-            <div style="position:relative;">
-              <input type="password" name="confirm_password" class="codeit-input" id="forcePwConfirm"
-                     placeholder="Re-enter password" required />
-              <button type="button" onclick="toggleForcePw(this)" style="
-                position:absolute; right:14px; top:50%; transform:translateY(-50%);
-                cursor:pointer; color:#8B8070; background:none; border:none; font-size:.85rem;">
-                <i class="fa fa-eye"></i>
-              </button>
-            </div>
-          </div>
-          <div id="forcePwError" style="display:none; color:#E74C3C; font-size:.82rem; margin-bottom:12px; font-weight:600;"></div>
-          <button type="submit" class="btn-codeit" style="width:100%;">
-            <i class="fa fa-key"></i> Set New Password
-          </button>
-        </form>
-      </div>
-    </div>
+      {% endfor %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
   </div>
-</div>
-<script>
-  function toggleForcePw(btn) {
-    const input = btn.parentElement.querySelector('input');
-    const icon  = btn.querySelector('i');
-    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
-    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
-  }
-  document.getElementById('forcePwForm').addEventListener('submit', function(e) {
-    const pw  = document.getElementById('forcePwNew').value;
-    const cpw = document.getElementById('forcePwConfirm').value;
-    const err = document.getElementById('forcePwError');
-    if (pw.length < 8) { e.preventDefault(); err.textContent = 'Password must be at least 8 characters.'; err.style.display = 'block'; return; }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pw)) { e.preventDefault(); err.textContent = 'Must contain at least 1 special character.'; err.style.display = 'block'; return; }
-    if (pw !== cpw) { e.preventDefault(); err.textContent = 'Passwords do not match.'; err.style.display = 'block'; return; }
-  });
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && document.getElementById('forcePasswordOverlay')) e.preventDefault();
-  });
-</script>
-{% endif %}
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  /* Navigation dropdown */
-  const userCard = document.getElementById('userCard');
-  const navDropdown = document.getElementById('navDropdown');
-  const navToggleIcon = document.getElementById('navToggleIcon');
+  (function () {
+    const sidebar = document.getElementById('sidebar');
+    const toggle  = document.getElementById('sidebarToggle');
+    const overlay = document.getElementById('sidebarOverlay');
 
-  if (userCard && navDropdown) {
-    userCard.addEventListener('click', function(e) {
-      e.stopPropagation();
-      const isOpen = navDropdown.classList.toggle('show');
-      if (navToggleIcon) navToggleIcon.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0)';
+    function openSidebar() {
+      sidebar.classList.add('open');
+      if (overlay) overlay.style.display = 'block';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      if (overlay) overlay.style.display = 'none';
+    }
+
+    toggle?.addEventListener('click', () => {
+      sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
     });
-    document.addEventListener('click', function() {
-      navDropdown.classList.remove('show');
-      if (navToggleIcon) navToggleIcon.style.transform = 'rotate(0)';
+
+    overlay?.addEventListener('click', closeSidebar);
+
+    // Close sidebar on nav link tap (mobile UX)
+    sidebar?.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        if (window.innerWidth <= 768) closeSidebar();
+      });
     });
-    navDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
-  }
-
-  function cleanupModalBackdrops() {
-    window.requestAnimationFrame(() => {
-      const openModals = document.querySelectorAll('.modal.show');
-      const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
-
-      if (openModals.length === 0) {
-        backdrops.forEach(backdrop => backdrop.remove());
-        document.body.classList.remove('modal-open');
-        document.body.style.removeProperty('overflow');
-        document.body.style.removeProperty('padding-right');
-        return;
-      }
-
-      backdrops.slice(0, -1).forEach(backdrop => backdrop.remove());
-    });
-  }
-
-  document.addEventListener('shown.bs.modal', cleanupModalBackdrops);
-  document.addEventListener('hidden.bs.modal', cleanupModalBackdrops);
+  })();
 </script>
 {% block extra_js %}{% endblock %}
 </body>

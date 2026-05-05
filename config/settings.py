@@ -11,10 +11,6 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
-import os
-import logging
-from dotenv import load_dotenv
-import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,21 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-s5#lxjf)g3*f*@3a0*c*tm968zrkp@*mup$ch@e167d&ccb7*s')
+SECRET_KEY = 'django-insecure-s5#lxjf)g3*f*@3a0*c*tm968zrkp@*mup$ch@e167d&ccb7*s'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
+DEBUG = True
 
-ALLOWED_HOSTS = ['codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net', 'codeit-attendance.azurewebsites.net', 'localhost', '127.0.0.1', '52.253.95.130', 'codeit-attendancesystem.me']
-
-CSRF_TRUSTED_ORIGINS = [
-    'https://codeit-attendance-cfawbphhb7a2a9eq.southeastasia-01.azurewebsites.net',
-    'https://codeit-attendance.azurewebsites.net',
-    'https://codeit-attendancesystem.me',
-    'http://52.253.95.130',
-    'http://codeit-attendancesystem.me'
-]
-
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -58,9 +45,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'config.middleware.DDoSProtectionMiddleware',  # DDoS protection (must be first)
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -90,15 +75,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
+import os
+import logging
+from dotenv import load_dotenv
+import dj_database_url
 
-
-# Load .env file only if it exists (for local development)
-# On Azure, we use the Environment Variables set in the Portal.
-env_path = BASE_DIR / '.env'
-if env_path.exists():
-    load_dotenv(env_path, override=True)
-else:
-    load_dotenv() # Fallback to standard loading
+# Load the exact same .env file used by your SQLAlchemy setup
+env_path = BASE_DIR.parent / 'Data base proj' / '.env'
+load_dotenv(env_path, override=True)  # override=True ensures it always loads
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -158,24 +142,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# Only use WhiteNoise's compressed manifest storage in production (when DEBUG is False)
-if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
-# WhiteNoise Optimization for Azure
-WHITENOISE_MANIFEST_STRICT = False
-WHITENOISE_USE_FINDERS = True
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS — open in dev, locked down in production
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allows all origins when DEBUG=True (localhost)
+# CORS — allow frontend to connect during development
+CORS_ALLOW_ALL_ORIGINS = True  # Lock this down in production!
 
 # DRF settings
 REST_FRAMEWORK = {
@@ -193,41 +167,3 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')       # your Gmail address
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '') # Gmail App Password
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'noreply@code-it.edu')
-
-# Azure HTTPS Support
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = False   # Azure handles this at the SSL settings level
-
-# Dynamically set secure cookies based on DEBUG.
-# Localhost (DEBUG=True => False), Production (DEBUG=False => True)
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_HTTPONLY = True      # Prevent JS access
-CSRF_COOKIE_HTTPONLY = True         # Prevent JS access
-SESSION_COOKIE_SAMESITE = 'Lax'     # CSRF Protection
-
-# Student sessions should expire after 30 minutes of inactivity.
-SESSION_COOKIE_AGE = 1800
-SESSION_SAVE_EVERY_REQUEST = True
-
-# Cache configuration for login rate limiting & DDoS protection
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'codeit_cache_table',
-    }
-}
-
-# ---------------------------------------------------------------------------
-# DDoS Protection Configuration
-# ---------------------------------------------------------------------------
-DDOS_RATE_LIMIT     = 100   # Max requests per IP per time window
-DDOS_RATE_WINDOW    = 60    # Time window in seconds (1 minute)
-DDOS_BLOCK_DURATION = 300   # Block offending IP for 5 minutes
-DDOS_MAX_BODY_SIZE  = 10    # Max upload body size in MB
-DDOS_WHITELIST_IPS  = ['127.0.0.1']  # Localhost bypasses DDoS checks for dev
-
-# Security headers (in addition to those added by middleware)
-SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_BROWSER_XSS_FILTER = True
-X_FRAME_OPTIONS = 'DENY'

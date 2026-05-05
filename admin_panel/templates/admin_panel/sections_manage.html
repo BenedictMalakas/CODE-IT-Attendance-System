@@ -3,203 +3,124 @@
 {% block title %}Manage Sections{% endblock %}
 {% block nav_sections %}active{% endblock %}
 
-{% block extra_head %}
-<style>
-  #sectionNumberInput::-webkit-outer-spin-button,
-  #sectionNumberInput::-webkit-inner-spin-button {
-    -webkit-appearance: none; margin: 0;
-  }
-  #sectionNumberInput[type=number] { -moz-appearance: textfield; }
-</style>
-{% endblock %}
-
 {% block content %}
-<!-- Section Title -->
-<div class="section-title-band">
-  <h2>Manage Section</h2>
-</div>
+<h1 class="figma-heading mb-4">Manage Sections</h1>
 
-<div class="row g-4">
-  <!-- Add Section Card -->
-  <div class="col-lg-5">
-    <div class="folder-card">
-      <div class="folder-tab" style="color:var(--text-dark); font-size:0.95rem;">ADD SECTION</div>
-      <div class="folder-body">
-        <span class="screw screw-tl"></span>
-        <span class="screw screw-tr"></span>
-        <span class="screw screw-bl"></span>
-        <span class="screw screw-br"></span>
-        <div class="folder-inner dark" style="padding:28px;">
-          <form method="post" id="sectionForm">
-            {% csrf_token %}
-            <div style="margin-bottom:18px;">
-              <label class="codeit-label codeit-label-white" style="text-align:center; font-size:0.95rem;">
-                YEAR LEVEL
-              </label>
-              <select name="year_level" class="codeit-select codeit-select-green"
-                      id="sectionYearSelect" required>
-                <option value="1">1ST YEAR</option>
-                <option value="2">2ND YEAR</option>
-                <option value="3">3RD YEAR</option>
-                <option value="4">4TH YEAR</option>
-              </select>
-            </div>
-            <div style="margin-bottom:18px;">
-              <label class="codeit-label codeit-label-white" style="text-align:center; font-size:0.95rem;">
-                SECTION NAME
-              </label>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <div class="codeit-input" style="flex:0 0 auto; width:auto; padding:10px 14px;
-                     font-weight:800; pointer-events:none; background:#D0D0D0;">
-                  BSIT <span id="sectionYearDisplay">1</span> -
-                </div>
-                <select name="section_number" class="codeit-select" id="sectionNumberSelect"
-                        style="flex:1;" required>
-                  {% for i in "123456789" %}
-                  <option value="{{ forloop.counter }}">{{ forloop.counter }}</option>
-                  {% endfor %}
-                  <option value="10">10</option>
-                  <option value="11">11</option>
-                  <option value="12">12</option>
-                  <option value="13">13</option>
-                  <option value="14">14</option>
-                  <option value="15">15</option>
-                </select>
-              </div>
-            </div>
-            <button type="submit" class="btn-codeit btn-codeit-green" style="width:100%;">
-              + ADD SECTION
-            </button>
-          </form>
-        </div>
+<div class="figma-grid-2" style="gap:24px; align-items:start;">
+
+  {# ── Left: Add Section ── #}
+  <section class="figma-panel" style="max-width:420px;">
+    <p class="figma-section-heading mb-1">Add Section</p>
+    <p class="figma-muted small mb-4">Name is auto-generated as BSIT {year}-{index}</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Year Level</label>
+        <select class="form-control" name="year_level">
+          <option value="1">1st Year</option>
+          <option value="2">2nd Year</option>
+          <option value="3">3rd Year</option>
+          <option value="4">4th Year</option>
+        </select>
       </div>
-    </div>
-  </div>
+      <button class="figma-btn" type="submit" style="width:100%;">
+        <i class="fa fa-plus"></i> Add Section
+      </button>
+    </form>
+  </section>
 
-  <!-- All Sections Card -->
-  <div class="col-lg-7">
-    <div class="folder-card">
-      <div class="folder-tab">ALL SECTION</div>
-      <div class="folder-body">
-        <span class="screw screw-tl"></span>
-        <span class="screw screw-tr"></span>
-        <span class="screw screw-bl"></span>
-        <span class="screw screw-br"></span>
-        <div class="folder-inner white" style="padding:0; overflow:hidden; border-radius:14px;">
-          <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #E8E8E8;">
-            <div style="font-size:0.82rem;color:var(--text-muted);font-weight:700;">
-              {% if page_obj.paginator.count %}
-              Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
-              {% else %}
-              No sections found
+  {# ── Right: All Sections Table ── #}
+  <section class="figma-panel">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+      <p class="figma-section-heading mb-0">
+        All Sections
+        <span class="figma-badge ms-2">{{ total_sections }}</span>
+      </p>
+
+      {# Year filter #}
+      <form method="get" class="d-flex align-items-center gap-2">
+        <select name="year" class="form-select form-select-sm" style="width:160px; min-height:36px !important; font-size:13px !important; padding:4px 12px !important;" onchange="this.form.submit()">
+          <option value="all" {% if year_filter == 'all' %}selected{% endif %}>All Year Levels</option>
+          <option value="1" {% if year_filter == '1' %}selected{% endif %}>1st Year</option>
+          <option value="2" {% if year_filter == '2' %}selected{% endif %}>2nd Year</option>
+          <option value="3" {% if year_filter == '3' %}selected{% endif %}>3rd Year</option>
+          <option value="4" {% if year_filter == '4' %}selected{% endif %}>4th Year</option>
+        </select>
+      </form>
+    </div>
+
+    {% if page_obj.has_other_pages or sections %}
+    <p class="figma-muted small mb-2">
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_sections }}
+    </p>
+    {% endif %}
+
+    <div class="figma-table-wrap">
+      <table class="figma-table figma-table--compact" style="min-width:0;">
+        <thead>
+          <tr>
+            <th>Section</th>
+            <th>Year Level</th>
+            <th>Students</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for section in sections %}
+          <tr>
+            <td><strong>{{ section.name }}</strong></td>
+            <td>
+              {% if section.year_level == 1 %}First Year
+              {% elif section.year_level == 2 %}Second Year
+              {% elif section.year_level == 3 %}Third Year
+              {% elif section.year_level == 4 %}Fourth Year
+              {% else %}Year {{ section.year_level }}{% endif %}
+            </td>
+            <td>
+              <span class="figma-muted">{{ section.active_students }} active</span>
+              {% if section.pending_students %}
+                <span class="figma-badge ms-1" style="font-size:11px;">{{ section.pending_students }} pending</span>
               {% endif %}
-            </div>
-            <form method="get">
-              <select name="year" id="yearFilter" class="codeit-select codeit-select-rect" style="max-width:160px; font-size:0.82rem;" onchange="this.form.submit()">
-                <option value="all" {% if year_filter == 'all' %}selected{% endif %}>All Year Levels</option>
-                <option value="1" {% if year_filter == '1' %}selected{% endif %}>1st Year</option>
-                <option value="2" {% if year_filter == '2' %}selected{% endif %}>2nd Year</option>
-                <option value="3" {% if year_filter == '3' %}selected{% endif %}>3rd Year</option>
-                <option value="4" {% if year_filter == '4' %}selected{% endif %}>4th Year</option>
-              </select>
-            </form>
-          </div>
-          <table class="codeit-table">
-            <thead>
-              <tr>
-                <th>Section</th>
-                <th>Year Level</th>
-                <th style="text-align:center;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for section in page_obj %}
-              <tr>
-                <td style="font-weight:700;">{{ section.name }}</td>
-                <td>
-                  {% if section.year_level == 1 %}FIRST YEAR
-                  {% elif section.year_level == 2 %}SECOND YEAR
-                  {% elif section.year_level == 3 %}THIRD YEAR
-                  {% elif section.year_level == 4 %}FOURTH YEAR
-                  {% else %}Year {{ section.year_level }}{% endif %}
-                </td>
-                <td style="text-align:center;">
-                  <button type="button" class="delete-btn"
-                          data-bs-toggle="modal" data-bs-target="#deleteSectionModal"
-                          data-section-id="{{ section.id }}"
-                          data-section-name="{{ section.name }}">
-                    DELETE
-                  </button>
-                </td>
-              </tr>
-              {% empty %}
-              <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:32px;">No sections yet.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-          {% if page_obj.paginator.num_pages > 1 %}
-          <div style="display:flex;justify-content:center;align-items:center;gap:12px;padding:16px;flex-wrap:wrap;border-top:1px solid #E8E8E8;">
-            {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">&lt; Prev</a>
-            {% endif %}
-            <span style="font-weight:700;font-size:.85rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-            {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">Next &gt;</a>
-            {% endif %}
-          </div>
-          {% endif %}
-        </div>
+            </td>
+            <td class="text-center">
+              <form method="post" action="{% url 'admin_panel:delete_section' section.id %}"
+                    onsubmit="return confirm('Delete {{ section.name }}? This cannot be undone.');">
+                {% csrf_token %}
+                <button type="submit" class="figma-icon-btn figma-icon-btn--delete" title="Delete section">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr class="figma-empty-row">
+            <td colspan="4">No sections found</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Pagination #}
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex align-items-center justify-content-end gap-3 mt-3">
+      <span class="figma-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      <div class="d-flex gap-2">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% if year_filter != 'all' %}&year={{ year_filter }}{% endif %}" class="figma-btn figma-btn--plain figma-btn--sm">
+            <i class="fa fa-chevron-left"></i> Prev
+          </a>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if year_filter != 'all' %}&year={{ year_filter }}{% endif %}" class="figma-btn figma-btn--sm">
+            Next <i class="fa fa-chevron-right"></i>
+          </a>
+        {% endif %}
       </div>
     </div>
-  </div>
+    {% endif %}
+  </section>
+
 </div>
-
-<!-- Delete Section Modal -->
-<div class="modal fade" id="deleteSectionModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius:18px; border:3px solid var(--card-border);">
-      <div class="modal-header border-0">
-        <h5 class="modal-title" style="font-weight:800; color:var(--accent-red);">
-          <i class="fa fa-triangle-exclamation me-2"></i>Delete Section
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        Are you sure you want to delete <strong id="deleteSectionName"></strong>?
-        <div class="alert alert-warning mt-2 mb-0 py-2 small" style="border-radius:10px;">
-          <i class="fa fa-warning me-1"></i>Students registered in this section may be affected.
-        </div>
-      </div>
-      <div class="modal-footer border-0">
-        <button class="btn-codeit btn-codeit-sm" data-bs-dismiss="modal"
-                style="background:#999; color:#fff;">Cancel</button>
-        <form id="deleteSectionForm" method="post">
-          {% csrf_token %}
-          <button type="submit" class="btn-codeit btn-codeit-sm btn-codeit-red">
-            <i class="fa fa-trash"></i> Delete
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-  const yearSelect = document.getElementById('sectionYearSelect');
-  const yearDisplay = document.getElementById('sectionYearDisplay');
-
-  yearSelect.addEventListener('change', function() {
-    yearDisplay.textContent = this.value;
-  });
-
-  // Delete modal logic
-  document.getElementById('deleteSectionModal')?.addEventListener('show.bs.modal', e => {
-    const btn = e.relatedTarget;
-    document.getElementById('deleteSectionName').textContent = btn.dataset.sectionName;
-    document.getElementById('deleteSectionForm').action =
-      `/admin-panel/sections/${btn.dataset.sectionId}/delete/`;
-  });
-</script>
 {% endblock %}

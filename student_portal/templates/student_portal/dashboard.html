@@ -2,152 +2,63 @@
 
 {% block title %}Dashboard{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<!-- ===== STUDENT INFO + QR CODE ROW ===== -->
-<div class="row g-4">
-  <!-- Student Info Card -->
-  <div class="col-lg-7">
-    <div class="folder-card">
-      <div class="folder-tab">Student Info</div>
-      <div class="folder-body">
-        <span class="screw screw-tl"></span>
-        <span class="screw screw-tr"></span>
-        <span class="screw screw-bl"></span>
-        <span class="screw screw-br"></span>
-        <div class="folder-inner">
-          <div class="mb-3">
-            <label class="codeit-label">Name</label>
-            <div class="codeit-input" style="pointer-events:none;">{{ student.first_name }} {{ student.last_name }}</div>
-          </div>
-          <div class="mb-3">
-            <label class="codeit-label">Section</label>
-            <div class="codeit-input" style="pointer-events:none;">{{ student.section.name }}</div>
-          </div>
-          <div class="mb-3">
-            <label class="codeit-label">Student ID</label>
-            <div class="codeit-input" style="pointer-events:none;">{{ student.student_id }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
+<section class="portal-panel">
+  <p class="portal-title">Dashboard</p>
+  <div class="portal-stat-strip">
+    <article class="portal-stat">
+      <div class="portal-stat__icon"><i class="fa fa-user-check"></i></div>
+      <div><div class="portal-stat__value">{{ total_present }}</div><div class="portal-stat__label">Present</div></div>
+    </article>
+    <article class="portal-stat">
+      <div class="portal-stat__icon"><i class="fa fa-clock"></i></div>
+      <div><div class="portal-stat__value">{{ total_late }}</div><div class="portal-stat__label">Late</div></div>
+    </article>
+    <article class="portal-stat">
+      <div class="portal-stat__icon"><i class="fa fa-user-xmark"></i></div>
+      <div><div class="portal-stat__value">{{ total_absent }}</div><div class="portal-stat__label">Absent</div></div>
+    </article>
   </div>
+</section>
 
-  <!-- Your QR Code Card -->
-  <div class="col-lg-5">
-    <div class="folder-card">
-      <div class="folder-tab">Your QR Code</div>
-      <div class="folder-body">
-        <span class="screw screw-tl"></span>
-        <span class="screw screw-tr"></span>
-        <span class="screw screw-bl"></span>
-        <span class="screw screw-br"></span>
-        <div class="folder-inner" style="text-align:center;">
-          {% if qr_token and qr_token.qr_path %}
-            <div class="qr-frame" style="margin: 0 auto;">
-              <img src="{{ qr_token.qr_path }}" alt="QR Code"
-                   style="width:200px; height:200px;" id="qr-img" />
-            </div>
-          {% else %}
-            <div style="width:200px; height:200px; margin:0 auto; border-radius:14px;
-                 background:rgba(255,255,255,0.15); display:flex; align-items:center;
-                 justify-content:center; flex-direction:column; gap:8px;">
-              <i class="fa fa-qrcode" style="font-size:3rem; color:rgba(255,255,255,0.4);"></i>
-              <span style="color:rgba(255,255,255,0.5); font-size:0.82rem; font-weight:600;">
-                Pending Approval
-              </span>
-            </div>
-          {% endif %}
-        </div>
+<section class="portal-grid-2 mt-5">
+  <article class="portal-card quick-action-card">
+    <div class="portal-card__header">
+      <i class="fa fa-bolt" style="font-size:34px;"></i>
+      <h2 class="portal-subtitle" style="font-size:26px; font-weight:700; color:#000;">Quick Actions</h2>
+    </div>
+    <div class="p-4 text-center">
+      <h3 style="margin:18px 0; color:var(--orange); font-size:26px; font-weight:700; text-transform:uppercase;">Scan Your QR Code</h3>
+      <div class="qr-frame mb-4">
         {% if qr_token and qr_token.qr_path %}
-        <div style="text-align:center; margin-top:16px;">
-          <a href="{{ qr_token.qr_path }}" download="CODE-IT_QR_{{ student.student_id }}.png"
-             class="btn-codeit">
-            <i class="fa fa-download"></i> Download QR
-          </a>
-        </div>
+          <img src="{{ qr_token.qr_path }}" alt="Student QR code" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+          <div class="qr-fallback"><i class="fa fa-qrcode"></i></div>
+        {% else %}
+          <div class="portal-muted">
+            <i class="fa fa-qrcode d-block mb-2" style="font-size:72px; color:#000;"></i>
+            Waiting for QR
+          </div>
         {% endif %}
       </div>
+      <a href="{% url 'student_portal:attendance' %}" class="portal-btn">Attendance History</a>
     </div>
-  </div>
-</div>
+  </article>
 
-<!-- ===== ATTENDANCE SECTION ===== -->
-<div class="folder-card" style="margin-top: 40px;">
-  <div class="folder-tab">Attendance</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span>
-    <span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span>
-    <span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:20px;">
-      <!-- Stat Pills -->
-      <div class="row g-3 mb-4">
-        <div class="col-4">
-          <div class="stat-pill">
-            <div class="stat-icon present"><i class="fa fa-circle-check"></i></div>
-            <div class="stat-label present">Present</div>
-            <div style="font-weight:800; font-size:1.3rem; color:#22C55E;">{{ total_present }}</div>
-          </div>
-        </div>
-        <div class="col-4">
-          <div class="stat-pill">
-            <div class="stat-icon late"><i class="fa fa-exclamation-circle"></i></div>
-            <div class="stat-label late">Late</div>
-            <div style="font-weight:800; font-size:1.3rem; color:#F59E0B;">{{ total_late }}</div>
-          </div>
-        </div>
-        <div class="col-4">
-          <div class="stat-pill">
-            <div class="stat-icon absent"><i class="fa fa-circle-xmark"></i></div>
-            <div class="stat-label absent">Absent</div>
-            <div style="font-weight:800; font-size:1.3rem; color:#EF4444;">{{ total_absent }}</div>
-          </div>
-        </div>
+  <article class="portal-card upcoming-card">
+    <div class="portal-card__header" style="background:var(--sidebar); color:#fff; border-radius:17px;">
+      <i class="fa fa-calendar-check" style="font-size:28px;"></i>
+      <h2 class="portal-subtitle" style="font-size:28px; font-weight:700; color:#fff;">Upcoming Events</h2>
+    </div>
+    {% for event in upcoming_events|slice:":1" %}
+      <div class="upcoming-event-card">
+        <h3>{{ event.name }}</h3>
+        <p>{{ event.date|date:"n/j/Y" }} ~ {{ event.start_time|time:"g:iA" }} - {{ event.end_time|time:"g:iA" }}</p>
       </div>
-
-      <!-- All Records Link -->
-      <div style="text-align:center;">
-        <a href="{% url 'student_portal:attendance' %}" class="btn-codeit btn-codeit-sm">
-          <i class="fa fa-clipboard-list"></i> All Records
-        </a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== UPCOMING EVENTS ===== -->
-{% if upcoming_events %}
-<div class="folder-card" style="margin-top: 40px;">
-  <div class="folder-tab">Upcoming Events</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span>
-    <span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span>
-    <span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:0; overflow:hidden; border-radius:14px;">
-      <table class="codeit-table">
-        <thead>
-          <tr>
-            <th>Event</th>
-            <th>Date</th>
-            <th>Start Time</th>
-            <th>Late After</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for event in upcoming_events %}
-          <tr>
-            <td style="font-weight:700;">{{ event.name }}</td>
-            <td>{{ event.date|date:"M d, Y" }}</td>
-            <td>{{ event.start_time|time:"g:i A" }}</td>
-            <td>{{ event.late_cutoff_mins }} min</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-{% endif %}
+    {% empty %}
+      <div class="p-5 text-center portal-muted">No upcoming events at the moment</div>
+    {% endfor %}
+  </article>
+</section>
 {% endblock %}

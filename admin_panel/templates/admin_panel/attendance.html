@@ -1,298 +1,261 @@
 {% extends 'admin_panel/base.html' %}
 
-{% block title %}Attendance – {{ event.name }}{% endblock %}
+{% block title %}Attendance - {{ event.name }}{% endblock %}
 {% block nav_events %}active{% endblock %}
 
-{% block extra_head %}
-<style>
-  .overview-tile {
-    border-radius: 12px; padding: .6rem .8rem;
-    background: #fff; border: 2px solid var(--card-border);
-    text-align: center;
-  }
-  .overview-tile .tile-label { font-size: .72rem; color: #888; font-weight: 600; }
-  .overview-tile .tile-value { font-size: 1.3rem; font-weight: 800; }
-</style>
-{% endblock %}
-
 {% block content %}
-<!-- Event header -->
-<div class="folder-card" style="margin-top:0;">
-  <div class="folder-tab">{{ event.name }}</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:16px 20px;">
-      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div>
-          <span style="color:var(--text-muted); font-size:.85rem;">
-            <i class="fa fa-calendar me-1"></i>{{ event.date }}
-            &nbsp;|&nbsp;
-            <i class="fa fa-clock me-1"></i>{% if event.start_time %}{{ event.start_time|time:"g:i A" }}{% else %}Manual{% endif %}
-            {% if event.end_time %}&nbsp;&ndash;&nbsp;{{ event.end_time|time:"g:i A" }}{% endif %}
-            &nbsp;|&nbsp;Late cutoff: {{ event.late_cutoff_mins }} mins
-          </span>
-          {% if event.status == 'closed' %}<span class="badge bg-dark ms-2" style="border-radius:8px;">Closed</span>
-          {% elif event.status == 'ended' %}<span class="badge bg-secondary ms-2" style="border-radius:8px;">Ended (Exit Mode)</span>
-          {% elif event.status == 'active' %}<span class="badge bg-success ms-2" style="border-radius:8px;">Active</span>
-          {% else %}<span class="badge bg-warning text-dark ms-2" style="border-radius:8px;">Pending</span>{% endif %}
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-          {% if admin_role == 'vits' and event.status == 'active' %}
-          <a href="{% url 'admin_panel:scanner' event.id %}" class="btn-codeit btn-codeit-sm btn-codeit-green" style="font-size:.78rem;padding:5px 14px;"><i class="fa fa-qrcode me-1"></i>Open Scanner</a>
-          {% endif %}
-          {% if admin_role == 'vits' and event.status == 'ended' %}
-          <a href="{% url 'admin_panel:scanner' event.id %}" class="btn-codeit btn-codeit-sm" style="font-size:.78rem;padding:5px 14px;background:#666;color:#fff;"><i class="fa fa-door-open me-1"></i>Exit Scanner</a>
-          {% endif %}
-          <a href="{% url 'admin_panel:export' event.id %}" class="btn-codeit btn-codeit-sm btn-codeit-green" style="font-size:.78rem;padding:5px 14px;"><i class="fa fa-file-excel me-1"></i>Export</a>
-          <a href="{% url 'admin_panel:events' %}" class="btn-codeit btn-codeit-sm" style="font-size:.78rem;padding:5px 14px;background:#999;color:#fff;"><i class="fa fa-arrow-left me-1"></i>Back</a>
-        </div>
+<section class="figma-panel mb-3">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <p class="figma-subtitle mb-1" style="font-size:12px;">Event Attendance</p>
+      <h1 class="figma-heading" style="font-size:20px;">{{ event.name }}</h1>
+      <div class="figma-muted mt-1" style="font-size:12px;">
+        <i class="fa fa-calendar me-1"></i>{{ event.date|date:"M d, Y" }}
+        <span class="mx-1">|</span>
+        <i class="fa fa-clock me-1"></i>{{ event.start_time|time:"g:i A"|default:"N/A" }}
+        {% if event.end_time %} – {{ event.end_time|time:"g:i A" }}{% endif %}
+        <span class="mx-1">|</span>
+        Late cutoff: {{ event.late_cutoff_mins }} mins
+        <span class="figma-badge {{ event.status }} ms-1">{{ event.status|upper }}</span>
       </div>
     </div>
-  </div>
-</div>
-
-<!-- Check-In Overview -->
-<div class="folder-card" style="margin-top:40px;">
-  <div class="folder-tab">Check-In Overview</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:16px;">
-      <div style="text-align:right;margin-bottom:8px;">
-        <select id="checkinYearFilter" class="codeit-select" style="max-width:140px;padding:6px 14px;font-size:.82rem;" onchange="filterOverview('checkin')">
-          <option value="all">All Years</option>
-          {% for yl in year_levels %}<option value="{{ yl }}">Year {{ yl }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="row g-2" id="checkinTiles">
-        {% for tile in checkin_tiles %}
-        <div class="col-6 col-md-3 col-lg-2 checkin-tile" data-year="{{ tile.section.year_level }}">
-          <div class="overview-tile">
-            <div style="font-weight:700;font-size:.82rem;margin-bottom:4px;">{{ tile.section.name }}</div>
-            <div class="d-flex justify-content-center gap-2">
-              <div><div class="tile-value" style="color:#22C55E;">{{ tile.present }}</div><div class="tile-label">Present</div></div>
-              <div><div class="tile-value" style="color:#F59E0B;">{{ tile.late }}</div><div class="tile-label">Late</div></div>
-              <div><div class="tile-value" style="color:#EF4444;">{{ tile.absent }}</div><div class="tile-label">Absent</div></div>
-            </div>
-            <div class="tile-label mt-1">Total: {{ tile.total }}</div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Check-Out Overview -->
-{% if checkout_tiles %}
-<div class="folder-card" style="margin-top:40px;">
-  <div class="folder-tab">Check-Out Overview</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:16px;">
-      <div style="text-align:right;margin-bottom:8px;">
-        <select id="checkoutYearFilter" class="codeit-select" style="max-width:140px;padding:6px 14px;font-size:.82rem;" onchange="filterOverview('checkout')">
-          <option value="all">All Years</option>
-          {% for yl in year_levels %}<option value="{{ yl }}">Year {{ yl }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="row g-2" id="checkoutTiles">
-        {% for tile in checkout_tiles %}
-        <div class="col-6 col-md-3 col-lg-2 checkout-tile" data-year="{{ tile.section.year_level }}">
-          <div class="overview-tile">
-            <div style="font-weight:700;font-size:.82rem;margin-bottom:4px;">{{ tile.section.name }}</div>
-            <div class="d-flex justify-content-center gap-2">
-              <div><div class="tile-value" style="color:#17A2B8;">{{ tile.checked_out }}</div><div class="tile-label">Checked Out</div></div>
-              <div><div class="tile-value" style="color:#EF4444;">{{ tile.missed_exit }}</div><div class="tile-label">Missed Exit</div></div>
-            </div>
-            <div class="tile-label mt-1">Total: {{ tile.total }}</div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-<!-- Final Comparison -->
-{% if final_tiles %}
-<div class="folder-card" style="margin-top:40px;">
-  <div class="folder-tab">Final Overview</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:16px;">
-      <div style="text-align:right;margin-bottom:8px;">
-        <select id="finalYearFilter" class="codeit-select" style="max-width:140px;padding:6px 14px;font-size:.82rem;" onchange="filterOverview('final')">
-          <option value="all">All Years</option>
-          {% for yl in year_levels %}<option value="{{ yl }}">Year {{ yl }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="row g-2" id="finalTiles">
-        {% for tile in final_tiles %}
-        <div class="col-6 col-md-3 col-lg-2 final-tile" data-year="{{ tile.section.year_level }}">
-          <div class="overview-tile" style="border-left:3px solid var(--card-border);">
-            <div style="font-weight:700;font-size:.82rem;margin-bottom:4px;">{{ tile.section.name }}</div>
-            <div class="d-flex justify-content-center gap-2">
-              <div><div class="tile-value" style="color:#22C55E;">{{ tile.final_present }}</div><div class="tile-label">Final Present</div></div>
-              <div><div class="tile-value" style="color:#EF4444;">{{ tile.final_absent }}</div><div class="tile-label">Final Absent</div></div>
-            </div>
-            <div class="tile-label mt-1">Total: {{ tile.total }}</div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Final Student List -->
-<div class="folder-card" style="margin-top:40px;">
-  <div class="folder-tab">Final Student List</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:16px;">
-      <div class="d-flex flex-wrap gap-2 mb-3">
-        <select id="filterStatus" class="codeit-select" style="max-width:150px;padding:6px 14px;font-size:.82rem;" onchange="filterStudentList()">
-          <option value="all">All Statuses</option>
-          <option value="present">Final Present</option>
-          <option value="absent">Final Absent</option>
-        </select>
-        <select id="filterYear" class="codeit-select" style="max-width:130px;padding:6px 14px;font-size:.82rem;" onchange="filterStudentList()">
-          <option value="all">All Years</option>
-          {% for yl in year_levels %}<option value="{{ yl }}">Year {{ yl }}</option>{% endfor %}
-        </select>
-        <select id="filterSection" class="codeit-select" style="max-width:160px;padding:6px 14px;font-size:.82rem;" onchange="filterStudentList()">
-          <option value="all">All Sections</option>
-          {% for sn in section_names %}<option value="{{ sn }}">{{ sn }}</option>{% endfor %}
-        </select>
-        <span style="color:var(--text-muted);font-size:.82rem;font-weight:600;align-self:center;" id="listCount"></span>
-      </div>
-      <div class="table-responsive">
-        <table class="codeit-table" id="finalTable">
-          <thead>
-            <tr>
-              <th class="d-none d-md-table-cell">#</th><th>Student</th>
-              <th class="d-none d-lg-table-cell">Section</th><th>Check-In</th>
-              <th class="d-none d-md-table-cell">Time IN</th><th class="d-none d-md-table-cell">Time OUT</th>
-              <th>Final Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in student_final_list %}
-            <tr class="final-row" data-status="{{ item.final_status }}" data-year="{{ item.year_level }}" data-section="{{ item.section_name }}">
-              <td class="d-none d-md-table-cell" style="color:var(--text-muted);font-size:.82rem;">{{ forloop.counter }}</td>
-              <td>
-                <div style="font-weight:700;font-size:.85rem;">{{ item.student.last_name }}, {{ item.student.first_name }}</div>
-                <div style="color:var(--text-muted);font-family:monospace;font-size:.7rem;">{{ item.student.student_id }}</div>
-                <div class="d-lg-none" style="color:var(--text-muted);font-size:.75rem;"><i class="fa fa-users me-1"></i>{{ item.section_name }}</div>
-              </td>
-              <td class="d-none d-lg-table-cell">{{ item.section_name }}</td>
-              <td>
-                {% if item.checkin_status == 'present' %}<span class="badge bg-success px-2">Present</span>
-                {% elif item.checkin_status == 'late' %}<span class="badge bg-warning text-dark px-2">Late</span>
-                {% else %}<span class="badge bg-danger px-2">Absent</span>{% endif %}
-              </td>
-              <td class="d-none d-md-table-cell" style="font-size:.82rem;">{% if item.checkin_time %}{{ item.checkin_time|time:"g:i:s A" }}{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}</td>
-              <td class="d-none d-md-table-cell" style="font-size:.82rem;">{% if item.checkout_time %}{{ item.checkout_time|time:"g:i:s A" }}{% else %}<span style="color:#EF4444;">Missed Exit</span>{% endif %}</td>
-              <td>
-                {% if item.final_status == 'present' %}<span class="badge bg-success px-2 py-1" style="font-size:.7rem;">PRESENT</span>
-                {% else %}<span class="badge bg-danger px-2 py-1" style="font-size:.7rem;">ABSENT</span>{% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-<!-- Timestamp Logs -->
-<div class="folder-card" style="margin-top:40px;">
-  <div class="folder-tab">Timestamp Logs</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:0;overflow:hidden;border-radius:14px;">
-      <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #E8E8E8;">
-        <div style="font-weight:800;font-size:.88rem;color:var(--text-dark);">Scan History</div>
-        <div style="font-size:.82rem;color:var(--text-muted);font-weight:700;">
-          {% if page_obj.paginator.count %}
-          Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
-          {% else %}
-          No attendance records yet
-          {% endif %}
-        </div>
-      </div>
-      <div class="table-responsive">
-        <table class="codeit-table">
-          <thead><tr><th>#</th><th>Student ID</th><th>Name</th><th>Section</th><th>Status</th><th>Scanned At</th><th>Checked Out</th><th>Scanned By</th></tr></thead>
-          <tbody>
-            {% for log in page_obj %}
-            <tr>
-              <td style="color:var(--text-muted);font-size:.82rem;">{{ forloop.counter }}</td>
-              <td style="font-family:monospace;font-size:.82rem;">{{ log.student.student_id }}</td>
-              <td style="font-weight:700;">{{ log.student.name }}</td>
-              <td>{{ log.student.section.name }}</td>
-              <td><span class="badge rounded-pill badge-{{ log.status }} px-3 py-2" style="font-size:.72rem;">{{ log.status|upper }}</span></td>
-              <td style="font-size:.82rem;">{% if log.scanned_at %}{{ log.scanned_at|date:"M d, Y" }} <span style="color:var(--text-muted);">{{ log.scanned_at|time:"g:i:s A" }}</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}</td>
-              <td style="font-size:.82rem;">{% if log.scanned_out_at %}<span style="color:#17A2B8;">{{ log.scanned_out_at|time:"g:i:s A" }}</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}</td>
-              <td style="font-size:.82rem;color:var(--text-muted);">{{ log.scanned_by.name|default:"—" }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px;">No attendance records yet.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% if page_obj.paginator.num_pages > 1 %}
-      <div style="display:flex;justify-content:center;align-items:center;gap:12px;padding:16px;flex-wrap:wrap;border-top:1px solid #E8E8E8;">
-        {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">&lt; Prev</a>
-        {% endif %}
-        <span style="font-weight:700;font-size:.85rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">Next &gt;</a>
-        {% endif %}
-      </div>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if event.status == 'active' or event.status == 'ended' %}
+      <a href="{% url 'admin_panel:scanner' event.id %}" class="figma-btn figma-btn--sm">
+        <i class="fa fa-qrcode"></i> {% if event.status == 'ended' %}Check-Out{% else %}Scanner{% endif %}
+      </a>
       {% endif %}
+      <a href="{% url 'admin_panel:set_expected' event.id %}" class="figma-btn figma-btn--plain figma-btn--sm"><i class="fa fa-users"></i> Expected</a>
+      <a href="{% url 'admin_panel:export' event.id %}" class="figma-btn figma-btn--plain figma-btn--sm"><i class="fa fa-file-excel"></i> Export</a>
+      <a href="{% url 'admin_panel:events' %}" class="figma-btn figma-btn--plain figma-btn--sm"><i class="fa fa-arrow-left"></i> Back</a>
     </div>
   </div>
-</div>
-{% endblock %}
 
-{% block extra_js %}
-<script>
-  function filterOverview(prefix) {
-    const sel = document.getElementById(prefix + 'YearFilter');
-    const val = sel.value;
-    document.querySelectorAll('.' + prefix + '-tile').forEach(t => {
-      t.style.display = (val === 'all' || t.dataset.year === val) ? '' : 'none';
-    });
-  }
+  {# Check-In Summary #}
+  <div class="figma-stat-strip four">
+    <article class="figma-stat">
+      <div class="figma-stat__icon"><i class="fa fa-check"></i></div>
+      <div><div class="figma-stat__value">{{ present }}</div><div class="figma-stat__label">Present</div></div>
+    </article>
+    <article class="figma-stat">
+      <div class="figma-stat__icon"><i class="fa fa-clock"></i></div>
+      <div><div class="figma-stat__value">{{ late }}</div><div class="figma-stat__label">Late</div></div>
+    </article>
+    <article class="figma-stat">
+      <div class="figma-stat__icon"><i class="fa fa-user-xmark"></i></div>
+      <div><div class="figma-stat__value">{{ absent }}</div><div class="figma-stat__label">Absent</div></div>
+    </article>
+    <article class="figma-stat">
+      <div class="figma-stat__icon"><i class="fa fa-list"></i></div>
+      <div><div class="figma-stat__value">{{ total }}</div><div class="figma-stat__label">Total</div></div>
+    </article>
+  </div>
 
-  function filterStudentList() {
-    const status = document.getElementById('filterStatus').value;
-    const year = document.getElementById('filterYear').value;
-    const section = document.getElementById('filterSection').value;
-    const rows = document.querySelectorAll('.final-row');
-    let visible = 0, counter = 0;
-    rows.forEach(row => {
-      const ms = (status === 'all' || row.dataset.status === status);
-      const my = (year === 'all' || row.dataset.year === year);
-      const mc = (section === 'all' || row.dataset.section === section);
-      if (ms && my && mc) { row.style.display = ''; counter++; row.querySelector('td').textContent = counter; visible++; }
-      else { row.style.display = 'none'; }
-    });
-    document.getElementById('listCount').textContent = visible + ' student(s) shown';
-  }
+  {# Check-In Section Tiles with Year Filter #}
+  <div class="mt-3">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <p class="figma-section-heading mb-0">Check-In by Section</p>
+      <form method="get" class="d-flex align-items-center gap-2">
+        {% if status_filter and status_filter != 'all' %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+        <select name="year" class="form-select form-select-sm" style="width:150px; font-size:12px;" onchange="this.form.submit()">
+          <option value="all" {% if year_filter == 'all' %}selected{% endif %}>All Sections</option>
+          {% for yl in year_levels %}
+          <option value="{{ yl }}" {% if year_filter == yl|stringformat:"d" %}selected{% endif %}>
+            {{ yl }}{% if yl == 1 %}st{% elif yl == 2 %}nd{% elif yl == 3 %}rd{% else %}th{% endif %} Year
+          </option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    <div class="section-card-grid section-card-grid--compact">
+      {% for tile in section_tiles %}
+      <article class="section-card section-card--sm">
+        <h3>{{ tile.name }}</h3>
+        <p class="section-card__students">{{ tile.total_students }} students</p>
+        <div class="section-card__metrics">
+          <span class="section-card__metric present">{{ tile.present }}</span>
+          <span class="section-card__metric late">{{ tile.late }}</span>
+          <span class="section-card__metric absent">{{ tile.absent }}</span>
+        </div>
+      </article>
+      {% empty %}
+      <p class="figma-muted mb-0">No sections found.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
 
-  if (document.getElementById('listCount')) { filterStudentList(); }
-</script>
+{# Check-Out Overview (ended or closed events) #}
+{% if event.status == 'ended' or event.status == 'closed' %}
+<section class="figma-panel mb-3">
+  <h2 class="figma-section-heading mb-2">Check-Out Overview</h2>
+  <div class="figma-stat-strip">
+    <article class="figma-stat">
+      <div class="figma-stat__icon"><i class="fa fa-door-open"></i></div>
+      <div><div class="figma-stat__value">{{ checked_out }}</div><div class="figma-stat__label">Checked Out</div></div>
+    </article>
+    <article class="figma-stat">
+      <div class="figma-stat__icon"><i class="fa fa-door-closed"></i></div>
+      <div><div class="figma-stat__value">{{ not_checked_out }}</div><div class="figma-stat__label">Not Checked Out</div></div>
+    </article>
+  </div>
+
+  {# Check-Out Section Tiles #}
+  {% if checkout_tiles %}
+  <div class="mt-2">
+    <p class="figma-section-heading mb-2">Check-Out by Section</p>
+    <div class="section-card-grid section-card-grid--compact">
+      {% for tile in checkout_tiles %}
+      <article class="section-card section-card--sm">
+        <h3>{{ tile.name }}</h3>
+        <div class="section-card__metrics">
+          <span class="section-card__metric present">{{ tile.checked_out }}</span>
+          <span class="section-card__metric absent">{{ tile.not_checked_out }}</span>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{# Final Comparison (ended or closed events) #}
+{% if event.status == 'ended' or event.status == 'closed' %}
+<section class="figma-panel mb-3">
+  <h2 class="figma-section-heading mb-2">Final Comparison</h2>
+  <div class="figma-table-wrap">
+    <table class="figma-table figma-table--compact">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Check-In Status</th>
+          <th>Checked In At</th>
+          <th>Checked Out At</th>
+          <th>Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        {% if log.status != 'absent' %}
+        <tr>
+          <td>
+            <div class="cell-name">{{ log.student.name }}</div>
+            <div class="figma-muted small">{{ log.student.student_id }} · {{ log.student.section }}</div>
+          </td>
+          <td><span class="figma-badge {{ log.status }}">{{ log.status|upper }}</span></td>
+          <td class="figma-muted small">
+            {% if log.scanned_at %}{{ log.scanned_at|time:"g:i:s A" }}{% else %}—{% endif %}
+          </td>
+          <td class="figma-muted small">
+            {% if log.scanned_out_at %}{{ log.scanned_out_at|time:"g:i:s A" }}{% else %}<span class="figma-badge absent">No check-out</span>{% endif %}
+          </td>
+          <td class="figma-muted small">
+            {% if log.scanned_at and log.scanned_out_at %}
+              {{ log.scanned_at|timesince:log.scanned_out_at }}
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if absent > 0 and event.status == 'active' %}
+<form method="post" action="{% url 'admin_panel:finalize_event' event.id %}" class="mb-3">
+  {% csrf_token %}
+  <button class="figma-btn figma-btn--danger figma-btn--sm">
+    <i class="fa fa-flag-checkered"></i> Finalize Absent Students
+  </button>
+</form>
+{% endif %}
+
+<section class="figma-card" style="padding:14px 18px;">
+  <div class="figma-card__header px-0 pt-0" style="min-height:36px;">
+    <h2 class="figma-section-heading">Timestamp Logs</h2>
+    <div class="d-flex align-items-center gap-2">
+      <span class="figma-badge">{{ total }} records</span>
+      {# Status filter #}
+      <form method="get" class="d-flex gap-2 ms-2">
+        {% if year_filter and year_filter != 'all' %}<input type="hidden" name="year" value="{{ year_filter }}">{% endif %}
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" style="width:130px; font-size:12px;">
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+          <option value="present" {% if status_filter == 'present' %}selected{% endif %}>Present</option>
+          <option value="late" {% if status_filter == 'late' %}selected{% endif %}>Late</option>
+          <option value="absent" {% if status_filter == 'absent' %}selected{% endif %}>Absent</option>
+        </select>
+      </form>
+    </div>
+  </div>
+  <div class="figma-table-wrap">
+    <table class="figma-table figma-table--compact">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student ID</th>
+          <th>Name</th>
+          <th>Section</th>
+          <th>Status</th>
+          <th>Checked In</th>
+          {% if event.status == 'ended' or event.status == 'closed' %}
+          <th>Checked Out</th>
+          {% endif %}
+          <th>Scanned By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in page_obj %}
+        <tr>
+          <td class="figma-muted">{{ forloop.counter }}</td>
+          <td class="small">{{ log.student.student_id }}</td>
+          <td class="cell-name">{{ log.student.name }}</td>
+          <td>{{ log.student.section }}</td>
+          <td><span class="figma-badge {{ log.status }}">{{ log.status|upper }}</span></td>
+          <td>
+            {% if log.scanned_at %}
+              {{ log.scanned_at|date:"M d, Y" }} <span class="figma-muted">{{ log.scanned_at|time:"g:i:s A" }}</span>
+            {% else %}
+              <span class="figma-muted">—</span>
+            {% endif %}
+          </td>
+          {% if event.status == 'ended' or event.status == 'closed' %}
+          <td>
+            {% if log.scanned_out_at %}
+              <span class="figma-muted">{{ log.scanned_out_at|time:"g:i:s A" }}</span>
+            {% else %}
+              <span class="figma-muted">—</span>
+            {% endif %}
+          </td>
+          {% endif %}
+          <td class="figma-muted">{{ log.scanned_by.name|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center figma-muted py-3">
+            No attendance records yet.
+            {% if event.status == 'active' %}
+            <a class="figma-link" href="{% url 'admin_panel:scanner' event.id %}">Start scanning</a>.
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <nav class="d-flex justify-content-center align-items-center gap-2 mt-3">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&year={{ year_filter }}" class="figma-btn figma-btn--plain figma-btn--sm"><i class="fa fa-chevron-left"></i></a>
+    {% endif %}
+    <span class="figma-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&year={{ year_filter }}" class="figma-btn figma-btn--plain figma-btn--sm"><i class="fa fa-chevron-right"></i></a>
+    {% endif %}
+  </nav>
+  {% endif %}
+</section>
 {% endblock %}

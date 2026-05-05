@@ -1,94 +1,64 @@
 {% extends "student_portal/base.html" %}
 
 {% block title %}My QR Code{% endblock %}
-{% block nav_qr %}active{% endblock %}
+{% block page_title %}My QR Code{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-lg-6 col-md-8">
-    <div class="folder-card">
-      <div class="folder-tab">Your QR Code</div>
-      <div class="folder-body">
-        <span class="screw screw-tl"></span>
-        <span class="screw screw-tr"></span>
-        <span class="screw screw-bl"></span>
-        <span class="screw screw-br"></span>
-        <div class="folder-inner" style="text-align:center;">
-          {% if qr_token %}
-            {% if qr_token.qr_path %}
-              <div class="qr-frame" style="margin:0 auto 20px;">
-                <img src="{{ qr_token.qr_path }}" alt="QR Code"
-                     style="width:240px; height:240px;" id="qr-img" />
-              </div>
-            {% else %}
-              <div style="width:240px; height:240px; margin:0 auto 20px; border-radius:14px;
-                   background:rgba(255,255,255,0.15); display:flex; align-items:center;
-                   justify-content:center; flex-direction:column; gap:8px;">
-                <i class="fa fa-qrcode" style="font-size:3rem; color:rgba(255,255,255,0.4);"></i>
-                <span style="color:rgba(255,255,255,0.5); font-size:0.85rem; font-weight:600;">
-                  QR not generated yet
-                </span>
-              </div>
-            {% endif %}
+<section class="portal-panel text-center">
+  <p class="portal-title mb-1">Student QR</p>
+  <h1 class="figma-heading mb-4" style="font-size:28px;">{{ student.name }}</h1>
 
-            <!-- Token display -->
-            <div style="margin-bottom:20px;">
-              <span style="font-size:0.82rem; color:rgba(30,30,46,0.6); font-weight:600;">Token</span><br/>
-              <code style="background:rgba(255,255,255,0.3); padding:6px 14px; border-radius:10px;
-                    font-size:0.75rem; word-break:break-all; display:inline-block; max-width:100%;
-                    margin-top:4px; color:var(--text-dark); font-weight:600;">
-                {{ qr_token.token }}
-              </code>
-            </div>
+  {% if qr_token %}
+    <div class="qr-frame mb-4">
+      {% if qr_token.qr_path %}
+        <img src="{{ qr_token.qr_path }}" alt="QR Code" id="qr-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+        <div class="qr-fallback"><i class="fa fa-qrcode"></i></div>
+      {% else %}
+        <div class="portal-muted">QR image not generated yet.</div>
+      {% endif %}
+    </div>
 
-            <hr style="border-color:rgba(255,255,255,0.2); margin:16px 0;" />
-
-            <!-- Student info summary -->
-            <div class="row text-start" style="max-width:360px; margin:0 auto;">
-              <div class="col-6 mb-3">
-                <span style="font-size:0.78rem; color:rgba(30,30,46,0.5); font-weight:600;">Name</span><br/>
-                <strong style="font-size:0.9rem;">{{ student.first_name }} {{ student.last_name }}</strong>
-              </div>
-              <div class="col-6 mb-3">
-                <span style="font-size:0.78rem; color:rgba(30,30,46,0.5); font-weight:600;">Student ID</span><br/>
-                <strong style="font-size:0.9rem;">{{ student.student_id }}</strong>
-              </div>
-              <div class="col-6">
-                <span style="font-size:0.78rem; color:rgba(30,30,46,0.5); font-weight:600;">Section</span><br/>
-                <strong style="font-size:0.9rem;">{{ student.section.name }}</strong>
-              </div>
-              <div class="col-6">
-                <span style="font-size:0.78rem; color:rgba(30,30,46,0.5); font-weight:600;">Status</span><br/>
-                <span class="badge badge-{{ student.status }} px-3 py-1"
-                      style="border-radius:20px; font-size:0.78rem;">{{ student.status|upper }}</span>
-              </div>
-            </div>
-
-            {% if qr_token.qr_path %}
-            <div style="margin-top:24px;">
-              <a href="{{ qr_token.qr_path }}" download="CODE-IT_QR_{{ student.student_id }}.png"
-                 class="btn-codeit">
-                <i class="fa fa-download"></i> Download QR
-              </a>
-            </div>
-            {% endif %}
-
-          {% else %}
-            <!-- No QR yet -->
-            <div style="padding:40px 20px;">
-              <div style="width:100px; height:100px; margin:0 auto 20px; border-radius:50%;
-                   background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center;">
-                <i class="fa fa-qrcode" style="font-size:2.5rem; color:rgba(255,255,255,0.4);"></i>
-              </div>
-              <h5 style="font-weight:800; color:var(--text-dark);">No QR Code Yet</h5>
-              <p style="color:rgba(30,30,46,0.6); font-size:0.9rem; max-width:300px; margin:8px auto 0;">
-                Your QR code will be generated once your account is approved by an admin.
-              </p>
-            </div>
-          {% endif %}
-        </div>
+    <div class="portal-card p-4 mx-auto text-start" style="max-width:520px;">
+      <div class="d-flex justify-content-between py-2 border-bottom">
+        <span class="portal-muted">Student ID</span>
+        <span>{{ student.student_id }}</span>
+      </div>
+      <div class="d-flex justify-content-between py-2 border-bottom">
+        <span class="portal-muted">Section</span>
+        <span>{{ student.section }}</span>
+      </div>
+      <div class="d-flex justify-content-between py-2">
+        <span class="portal-muted">Status</span>
+        <span class="portal-badge {{ student.status }}">{{ student.status|upper }}</span>
       </div>
     </div>
-  </div>
-</div>
+
+    {% if qr_token.qr_path %}
+      <button onclick="downloadQR()" class="portal-btn mt-4">
+        <i class="fa fa-download"></i> Download QR
+      </button>
+    {% endif %}
+  {% else %}
+    <div class="portal-card p-5 mx-auto" style="max-width:520px;">
+      <i class="fa fa-qrcode mb-3" style="font-size:64px; color:#533bb5;"></i>
+      <h2 class="portal-subtitle">No QR Code Yet</h2>
+      <p class="portal-muted mb-0">Your QR code appears after your account is approved by an admin.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_js %}
+{% if qr_token.qr_path %}
+<script>
+  function downloadQR() {
+    const link = document.createElement('a');
+    link.download = 'my_qr_code.png';
+    link.href = document.getElementById('qr-img').src;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+</script>
+{% endif %}
 {% endblock %}

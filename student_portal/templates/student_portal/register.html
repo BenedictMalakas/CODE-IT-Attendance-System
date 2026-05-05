@@ -1,292 +1,169 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Register | CODE-IT</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+{% extends 'shared/figma_auth_base.html' %}
+{% load static %}
+
+{% block page_title %}Register | CODE-IT{% endblock %}
+{% block auth_page %}register{% endblock %}
+
+{% block extra_head %}
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg-dark: #111840;
-      --card-border: #1E1E2E;
-      --accent-orange: #F5A623;
-      --btn-orange: #E89430;
-      --text-dark: #1E1E2E;
-      --text-muted: rgba(30,30,46,0.5);
-      --input-bg: #E8E4DC;
-      --font: 'Outfit', 'Segoe UI', system-ui, sans-serif;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: var(--font);
-      background: var(--bg-dark);
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 2rem 1rem;
-      position: relative;
-      overflow-x: hidden;
-    }
-    .blob { position: fixed; border-radius: 50%; filter: blur(90px); opacity: .55; pointer-events: none; z-index: 0; }
-    .blob-1 { width: 420px; height: 420px; background: #2ecc71; top: -80px; left: -60px; }
-    .blob-2 { width: 350px; height: 350px; background: #3498db; bottom: -60px; right: -40px; }
-    .blob-3 { width: 280px; height: 280px; background: #9b59b6; top: 50%; left: 60%; }
+{% endblock %}
 
-    .folder-card { position: relative; z-index: 1; width: 100%; max-width: 560px; }
-    .folder-tab { display: inline-block; background: var(--card-border); color: #fff; font-weight: 800; font-size: .95rem; padding: 8px 28px; border-radius: 16px 16px 0 0; letter-spacing: .5px; }
-    .folder-body { background: #fff; border: 3px solid var(--card-border); border-radius: 0 18px 18px 18px; padding: 28px 24px; position: relative; }
-    .screw { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #d4d4d4, #888 70%); box-shadow: inset 0 1px 2px rgba(0,0,0,.3); }
-    .screw-tl { top: 10px; left: 10px; } .screw-tr { top: 10px; right: 10px; }
-    .screw-bl { bottom: 10px; left: 10px; } .screw-br { bottom: 10px; right: 10px; }
-    .folder-inner { background: linear-gradient(145deg, #7B8ED8, #9DAAE8, #A8B5F0); border-radius: 14px; padding: 28px 24px; }
+{% block extra_alerts %}
+  {% for field in form %}
+    {% for error in field.errors %}
+      <div class="floating-alert floating-alert--error">{{ field.label }}: {{ error }}</div>
+    {% endfor %}
+  {% endfor %}
+  {% for error in form.non_field_errors %}
+    <div class="floating-alert floating-alert--error">{{ error }}</div>
+  {% endfor %}
+{% endblock %}
 
-    .brand-header { text-align: center; margin-bottom: 24px; }
-    .brand-header h1 { font-weight: 900; font-size: 1.8rem; color: var(--accent-orange); margin: 0; }
-    .brand-header p { font-size: .78rem; color: rgba(255,255,255,.6); font-weight: 600; margin: 4px 0 0; }
+{% block canvas_content %}
+  <img class="scene-backdrop-logo" src="{% static 'student_portal/img/codeit_logo.png' %}" alt="" aria-hidden="true" />
 
-    .codeit-label { font-weight: 700; font-size: .85rem; color: var(--text-dark); margin-bottom: 4px; display: block; }
-    .codeit-input { width: 100%; padding: 11px 16px; border: 2px solid transparent; border-radius: 18px; background: var(--input-bg); font-family: var(--font); font-size: .88rem; font-weight: 500; color: var(--text-dark); outline: none; transition: border-color .2s, background .2s; }
-    .codeit-input::placeholder { color: rgba(30,30,46,0.35); }
-    .codeit-input:focus { border-color: var(--accent-orange); background: #F5F0E8; }
-    .codeit-select { width: 100%; padding: 11px 16px; border: 2px solid transparent; border-radius: 18px; background: var(--input-bg); font-family: var(--font); font-size: .88rem; font-weight: 500; color: var(--text-dark); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; transition: border-color .2s; }
-    .codeit-select:focus { border-color: var(--accent-orange); }
+  <a class="figma-pill" href="{% url 'student_portal:login' %}" style="left:41px; top:32px;" aria-label="Login">
+    <span class="figma-pill__label figma-pill__label--login">LOGIN</span>
+  </a>
+  <div class="figma-progress" style="top:1002px;"></div>
 
-    .btn-codeit { display: block; width: 100%; padding: 14px; border: 3px solid var(--card-border); background: var(--btn-orange); color: var(--card-border); border-radius: 16px; font-family: var(--font); font-weight: 800; font-size: 1rem; cursor: pointer; transition: all .15s; text-align: center; text-decoration: none; }
-    .btn-codeit:hover { background: #D07A20; transform: translateY(-2px); box-shadow: 0 4px 0 var(--card-border); }
-
-    .pw-toggle { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); z-index: 5; background: none; border: none; padding: 0; font-size: .85rem; }
-    input::-ms-reveal, input::-ms-clear, input::-webkit-reveal { display: none !important; }
-    .alert { border-radius: 12px; font-size: .85rem; font-weight: 600; }
-
-    .login-toggle { position: fixed; top: 20px; left: 20px; z-index: 10; }
-    .login-toggle a { display: inline-block; padding: 10px 22px; border-radius: 14px; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.12); color: #fff; font-family: var(--font); font-weight: 700; font-size: .88rem; text-decoration: none; transition: all .2s; }
-    .login-toggle a:hover { background: rgba(255,255,255,.15); }
-
-    .file-upload-area { display: flex; align-items: center; gap: 10px; }
-    .file-upload-btn { padding: 8px 18px; border-radius: 14px; background: var(--input-bg); border: 2px solid rgba(30,30,46,.15); color: var(--text-dark); font-family: var(--font); font-weight: 600; font-size: .82rem; cursor: pointer; transition: all .2s; }
-    .file-upload-btn:hover { background: #DDD8CF; }
-    .file-name { font-size: .82rem; color: var(--text-muted); font-weight: 500; }
-
-    .login-link { text-align: center; margin-top: 16px; }
-    .login-link a { color: rgba(255,255,255,.55); font-size: .85rem; font-weight: 600; text-decoration: none; }
-    .login-link a:hover { color: var(--accent-orange); }
-  </style>
-</head>
-<body>
-
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
-<div class="blob blob-3"></div>
-
-<div class="login-toggle"><a href="{% url 'student_portal:login' %}">LOG IN</a></div>
-
-<div class="folder-card">
-  <div class="brand-header">
-    <h1>CODE-IT</h1>
-    <p>QR Attendance System — Student Portal</p>
-  </div>
-
-  <div class="folder-tab">Create Account</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
-    <div class="folder-inner">
-      {% if messages %}{% for msg in messages %}<div class="alert alert-danger py-2 mb-3">{{ msg }}</div>{% endfor %}{% endif %}
-
-      <form method="post" enctype="multipart/form-data" id="registerForm">
-        {% csrf_token %}
-        <div class="row g-3">
-          <div class="col-6">
-            <label class="codeit-label">First Name</label>
-            <input type="text" name="first_name" class="codeit-input" placeholder="Juan" required
-                   value="{{ form.first_name.value|default:'' }}" id="firstNameInput" />
-          </div>
-          <div class="col-6">
-            <label class="codeit-label">Last Name</label>
-            <input type="text" name="last_name" class="codeit-input" placeholder="Dela Cruz" required
-                   value="{{ form.last_name.value|default:'' }}" id="lastNameInput" />
-          </div>
-
-          <div class="col-6">
-            <label class="codeit-label">Student ID</label>
-            <input type="text" name="student_id" class="codeit-input" placeholder="02-2324"
-                   required maxlength="7" id="registerSidInput"
-                   value="{{ form.student_id.value|default:'' }}" />
-            {% if form.student_id.errors %}<div style="color:#E74C3C;font-size:.72rem;margin-top:4px;font-weight:600;">{{ form.student_id.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="col-6">
-            <label class="codeit-label">Year Level</label>
-            <select name="year_level" class="codeit-select" id="yearLevelSelect" required>
-              <option value="1" {% if form.year_level.value == '1' %}selected{% endif %}>1st Year</option>
-              <option value="2" {% if form.year_level.value == '2' %}selected{% endif %}>2nd Year</option>
-              <option value="3" {% if form.year_level.value == '3' %}selected{% endif %}>3rd Year</option>
-              <option value="4" {% if form.year_level.value == '4' %}selected{% endif %}>4th Year</option>
-            </select>
-          </div>
-
-          <div class="col-12">
-            <label class="codeit-label">Section</label>
-            <select name="section" class="codeit-select" id="sectionSelect" required>
-              <option value="">Select section...</option>
-              {% for sec in sections %}
-                <option value="{{ sec.id }}" data-year="{{ sec.year_level }}"
-                        {% if form.section.value|stringformat:"s" == sec.id|stringformat:"s" %}selected{% endif %}>
-                  {{ sec.name }}
-                </option>
-              {% endfor %}
-            </select>
-            {% if form.section.errors %}<div style="color:#E74C3C;font-size:.72rem;margin-top:4px;font-weight:600;">{{ form.section.errors.0 }}</div>{% endif %}
-          </div>
-
-          <div class="col-12">
-            <label class="codeit-label">Email Address</label>
-            <input type="email" name="email" class="codeit-input" placeholder="your@email.com"
-                   value="{{ form.email.value|default:'' }}" />
-          </div>
-
-          <div class="col-12">
-            <label class="codeit-label">Student ID Photo <span style="opacity:0.6; font-size:0.8em; font-weight:500;">(Max 5MB)</span></label>
-            <div class="file-upload-area">
-              <label class="file-upload-btn" for="idPhotoInput">
-                <i class="fa fa-camera me-1"></i>Choose File
-              </label>
-              <span class="file-name" id="fileName">No file chosen</span>
-            </div>
-            <input type="file" name="id_photo" id="idPhotoInput" accept="image/*"
-                   style="display:none;" onchange="handleFileSelect(this)" />
-            {% if form.id_photo.errors %}<div style="color:#E74C3C;font-size:.72rem;margin-top:4px;font-weight:600;">{{ form.id_photo.errors.0 }}</div>{% endif %}
-          </div>
-
-          <div class="col-6">
-            <label class="codeit-label">Password</label>
-            <div style="position:relative;">
-              <input type="password" name="password" class="codeit-input" placeholder="Create password"
-                     required style="padding-right:2.8rem;" id="pw1" />
-              <button type="button" class="pw-toggle" onclick="togglePw(this)"><i class="fa fa-eye"></i></button>
-            </div>
-            <div id="pwIndicator" style="font-size:.72rem; margin-top:4px; font-weight:600; color:var(--text-muted);">
-              Min 8 chars, 1 special character required.
-            </div>
-            {% if form.password.errors %}<div style="color:#E74C3C;font-size:.72rem;margin-top:2px;font-weight:600;">{{ form.password.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="col-6">
-            <label class="codeit-label">Confirm Password</label>
-            <div style="position:relative;">
-              <input type="password" name="confirm_password" class="codeit-input" placeholder="Confirm"
-                     required style="padding-right:2.8rem;" id="pw2" />
-              <button type="button" class="pw-toggle" onclick="togglePw(this)"><i class="fa fa-eye"></i></button>
-            </div>
-            {% if form.confirm_password.errors %}<div style="color:#E74C3C;font-size:.72rem;margin-top:4px;font-weight:600;">{{ form.confirm_password.errors.0 }}</div>{% endif %}
-          </div>
-        </div>
-
-        <div style="margin-top:20px;">
-          <button type="submit" class="btn-codeit">
-            <i class="fa fa-user-plus me-2"></i>Create Account
-          </button>
-        </div>
-      </form>
+  <section class="figma-panel" style="left:225px; top:58px; width:989px; height:980px;" aria-label="Registration panel">
+    <div class="brand-group" style="left:239px; top:24px;">
+      <img class="brand-group__logo" src="{% static 'student_portal/img/codeit_logo.png' %}" alt="CODE-IT logo" />
+      <div class="brand-group__wordmark">
+        <span class="brand-group__wordmark-code">CODE</span>
+        <span class="brand-group__wordmark-it">-IT</span>
+      </div>
+      <div class="brand-group__subtitle">VALENZUELA INFORMATION TECHNOLOGY SOCIETY</div>
+      <div class="brand-group__description">QR Attendance System -- Student Portal</div>
     </div>
-  </div>
 
-  <div class="login-link">
-    <a href="{% url 'student_portal:login' %}">Already have an account? <strong>Log in</strong></a>
-  </div>
-</div>
+    <form id="registerForm" method="post" enctype="multipart/form-data" style="position:absolute; inset:0;">
+      {% csrf_token %}
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  // Student ID auto-format
-  const sidInput = document.getElementById('registerSidInput');
-  if (sidInput) {
-    sidInput.addEventListener('input', function() {
-      let raw = this.value.replace(/\D/g, '');
-      if (raw.length > 6) raw = raw.substring(0, 6);
-      let fmt = '';
-      if (raw.length > 0) fmt += raw.substring(0, Math.min(2, raw.length));
-      if (raw.length > 2) fmt += '-' + raw.substring(2, 6);
-      this.value = fmt;
-    });
-  }
+      <label class="figma-label figma-label--register" for="firstNameInput" style="left:82px; top:155px;">First Name</label>
+      <div class="figma-field figma-field--register" style="left:82px; top:188px; width:363px; height:38px;">
+        <input id="firstNameInput" name="first_name" type="text" autocomplete="given-name" required value="{{ form.first_name.value|default:'' }}" />
+      </div>
 
-  // Dynamic section filter by year level
-  const yearSelect = document.getElementById('yearLevelSelect');
-  const sectionSelect = document.getElementById('sectionSelect');
-  const allOptions = [...sectionSelect.querySelectorAll('option[data-year]')];
-  function filterSections() {
-    const yr = yearSelect.value;
-    sectionSelect.innerHTML = '<option value="">Select section...</option>';
-    allOptions.forEach(opt => { if (opt.dataset.year === yr) sectionSelect.appendChild(opt.cloneNode(true)); });
-  }
-  yearSelect.addEventListener('change', filterSections);
-  filterSections();
+      <label class="figma-label figma-label--register" for="lastNameInput" style="left:554px; top:155px;">Last Name</label>
+      <div class="figma-field figma-field--register" style="left:554px; top:188px; width:363px; height:38px;">
+        <input id="lastNameInput" name="last_name" type="text" autocomplete="family-name" required value="{{ form.last_name.value|default:'' }}" />
+      </div>
 
-  // File upload display
-  function handleFileSelect(input) {
-    const name = input.files.length ? input.files[0].name : 'No file chosen';
-    const fileNameEl = document.getElementById('fileName');
-    fileNameEl.textContent = name;
-    fileNameEl.style.color = 'var(--text-muted)';
-    if (input.files[0] && input.files[0].size > 5 * 1024 * 1024) {
-      fileNameEl.textContent = 'File too large (max 5MB)';
-      fileNameEl.style.color = '#E74C3C';
-      input.value = '';
+      <label class="figma-label figma-label--register" for="registerSidInput" style="left:82px; top:240px;">Student ID</label>
+      <div class="figma-field figma-field--register" style="left:82px; top:273px; width:363px; height:38px;">
+        <input id="registerSidInput" name="student_id" type="text" placeholder="XX-XXXX" maxlength="7" required value="{{ form.student_id.value|default:'' }}" />
+      </div>
+      <span class="figma-hint" style="left:94px; top:316px;">Format: XX-XXXX</span>
+
+      <label class="figma-label figma-label--register" for="id_year_level" style="left:554px; top:240px;">Year Level</label>
+      <div class="figma-field figma-field--register" style="left:554px; top:273px; width:363px; height:38px;">
+        {{ form.year_level }}
+      </div>
+
+      <label class="figma-label figma-label--register" for="id_section" style="left:81px; top:350px;">Section</label>
+      <div class="figma-field figma-field--register" style="left:81px; top:383px; width:835px; height:44px;">
+        <select name="section" id="id_section" class="form-select" disabled required>
+          <option value="">— Select Year Level first —</option>
+        </select>
+      </div>
+
+      <label class="figma-label figma-label--register" for="emailInput" style="left:81px; top:460px;">Email Address</label>
+      <div class="figma-field figma-field--register" style="left:81px; top:493px; width:835px; height:44px;">
+        <input id="emailInput" name="email" type="email" autocomplete="email" required value="{{ form.email.value|default:'' }}" />
+      </div>
+
+      <label class="figma-label figma-label--register" for="passwordRegisterInput" style="left:81px; top:570px;">Password</label>
+      <div class="figma-field figma-field--register" style="left:69px; top:603px; width:376px; height:44px;">
+        <input id="passwordRegisterInput" name="password" type="password" autocomplete="new-password" required style="padding-right:48px;" />
+        <button type="button" class="figma-field__pw-toggle" onclick="togglePw(this)" aria-label="Toggle password visibility">
+          <i class="fa fa-eye"></i>
+        </button>
+      </div>
+      <span class="figma-hint" style="left:81px; top:652px;">Min 8 chars, 1 special character</span>
+
+      <label class="figma-label figma-label--register" for="confirmPasswordInput" style="left:554px; top:570px;">Confirm Password</label>
+      <div class="figma-field figma-field--register" style="left:554px; top:603px; width:366px; height:44px;">
+        <input id="confirmPasswordInput" name="confirm_password" type="password" autocomplete="new-password" required style="padding-right:48px;" />
+        <button type="button" class="figma-field__pw-toggle" onclick="togglePw(this)" aria-label="Toggle password visibility">
+          <i class="fa fa-eye"></i>
+        </button>
+      </div>
+
+      <label class="figma-label figma-label--register" for="idPhotoInput" style="left:81px; top:680px;">ID Photo <span style="opacity:.6;font-size:11px;">(optional)</span></label>
+      <div class="figma-field figma-field--register" style="left:81px; top:713px; width:835px; height:44px;">
+        <input id="idPhotoInput" name="id_photo" type="file" accept=".png,.jpg,.jpeg,.webp" style="padding:6px 12px;" />
+      </div>
+
+      <button class="figma-submit" type="submit" style="left:307px; top:790px; width:376px; height:48px;" aria-label="Create account">
+        <span class="figma-submit__label figma-submit__label--register">Create Account</span>
+      </button>
+    </form>
+  </section>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script>
+    const registerSidInput     = document.getElementById('registerSidInput');
+    const yearLevelSelect      = document.getElementById('id_year_level');
+    const sectionSelect        = document.getElementById('id_section');
+    const passwordRegisterInput = document.getElementById('passwordRegisterInput');
+    const confirmPasswordInput  = document.getElementById('confirmPasswordInput');
+
+    // Auto-format Student ID as XX-XXXX
+    if (registerSidInput) {
+      registerSidInput.addEventListener('input', function() {
+        let raw = this.value.replace(/\D/g, '').substring(0, 6);
+        this.value = raw.length > 2 ? raw.substring(0, 2) + '-' + raw.substring(2) : raw;
+      });
     }
-  }
 
-  // Password live feedback & validation
-  const pwInput = document.getElementById('pw1');
-  const pwIndicator = document.getElementById('pwIndicator');
-  if (pwInput && pwIndicator) {
-    pwInput.addEventListener('input', function() {
-      const val = this.value;
-      if (val.length === 0) {
-        pwIndicator.style.color = 'var(--text-muted)';
-        pwIndicator.textContent = 'Min 8 chars, 1 special character required.';
-      } else {
-        const hasLength = val.length >= 8;
-        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(val);
-        
-        if (!hasLength || !hasSpecial) {
-          pwIndicator.style.color = '#E74C3C'; // Red
-          pwIndicator.textContent = 'Weak password: Must be at least 8 chars and contain 1 special character.';
-        } else {
-          pwIndicator.style.color = '#0A5C36'; // Dark Green for better contrast
-          pwIndicator.textContent = 'Strong password.';
-        }
+    // AJAX: load sections when year level changes
+    async function loadSectionsByYear(year) {
+      if (!sectionSelect) return;
+      sectionSelect.disabled = true;
+      sectionSelect.innerHTML = '<option value="">Loading…</option>';
+
+      if (!year) {
+        sectionSelect.innerHTML = '<option value="">— Select Year Level first —</option>';
+        return;
       }
-    });
 
-    document.getElementById('registerForm')?.addEventListener('submit', function(e) {
-      const val = pwInput.value;
-      const hasLength = val.length >= 8;
-      const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(val);
+      try {
+        const res  = await fetch(`/api/sections/?year=${year}`);
+        const data = await res.json();
+        sectionSelect.innerHTML = '<option value="">— Select Section —</option>';
+        (data.sections || []).forEach(sec => {
+          const opt    = document.createElement('option');
+          opt.value    = sec.id;
+          opt.textContent = sec.name;
+          sectionSelect.appendChild(opt);
+        });
+        sectionSelect.disabled = data.sections.length === 0;
+      } catch (e) {
+        sectionSelect.innerHTML = '<option value="">Error loading sections</option>';
+      }
+    }
+
+    yearLevelSelect?.addEventListener('change', () => loadSectionsByYear(yearLevelSelect.value));
+
+    // Client-side submit validation
+    document.getElementById('registerForm')?.addEventListener('submit', function(event) {
+      const passwordValue = passwordRegisterInput ? passwordRegisterInput.value : '';
+      const confirmValue  = confirmPasswordInput  ? confirmPasswordInput.value  : '';
+      const hasLength     = passwordValue.length >= 8;
+      const hasSpecial    = /[!@#$%^&*(),.?":{}|<>]/.test(passwordValue);
+
       if (!hasLength || !hasSpecial) {
-        e.preventDefault();
-        pwIndicator.style.color = '#E74C3C';
-        pwIndicator.textContent = 'Please meet the password requirements before submitting.';
+        event.preventDefault();
+        window.pushFloatingAlert('Password must be at least 8 characters and include one special character.', 'error');
+        return;
+      }
+      if (passwordValue !== confirmValue) {
+        event.preventDefault();
+        window.pushFloatingAlert('Passwords do not match.', 'error');
       }
     });
-  }
-
-  // Name sanitization
-  ['firstNameInput', 'lastNameInput'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('input', function() {
-      this.value = this.value.replace(/[^a-zA-ZÀ-ÿñÑ\s\-'\.]/g, '');
-    });
-  });
-
-  // Password toggle
-  function togglePw(btn) {
-    const input = btn.parentElement.querySelector('input');
-    const icon = btn.querySelector('i');
-    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
-    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
-  }
-</script>
-</body>
-</html>
+  </script>
+{% endblock %}

@@ -1,10 +1,23 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from .models import Admin, Student, Event, QRToken, AttendanceLog
+from rest_framework.decorators import api_view
+from django.http import JsonResponse
+from .models import Admin, Section, Student, Event, QRToken, AttendanceLog
 from .serializers import (
     AdminSerializer, StudentSerializer, EventSerializer,
     QRTokenSerializer, AttendanceLogSerializer
 )
+
+
+@api_view(['GET'])
+def sections_by_year_api(request):
+    year = request.GET.get('year', '')
+    if year:
+        sections = Section.objects.filter(year_level=year).order_by('name')
+    else:
+        sections = Section.objects.all().order_by('year_level', 'name')
+    data = [{'id': str(s.id), 'name': s.name} for s in sections]
+    return Response({'sections': data})
 
 
 class AdminViewSet(viewsets.ModelViewSet):

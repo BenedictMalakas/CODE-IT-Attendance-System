@@ -1,273 +1,109 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Student Login | CODE-IT</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+{% extends 'shared/figma_auth_base.html' %}
+{% load static %}
+
+{% block page_title %}Student Login | CODE-IT{% endblock %}
+{% block auth_page %}login{% endblock %}
+
+{% block extra_head %}
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg-dark: #111840;
-      --card-border: #1E1E2E;
-      --accent-orange: #F5A623;
-      --btn-orange: #E89430;
-      --text-dark: #1E1E2E;
-      --text-muted: rgba(30,30,46,0.5);
-      --input-bg: #E8E4DC;
-      --font: 'Outfit', 'Segoe UI', system-ui, sans-serif;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: var(--font);
-      background: var(--bg-dark);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
-      position: relative;
-      overflow-x: hidden;
-    }
+{% endblock %}
 
-    /* ── Blob Backgrounds ── */
-    .blob {
-      position: fixed; border-radius: 50%; filter: blur(90px); opacity: .55;
-      pointer-events: none; z-index: 0;
-    }
-    .blob-1 { width: 420px; height: 420px; background: #2ecc71; top: -80px; left: -60px; }
-    .blob-2 { width: 350px; height: 350px; background: #3498db; bottom: -60px; right: -40px; }
-    .blob-3 { width: 280px; height: 280px; background: #9b59b6; top: 50%; left: 60%; }
+{% block extra_alerts %}
+  {% for field in form %}
+    {% for error in field.errors %}
+      <div class="floating-alert floating-alert--error">{{ field.label }}: {{ error }}</div>
+    {% endfor %}
+  {% endfor %}
+  {% for error in form.non_field_errors %}
+    <div class="floating-alert floating-alert--error">{{ error }}</div>
+  {% endfor %}
+{% endblock %}
 
-    /* ── Folder Card ── */
-    .folder-card {
-      position: relative; z-index: 1;
-      width: 100%; max-width: 440px;
-    }
-    .folder-tab {
-      display: inline-block;
-      background: var(--card-border);
-      color: #fff;
-      font-weight: 800;
-      font-size: .95rem;
-      padding: 8px 28px;
-      border-radius: 16px 16px 0 0;
-      letter-spacing: .5px;
-    }
-    .folder-body {
-      background: #fff;
-      border: 3px solid var(--card-border);
-      border-radius: 0 18px 18px 18px;
-      padding: 28px 24px;
-      position: relative;
-    }
-    .screw {
-      position: absolute; width: 14px; height: 14px; border-radius: 50%;
-      background: radial-gradient(circle at 40% 35%, #d4d4d4, #888 70%);
-      box-shadow: inset 0 1px 2px rgba(0,0,0,.3);
-    }
-    .screw-tl { top: 10px; left: 10px; }
-    .screw-tr { top: 10px; right: 10px; }
-    .screw-bl { bottom: 10px; left: 10px; }
-    .screw-br { bottom: 10px; right: 10px; }
+{% block canvas_content %}
+  <img class="scene-backdrop-logo" src="{% static 'student_portal/img/codeit_logo.png' %}" alt="" aria-hidden="true" />
 
-    .folder-inner {
-      background: linear-gradient(145deg, #7B8ED8, #9DAAE8, #A8B5F0);
-      border-radius: 14px;
-      padding: 28px 24px;
-    }
-    .folder-inner.white { background: #fff; }
+  <a class="figma-pill" href="{% url 'student_portal:register' %}" style="left:41px; top:32px;" aria-label="Sign up">
+    <span class="figma-pill__label figma-pill__label--signup">SIGN UP</span>
+  </a>
 
-    /* ── Brand ── */
-    .brand-header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .brand-header h1 {
-      font-weight: 900;
-      font-size: 1.8rem;
-      color: var(--accent-orange);
-      margin: 0;
-      letter-spacing: .5px;
-    }
-    .brand-header p {
-      font-size: .78rem;
-      color: rgba(255,255,255,.6);
-      font-weight: 600;
-      margin: 4px 0 0;
-    }
+  <div class="figma-progress" style="top:936px;"></div>
 
-    /* ── Form ── */
-    .codeit-label {
-      font-weight: 700;
-      font-size: .88rem;
-      color: var(--text-dark);
-      margin-bottom: 4px;
-      display: block;
-    }
-    .codeit-input {
-      width: 100%;
-      padding: 12px 18px;
-      border: 2px solid transparent;
-      border-radius: 20px;
-      background: var(--input-bg);
-      font-family: var(--font);
-      font-size: .9rem;
-      font-weight: 500;
-      color: var(--text-dark);
-      outline: none;
-      transition: border-color .2s, background .2s;
-    }
-    .codeit-input::placeholder { color: rgba(30,30,46,0.35); }
-    .codeit-input:focus { border-color: var(--accent-orange); background: #F5F0E8; }
-
-    .btn-codeit {
-      display: block;
-      width: 100%;
-      padding: 14px;
-      border: 3px solid var(--card-border);
-      background: var(--btn-orange);
-      color: var(--card-border);
-      border-radius: 16px;
-      font-family: var(--font);
-      font-weight: 800;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all .15s;
-      text-align: center;
-      text-decoration: none;
-    }
-    .btn-codeit:hover {
-      background: #D07A20;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 0 var(--card-border);
-    }
-
-    .pw-toggle {
-      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
-      cursor: pointer; color: var(--text-muted); z-index: 5;
-      background: none; border: none; padding: 0; font-size: .85rem;
-    }
-    .pw-toggle:hover { color: var(--text-dark); }
-    input::-ms-reveal, input::-ms-clear, input::-webkit-reveal { display: none !important; }
-
-    .alert {
-      border-radius: 12px;
-      font-size: .85rem;
-      font-weight: 600;
-    }
-
-    .register-link {
-      text-align: center;
-      margin-top: 16px;
-    }
-    .register-link a {
-      color: rgba(255,255,255,.55);
-      font-size: .85rem;
-      font-weight: 600;
-      text-decoration: none;
-      transition: color .2s;
-    }
-    .register-link a:hover { color: var(--accent-orange); }
-  </style>
-</head>
-<body>
-
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
-<div class="blob blob-3"></div>
-
-<div class="folder-card">
-  <div class="brand-header">
-    <h1>CODE-IT</h1>
-    <p>QR Attendance System — Student Portal</p>
-  </div>
-
-  <div class="folder-tab">Student Login</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
-    <div class="folder-inner">
-      {% if messages %}
-        {% for msg in messages %}
-          <div class="alert alert-danger py-2 mb-3">{{ msg }}</div>
-        {% endfor %}
-      {% endif %}
-
-      <form method="post">
-        {% csrf_token %}
-        <div style="margin-bottom:16px;">
-          <label class="codeit-label">Student ID</label>
-          <input type="text" name="student_id" class="codeit-input"
-                 placeholder="e.g. 02-2324"
-                 autocomplete="username" required
-                 id="studentIdInput" maxlength="7" />
-          {% if form.student_id.errors %}
-            <div style="color:#E74C3C;font-size:.75rem;margin-top:4px;font-weight:600;">{{ form.student_id.errors.0 }}</div>
-          {% endif %}
-        </div>
-        <div style="margin-bottom:20px;">
-          <label class="codeit-label">Password</label>
-          <div style="position:relative;">
-            <input type="password" name="password" class="codeit-input"
-                   placeholder="Your password"
-                   autocomplete="current-password" required
-                   style="padding-right:3rem;" />
-            <button type="button" class="pw-toggle" onclick="togglePw(this)">
-              <i class="fa fa-eye"></i>
-            </button>
-          </div>
-          {% if form.password.errors %}
-            <div style="color:#E74C3C;font-size:.75rem;margin-top:4px;font-weight:600;">{{ form.password.errors.0 }}</div>
-          {% endif %}
-        </div>
-        <button type="submit" class="btn-codeit">
-          <i class="fa fa-right-to-bracket me-2"></i>LOG IN
-        </button>
-      </form>
+  <section class="figma-panel" style="left:225px; top:160px; width:989px; height:820px;" aria-label="Login panel">
+    <div class="brand-group" style="left:239px; top:40px;">
+      <img class="brand-group__logo" src="{% static 'student_portal/img/codeit_logo.png' %}" alt="CODE-IT logo" />
+      <div class="brand-group__wordmark">
+        <span class="brand-group__wordmark-code">CODE</span>
+        <span class="brand-group__wordmark-it">-IT</span>
+      </div>
+      <div class="brand-group__subtitle">VALENZUELA INFORMATION TECHNOLOGY SOCIETY</div>
+      <div class="brand-group__description">QR Attendance System -- Student Portal</div>
     </div>
-  </div>
 
-  <div class="register-link">
-    <a href="{% url 'student_portal:register' %}">Don't have an account? <strong>Register here</strong></a>
-  </div>
-</div>
+    <form method="post" style="position:absolute; inset:0;">
+      {% csrf_token %}
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  // Student ID auto-format
-  const idInput = document.getElementById('studentIdInput');
-  if (idInput) {
-    idInput.addEventListener('input', function() {
-      let raw = this.value.replace(/\D/g, '');
-      if (raw.length > 6) raw = raw.substring(0, 6);
-      let formatted = '';
-      if (raw.length > 0) formatted += raw.substring(0, Math.min(2, raw.length));
-      if (raw.length > 2) formatted += '-' + raw.substring(2, 6);
-      this.value = formatted;
-    });
-  }
+      <label class="figma-label" for="studentIdInput" style="left:166px; top:200px;">Student ID</label>
+      <div class="figma-field figma-field--login" style="left:166px; top:238px; width:684px; height:58px;">
+        <input
+          id="studentIdInput"
+          name="student_id"
+          type="text"
+          placeholder="XX-XXXX"
+          autocomplete="username"
+          maxlength="7"
+          required
+          value="{{ form.student_id.value|default:'' }}"
+          aria-label="Student ID"
+        />
+      </div>
+      <span class="figma-hint" style="left:178px; top:302px;">Format: XX-XXXX (e.g. 24-1234)</span>
 
-  // Password toggle
-  function togglePw(btn) {
-    const input = btn.parentElement.querySelector('input');
-    const icon  = btn.querySelector('i');
-    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
-    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
-  }
+      <label class="figma-label" for="passwordInput" style="left:166px; top:330px;">Password</label>
+      <div class="figma-field figma-field--login" style="left:166px; top:368px; width:684px; height:58px;">
+        <input
+          id="passwordInput"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+          aria-label="Password"
+          style="padding-right:56px;"
+        />
+        <button type="button" class="figma-field__pw-toggle" onclick="togglePw(this)" aria-label="Toggle password visibility">
+          <i class="fa fa-eye"></i>
+        </button>
+      </div>
 
-  const sessionExpired = sessionStorage.getItem('studentSessionExpired');
-  if (sessionExpired === '1') {
-    sessionStorage.removeItem('studentSessionExpired');
-    const loginInner = document.querySelector('.folder-inner');
-    if (loginInner) {
-      const alert = document.createElement('div');
-      alert.className = 'alert alert-warning py-2 mb-3';
-      alert.innerHTML = '<i class="fa fa-clock me-1"></i>Your session has expired. Please log in again.';
-      loginInner.prepend(alert);
+      <button class="figma-submit" type="submit" style="left:166px; top:470px; width:684px; height:62px;" aria-label="Sign in">
+        <span class="figma-submit__label">Sign in</span>
+      </button>
+    </form>
+
+    <div class="figma-footer-copy" style="left:0; right:0; top:548px; text-align:center;">Don't have an account?</div>
+    <a class="figma-footer-link" href="{% url 'student_portal:register' %}" style="left:0; right:0; top:574px; text-align:center; display:block;">Register here.</a>
+  </section>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script>
+    const studentIdInput = document.getElementById('studentIdInput');
+    if (studentIdInput) {
+      studentIdInput.addEventListener('input', function() {
+        let raw = this.value.replace(/\D/g, '');
+        if (raw.length > 6) {
+          raw = raw.substring(0, 6);
+        }
+
+        let formatted = '';
+        if (raw.length > 0) {
+          formatted += raw.substring(0, Math.min(2, raw.length));
+        }
+        if (raw.length > 2) {
+          formatted += '-' + raw.substring(2, 6);
+        }
+
+        this.value = formatted;
+      });
     }
-  }
-</script>
-</body>
-</html>
+  </script>
+{% endblock %}

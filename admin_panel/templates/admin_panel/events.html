@@ -4,168 +4,111 @@
 {% block nav_events %}active{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
-  <div class="section-title-band"><h2>Event Scheduling</h2></div>
-  {% if admin_role == 'chairperson' or admin_role == 'vits' %}
-  <a href="{% url 'admin_panel:event_create' %}" class="btn-codeit btn-codeit-sm">
-    <i class="fa fa-plus me-1"></i> New Event
-  </a>
-  {% endif %}
-</div>
+<section class="figma-panel">
+  <h1 class="figma-heading">Event Scheduling</h1>
 
-<div class="folder-card">
-  <div class="folder-tab">All Events</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:0;overflow:hidden;border-radius:14px;">
-      <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #E8E8E8;">
-        <div style="font-weight:800;font-size:.88rem;color:var(--text-dark);">Event Directory</div>
-        <div style="font-size:.82rem;color:var(--text-muted);font-weight:700;">
-          {% if page_obj.paginator.count %}
-          Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
-          {% else %}
-          No events scheduled
-          {% endif %}
-        </div>
-      </div>
-      <div class="table-responsive">
-        <table class="codeit-table">
-          <thead>
-            <tr>
-              <th>Event Name</th><th>Date</th><th>Start Time</th><th>Late Cutoff</th><th>Status</th><th style="text-align:center;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for event in events %}
-            <tr>
-              <td style="font-weight:700;">{{ event.name }}</td>
-              <td>{{ event.date }}</td>
-              <td>{% if event.start_time %}{{ event.start_time|time:"g:i A" }}{% else %}<span style="color:var(--text-muted);font-style:italic;">Manual</span>{% endif %}</td>
-              <td>{{ event.late_cutoff_mins }} mins</td>
-              <td>
-                {% if event.status == 'pending' %}<span class="badge bg-warning text-dark px-3" style="border-radius:10px;">Pending</span>
-                {% elif event.status == 'active' %}<span class="badge bg-success px-3" style="border-radius:10px;">Active</span>
-                {% elif event.status == 'ended' %}<span class="badge bg-secondary px-3" style="border-radius:10px;">Ended</span>
-                {% elif event.status == 'closed' %}<span class="badge bg-dark px-3" style="border-radius:10px;">Closed</span>
-                {% endif %}
-              </td>
-              <td style="text-align:center;">
-                <div class="d-flex flex-wrap justify-content-center gap-1">
-                  {% if event.status == 'pending' and admin_role != 'representative' %}
-                  <form method="post" action="{% url 'admin_panel:event_start' event.id %}" class="d-inline"
-                        onsubmit="return confirm('Start event \'{{ event.name|escapejs }}\'?');">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-success" style="border-radius:8px;font-weight:700;font-size:.75rem;">
-                      <i class="fa fa-play me-1"></i><span class="d-none d-md-inline">Start</span>
-                    </button>
-                  </form>
-                  {% endif %}
-
-                  {% if admin_role == 'vits' %}
-                    {% if event.status == 'active' or event.status == 'pending' %}
-                    <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-success" style="border-radius:8px;font-weight:700;font-size:.75rem;">
-                      <i class="fa fa-qrcode me-1"></i><span class="d-none d-md-inline">Scan</span>
-                    </a>
-                    {% elif event.status == 'ended' %}
-                    <a href="{% url 'admin_panel:scanner' event.id %}" class="btn btn-sm btn-outline-dark" style="border-radius:8px;font-weight:700;font-size:.75rem;">
-                      <i class="fa fa-door-open me-1"></i><span class="d-none d-md-inline">Exit Scan</span>
-                    </a>
-                    {% endif %}
-                  {% endif %}
-
-                  {% if event.status == 'active' and admin_role != 'representative' %}
-                  <form method="post" action="{% url 'admin_panel:event_extend_grace' event.id %}" class="d-inline"
-                        onsubmit="return confirm('Extend grace period by +15 minutes?');">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-info" title="Extend late cutoff by 15 min" style="border-radius:8px;font-weight:700;font-size:.75rem;">
-                      <i class="fa fa-clock me-1"></i><span class="d-none d-md-inline">+15m</span>
-                    </button>
-                  </form>
-                  {% endif %}
-
-                  <a href="{% url 'admin_panel:attendance' event.id %}" class="btn btn-sm btn-outline-primary" style="border-radius:8px;font-weight:700;font-size:.75rem;">
-                    <i class="fa fa-list-check me-1"></i><span class="d-none d-md-inline">Logs</span>
-                  </a>
-
-                  <a href="{% url 'admin_panel:export' event.id %}" class="btn btn-sm btn-outline-success" style="border-radius:8px;font-weight:700;font-size:.75rem;">
-                    <i class="fa fa-file-excel me-1"></i><span class="d-none d-md-inline">Export</span>
-                  </a>
-
-                  {% if admin_role != 'representative' %}
-                    {% if event.status == 'active' %}
-                    <form method="post" action="{% url 'admin_panel:event_end' event.id %}" class="d-inline"
-                          onsubmit="return confirm('End event \'{{ event.name|escapejs }}\'? Scanner will switch to Exit Mode.');">
-                      {% csrf_token %}
-                      <button class="btn btn-sm btn-warning" style="border-radius:8px;font-weight:700;font-size:.75rem;">
-                        <i class="fa fa-stop me-1"></i><span class="d-none d-md-inline">End</span>
-                      </button>
-                    </form>
-                    {% endif %}
-
-                    {% if event.status == 'ended' and admin_role == 'chairperson' %}
-                    <form method="post" action="{% url 'admin_panel:event_close' event.id %}" class="d-inline"
-                          onsubmit="return confirm('CLOSE event \'{{ event.name|escapejs }}\'? This will permanently lock the event.');">
-                      {% csrf_token %}
-                      <button class="btn btn-sm btn-danger" style="border-radius:8px;font-weight:700;font-size:.75rem;">
-                        <i class="fa fa-lock me-1"></i><span class="d-none d-md-inline">Close</span>
-                      </button>
-                    </form>
-                    {% endif %}
-
-                    <a href="{% url 'admin_panel:event_edit' event.id %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;font-weight:700;font-size:.75rem;">
-                      <i class="fa fa-pen me-1"></i><span class="d-none d-md-inline">Edit</span>
-                    </a>
-
-                    <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:8px;font-weight:700;font-size:.75rem;"
-                            data-bs-toggle="modal" data-bs-target="#deleteModal"
-                            data-event-id="{{ event.id }}" data-event-name="{{ event.name }}">
-                      <i class="fa fa-trash me-1"></i><span class="d-none d-md-inline">Delete</span>
-                    </button>
-                  {% endif %}
-                </div>
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="6" style="text-align:center;color:var(--text-muted);padding:32px;">
-                No events yet. {% if admin_role == 'chairperson' or admin_role == 'vits' %}<a href="{% url 'admin_panel:event_create' %}" style="color:var(--accent-orange);font-weight:700;">Create one</a>.{% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% if page_obj.paginator.num_pages > 1 %}
-      <div style="display:flex;justify-content:center;align-items:center;gap:12px;padding:16px;flex-wrap:wrap;border-top:1px solid #E8E8E8;">
-        {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">&lt; Prev</a>
-        {% endif %}
-        <span style="font-weight:700;font-size:.85rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="btn-codeit btn-codeit-sm">Next &gt;</a>
-        {% endif %}
-      </div>
-      {% endif %}
-    </div>
+  <div class="d-flex align-items-center gap-3 mt-3 mb-3">
+    <p class="figma-section-heading">All Events <span class="figma-muted" style="font-size:12px; margin-left:4px;">Event Directory</span></p>
+    <a href="{% url 'admin_panel:event_create' %}" class="figma-btn ms-auto"><i class="fa fa-plus"></i> Create Event</a>
   </div>
-</div>
 
-<!-- Delete modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="figma-table-wrap">
+    <table class="figma-table">
+      <thead>
+        <tr>
+          <th>Event Name</th>
+          <th>Date</th>
+          <th>Start Time</th>
+          <th>Late Cutoff</th>
+          <th>Status</th>
+          <th class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in events %}
+        <tr>
+          <td>{{ event.name }}</td>
+          <td>{{ event.date|date:"n/j/Y" }}</td>
+          <td>{{ event.start_time|time:"g:i A"|default:"—" }}</td>
+          <td>{{ event.late_cutoff_mins }} mins</td>
+          <td><span class="figma-badge {{ event.status }}">{{ event.status|upper }}</span></td>
+          <td class="text-center">
+            <div class="figma-action-row">
+
+              {% if event.status == 'pending' %}
+              <form method="post" action="{% url 'admin_panel:start_event' event.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="figma-icon-btn figma-icon-btn--start" title="Start Event"><i class="fa fa-play"></i></button>
+              </form>
+              {% endif %}
+
+              {% if event.status == 'active' %}
+              <form method="post" action="{% url 'admin_panel:end_event' event.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="figma-icon-btn figma-icon-btn--end" title="End Event (enable check-out)"><i class="fa fa-stop"></i></button>
+              </form>
+              <form method="post" action="{% url 'admin_panel:extend_grace' event.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="figma-icon-btn figma-icon-btn--link" title="Extend Grace +15 mins"><i class="fa fa-clock"></i></button>
+              </form>
+              <a href="{% url 'admin_panel:scanner' event.id %}" class="figma-icon-btn figma-icon-btn--link" title="Open Scanner"><i class="fa fa-qrcode"></i></a>
+              {% endif %}
+
+              {% if event.status == 'ended' %}
+              <a href="{% url 'admin_panel:scanner' event.id %}" class="figma-icon-btn figma-icon-btn--link" title="Check-Out Scanner"><i class="fa fa-door-open"></i></a>
+              {% if admin_role == 'chairperson' %}
+              <form method="post" action="{% url 'admin_panel:close_event' event.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="figma-icon-btn figma-icon-btn--end" title="Close Event (chairperson only)"
+                        onclick="return confirm('Close this event? This locks all scanning and enables the final comparison.')">
+                  <i class="fa fa-lock"></i>
+                </button>
+              </form>
+              {% endif %}
+              {% endif %}
+
+              <a href="{% url 'admin_panel:attendance' event.id %}" class="figma-icon-btn figma-icon-btn--view" title="View Attendance"><i class="fa fa-list"></i></a>
+              <a href="{% url 'admin_panel:export' event.id %}" class="figma-icon-btn figma-icon-btn--excel" title="Export to Excel"><i class="fa fa-file-excel"></i></a>
+
+              {% if event.status == 'pending' %}
+              <a href="{% url 'admin_panel:event_edit' event.id %}" class="figma-icon-btn" title="Edit"><i class="fa fa-pen"></i></a>
+              <button type="button" class="figma-icon-btn figma-icon-btn--delete"
+                      data-bs-toggle="modal" data-bs-target="#deleteModal"
+                      data-event-id="{{ event.id }}" data-event-name="{{ event.name }}"
+                      title="Delete">
+                <i class="fa fa-trash"></i>
+              </button>
+              {% endif %}
+
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr class="figma-empty-row">
+          <td colspan="6">No events yet</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius:18px;border:3px solid var(--card-border);">
+    <div class="modal-content figma-card">
       <div class="modal-header border-0">
-        <h5 class="modal-title" style="font-weight:800;color:var(--accent-red);"><i class="fa fa-triangle-exclamation me-2"></i>Delete Event</h5>
+        <h5 class="modal-title">Delete Event</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        Are you sure you want to delete <strong id="modalEventName"></strong>?
-        This will also remove all related attendance logs.
+        Delete <strong id="modalEventName"></strong>? This also removes related attendance logs.
       </div>
       <div class="modal-footer border-0">
-        <button class="btn-codeit btn-codeit-sm" data-bs-dismiss="modal" style="background:#999;color:#fff;">Cancel</button>
-        <form id="deleteForm" method="post">{% csrf_token %}<button type="submit" class="btn-codeit btn-codeit-sm btn-codeit-red"><i class="fa fa-trash"></i> Delete</button></form>
+        <button class="figma-btn figma-btn--plain" data-bs-dismiss="modal" type="button">Cancel</button>
+        <form id="deleteForm" method="post">
+          {% csrf_token %}
+          <button type="submit" class="figma-btn figma-btn--danger">Delete</button>
+        </form>
       </div>
     </div>
   </div>
@@ -174,10 +117,12 @@
 
 {% block extra_js %}
 <script>
-  document.getElementById('deleteModal')?.addEventListener('show.bs.modal', e => {
+  const deleteModal = document.getElementById('deleteModal');
+  deleteModal?.addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     document.getElementById('modalEventName').textContent = btn.dataset.eventName;
-    document.getElementById('deleteForm').action = `/admin-panel/events/${btn.dataset.eventId}/delete/`;
+    document.getElementById('deleteForm').action =
+      `/admin-panel/events/${btn.dataset.eventId}/delete/`;
   });
 </script>
 {% endblock %}

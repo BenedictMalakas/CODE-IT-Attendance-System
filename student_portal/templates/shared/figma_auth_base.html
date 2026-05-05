@@ -1,0 +1,1226 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block page_title %}CODE-IT{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Special+Gothic+Expanded+One&family=Unbounded:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>document.documentElement.classList.add('js');</script>
+  <noscript>
+    <style>
+      .scene-frame {
+        opacity: 1 !important;
+      }
+
+      .splash-overlay {
+        display: none !important;
+      }
+    </style>
+  </noscript>
+  <style>
+    :root {
+      --figma-width-raw: 1440;
+      --figma-height-raw: 1212;
+      --figma-width: calc(var(--figma-width-raw) * 1px);
+      --figma-height: calc(var(--figma-height-raw) * 1px);
+      --figma-purple: #533bb5;
+      --figma-orange: #efa735;
+      --figma-glass: rgba(255, 255, 255, 0.36);
+      --figma-blue-button: rgba(36, 74, 196, 0.55);
+      --figma-white-border: rgba(255, 255, 255, 0.92);
+      --figma-shadow: rgba(0, 0, 0, 0.18);
+      --figma-stage-pad: 24px;
+      --body-font: 'Poppins', 'Segoe UI', sans-serif;
+      --heading-font: 'Unbounded', 'Poppins', sans-serif;
+      --kicker-font: 'Special Gothic Expanded One', 'Poppins', sans-serif;
+      --figma-progress-height: 8px;
+      --scene-runtime-scale: 1;
+      --splash-stage-scale: 1;
+      --splash-gradient: linear-gradient(180deg, #533bb5 0%, #6f4e91 18%, #8b616d 52%, #c48725 100%);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: var(--figma-stage-pad);
+      overflow: auto;
+      background: var(--figma-purple);
+      font-family: var(--body-font);
+      color: #fff;
+    }
+
+    body[data-auth-page='register'] {
+      --figma-progress-height: 17px;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+      color: inherit;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      border: 0;
+      outline: 0;
+      background: transparent;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    input::-ms-reveal,
+    input::-ms-clear,
+    input::-webkit-reveal {
+      display: none !important;
+    }
+
+    .scene-shell {
+      position: relative;
+      width: var(--figma-width);
+      height: var(--figma-height);
+      flex: 0 0 auto;
+    }
+
+    .scene-frame {
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: var(--figma-width);
+      height: var(--figma-height);
+      overflow: hidden;
+      --scene-frame-enter-y: 26px;
+      transform: translateY(var(--scene-frame-enter-y)) scale(var(--scene-runtime-scale));
+      transform-origin: top left;
+      background: var(--figma-purple);
+      isolation: isolate;
+      opacity: 0;
+      pointer-events: none;
+      transition:
+        opacity 0.42s ease,
+        transform 0.54s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .scene-frame::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 41%, rgba(255, 255, 255, 0.08), transparent 26%),
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03), transparent 42%);
+      pointer-events: none;
+    }
+
+    .scene-frame.ready {
+      --scene-frame-enter-y: 0px;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .scene-backdrop-logo {
+      position: absolute;
+      left: 420px;
+      top: 212px;
+      width: 600px;
+      height: 600px;
+      object-fit: cover;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .figma-pill {
+      position: absolute;
+      width: 166px;
+      height: 71px;
+      border: 1px solid var(--figma-white-border);
+      border-radius: 24px;
+      background: var(--figma-glass);
+      backdrop-filter: blur(125px);
+      -webkit-backdrop-filter: blur(125px);
+      box-shadow: 0 6px 18px rgba(34, 20, 78, 0.1);
+    }
+
+    .figma-pill__label {
+      position: absolute;
+      white-space: nowrap;
+      color: #fff;
+    }
+
+    .figma-pill__label--login {
+      left: 38px;
+      top: 20px;
+      font-family: var(--kicker-font);
+      font-size: 24px;
+      font-weight: 400;
+      line-height: normal;
+    }
+
+    .figma-pill__label--signup {
+      left: 21px;
+      top: 20px;
+      font-family: var(--heading-font);
+      font-size: 24px;
+      font-weight: 700;
+      line-height: normal;
+    }
+
+    .figma-progress {
+      position: absolute;
+      left: 518px;
+      width: 404px;
+      height: var(--figma-progress-height);
+      border: 1px solid var(--figma-white-border);
+      border-radius: 22px;
+      background: var(--figma-glass);
+      backdrop-filter: blur(125px);
+      -webkit-backdrop-filter: blur(125px);
+    }
+
+    .figma-panel {
+      position: absolute;
+      border: 1px solid var(--figma-white-border);
+      background: var(--figma-glass);
+      backdrop-filter: blur(125px);
+      -webkit-backdrop-filter: blur(125px);
+      border-radius: 189px;
+      box-shadow: 0 16px 48px rgba(21, 10, 58, 0.12);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(1200px);
+      transition:
+        opacity 0.7s ease 0.12s,
+        transform 1.4s cubic-bezier(0.16, 1, 0.3, 1) 0.12s;
+    }
+
+    .scene-frame.ready .figma-panel {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .brand-group {
+      position: absolute;
+      width: 512px;
+      height: 126px;
+    }
+
+    .brand-group__logo {
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 126px;
+      height: 126px;
+      border: 3px solid #fff;
+      border-radius: 436px;
+      object-fit: cover;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .brand-group__wordmark {
+      position: absolute;
+      left: 153px;
+      top: 17px;
+      display: flex;
+      align-items: center;
+      width: 320px;
+      height: 46px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 64px;
+      font-weight: 800;
+      line-height: normal;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+      -webkit-text-stroke: 1.5px #000;
+      white-space: nowrap;
+    }
+
+    .brand-group__wordmark-code {
+      color: var(--figma-orange);
+    }
+
+    .brand-group__wordmark-it {
+      color: var(--figma-purple);
+    }
+
+    .brand-group__subtitle {
+      position: absolute;
+      left: 95px;
+      top: 73px;
+      width: 417px;
+      height: 23px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: normal;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .brand-group__description {
+      position: absolute;
+      left: 140px;
+      top: 96px;
+      width: 316px;
+      height: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: normal;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .figma-label {
+      position: absolute;
+      color: #1a0a3e;
+      font-family: var(--body-font);
+      font-size: 22px;
+      font-weight: 500;
+      line-height: normal;
+      white-space: nowrap;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+    }
+
+    .figma-label--register {
+      font-size: 18px;
+    }
+
+    .figma-field {
+      position: absolute;
+      border: 1px solid var(--figma-white-border);
+      border-radius: 189px;
+      background: var(--figma-glass);
+      backdrop-filter: blur(125px);
+      -webkit-backdrop-filter: blur(125px);
+      overflow: hidden;
+    }
+
+    .figma-field input,
+    .figma-field select,
+    .figma-field textarea {
+      width: 100%;
+      height: 100%;
+      padding: 0 24px;
+      color: #1a0a3e;
+      font-family: var(--body-font);
+      font-size: 18px;
+      font-weight: 400;
+      line-height: normal;
+    }
+
+    .figma-field input::placeholder,
+    .figma-field select:invalid,
+    .figma-field textarea::placeholder {
+      color: rgba(26, 10, 62, 0.45);
+    }
+
+    select option {
+      color: #1a0a3e;
+      background: #fff;
+    }
+
+    .figma-field--register input,
+    .figma-field--register select,
+    .figma-field--register textarea {
+      font-size: 16px;
+      font-family: var(--body-font);
+    }
+
+    .figma-field--login input {
+      padding-left: 24px;
+      padding-right: 24px;
+      font-size: 18px;
+    }
+
+    .figma-submit {
+      position: absolute;
+      border: 1px solid var(--figma-white-border);
+      border-radius: 189px;
+      background: var(--figma-blue-button);
+      backdrop-filter: blur(125px);
+      -webkit-backdrop-filter: blur(125px);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: filter 0.18s ease, transform 0.18s ease;
+    }
+
+    .figma-submit:hover {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+
+    .figma-submit__label {
+      color: #fff;
+      font-family: var(--body-font);
+      font-size: 22px;
+      font-weight: 400;
+      line-height: normal;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .figma-submit__label--register {
+      font-size: 18px;
+    }
+
+    .figma-submit-icon {
+      position: absolute;
+      width: 49px;
+      height: 45px;
+      transform: rotate(-90deg);
+      transform-origin: center;
+      pointer-events: none;
+    }
+
+    .figma-submit-icon__intersect {
+      position: absolute;
+      top: 36.48%;
+      left: 27.4%;
+      width: 72.6%;
+      height: 63.52%;
+      transform: rotate(90deg);
+      transform-origin: center;
+    }
+
+    .figma-submit-icon__rect {
+      position: absolute;
+      top: 21.85%;
+      left: 11.48%;
+      width: 88.52%;
+      height: 78.15%;
+      transform: rotate(90deg);
+      transform-origin: center;
+    }
+
+    .figma-submit-icon__arrow {
+      position: absolute;
+      top: 18.05%;
+      left: 25.88%;
+      width: 74.12%;
+      height: 81.95%;
+      transform: rotate(90deg);
+      transform-origin: center;
+    }
+
+    .figma-footer-copy {
+      position: absolute;
+      color: #1a0a3e;
+      font-family: var(--body-font);
+      font-size: 16px;
+      font-weight: 500;
+      line-height: normal;
+      white-space: nowrap;
+    }
+
+    .figma-hint {
+      position: absolute;
+      color: #1a0a3e;
+      font-family: var(--body-font);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: normal;
+      white-space: nowrap;
+    }
+
+    .figma-field__pw-toggle {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #1a0a3e;
+      background: none;
+      border: none;
+      padding: 4px;
+      font-size: 18px;
+      line-height: 1;
+      opacity: 0.55;
+      transition: opacity 0.15s ease;
+      z-index: 2;
+    }
+
+    .figma-field__pw-toggle:hover {
+      opacity: 1;
+    }
+
+    .figma-footer-link {
+      position: absolute;
+      color: #93531f;
+      font-family: var(--body-font);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: normal;
+      white-space: nowrap;
+    }
+
+    .floating-alerts {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9990;
+      display: grid;
+      gap: 10px;
+      max-width: min(360px, calc(100vw - 24px));
+    }
+
+    .floating-alerts:empty {
+      display: none;
+    }
+
+    .floating-alert {
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 18px;
+      background: rgba(18, 9, 48, 0.56);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      padding: 12px 16px;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #fff;
+      box-shadow: 0 18px 40px rgba(11, 5, 31, 0.26);
+    }
+
+    .floating-alert--error,
+    .floating-alert--danger {
+      background: rgba(122, 28, 67, 0.76);
+    }
+
+    .floating-alert--warning {
+      background: rgba(138, 97, 30, 0.76);
+    }
+
+    .floating-alert--success {
+      background: rgba(23, 109, 70, 0.76);
+    }
+
+    .floating-alert--info {
+      background: rgba(29, 82, 144, 0.76);
+    }
+
+    .splash-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: block;
+      overflow: hidden;
+      transition: opacity 0.7s ease, visibility 0.7s step-end;
+      animation: splashOverlayEnter 0.24s ease-out both;
+    }
+
+    .splash-overlay__white,
+    .splash-overlay__purple {
+      position: absolute;
+      inset: 0;
+    }
+
+    .splash-overlay__white {
+      background: #fff;
+      opacity: 1;
+      transition: opacity 0.55s ease;
+      overflow: hidden;
+    }
+
+    .splash-stage-shell {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 1440px;
+      height: 1024px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .splash-stage {
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 1440px;
+      height: 1024px;
+      transform: scale(var(--splash-stage-scale));
+      transform-origin: top left;
+    }
+
+    .splash-vessel {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 176px;
+      height: 176px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 0 28px rgba(83, 59, 181, 0.3), inset 0 0 14px rgba(83, 59, 181, 0.12);
+      opacity: 0;
+      animation: splashVesselAppear 0.7s ease-out 0.18s forwards;
+    }
+
+    .splash-vessel__glow {
+      position: absolute;
+      inset: -38px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(111, 78, 145, 0.22), rgba(111, 78, 145, 0.06) 45%, transparent 70%);
+      opacity: 0;
+      animation: splashGlowAura 3.8s ease-out 0.5s forwards;
+    }
+
+    .splash-vessel__liquid {
+      position: absolute;
+      left: -10px;
+      right: -10px;
+      bottom: 0;
+      height: calc(100% + 20px);
+      border-radius: 0;
+      background: var(--splash-gradient);
+      box-shadow: 0 0 30px rgba(79, 54, 140, 0.24);
+      transform: translateY(100%);
+      animation: splashFillUp 3.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.7s forwards;
+    }
+
+    .splash-vessel__liquid::before {
+      content: '';
+      position: absolute;
+      top: -14px;
+      left: -60%;
+      width: 220%;
+      height: 28px;
+      background: rgba(108, 72, 176, 0.65);
+      border-radius: 42%;
+      animation: splashWave1 2s ease-in-out infinite;
+    }
+
+    .splash-vessel__liquid::after {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -40%;
+      width: 190%;
+      height: 22px;
+      background: rgba(140, 100, 210, 0.35);
+      border-radius: 38%;
+      animation: splashWave2 1.6s ease-in-out 0.3s infinite;
+    }
+
+    .splash-flood {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: var(--figma-purple);
+      transform: translate(-50%, -50%) scale(0.16);
+      opacity: 0;
+      transition: transform 0.92s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.32s ease;
+    }
+
+    .splash-overlay__purple {
+      background: var(--figma-purple);
+      opacity: 0;
+      transition: opacity 0.58s ease;
+    }
+
+    .splash-brand {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transform: translateY(22px) scale(0.82);
+      transition: opacity 0.58s ease, transform 0.82s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .splash-purple__logo {
+      position: absolute;
+      left: 391px;
+      top: 167px;
+      width: 658px;
+      height: 658px;
+      border: 12px solid #fff;
+      border-radius: 436px;
+      object-fit: cover;
+      pointer-events: none;
+      user-select: none;
+      transform: scale(0.74);
+      opacity: 0;
+    }
+
+    .splash-purple__subtitle {
+      position: absolute;
+      left: 563px;
+      top: 865px;
+      width: 314px;
+      height: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      font-family: var(--kicker-font);
+      font-size: 10px;
+      font-weight: 400;
+      line-height: normal;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.42s ease 0.08s, transform 0.52s ease 0.08s;
+    }
+
+    .splash-purple__wordmark {
+      position: absolute;
+      left: 632px;
+      top: 884px;
+      display: flex;
+      align-items: center;
+      width: 176px;
+      height: 43px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 40px;
+      font-weight: 800;
+      line-height: normal;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+      -webkit-text-stroke: 1px #000;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.42s ease 0.14s, transform 0.52s ease 0.14s;
+    }
+
+    .splash-purple__wordmark-code {
+      color: var(--figma-orange);
+    }
+
+    .splash-purple__wordmark-it {
+      color: var(--figma-purple);
+    }
+
+    .splash-purple__portal {
+      position: absolute;
+      left: 562px;
+      top: 936px;
+      width: 316px;
+      height: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      line-height: normal;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.42s ease 0.2s, transform 0.52s ease 0.2s;
+    }
+
+    .splash-purple__progress {
+      position: absolute;
+      left: 518px;
+      top: 993px;
+      width: 404px;
+      height: 17px;
+      border: 1px solid var(--figma-white-border);
+      border-radius: 22px;
+      background: var(--figma-glass);
+      backdrop-filter: blur(125px);
+      -webkit-backdrop-filter: blur(125px);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.42s ease 0.26s, transform 0.52s ease 0.26s;
+    }
+
+    .splash-purple__progress::after {
+      content: '';
+      position: absolute;
+      left: 2px;
+      top: 2px;
+      bottom: 2px;
+      width: calc(100% - 4px);
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.84), rgba(239, 167, 53, 0.96));
+      transform-origin: left center;
+      transform: scaleX(0.05);
+      transition: transform 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.18s;
+    }
+
+    .splash-overlay.show-brand .splash-overlay__white {
+      opacity: 0;
+    }
+
+    .splash-overlay.show-brand .splash-vessel {
+      opacity: 0;
+      transition: opacity 0.26s ease;
+    }
+
+    .splash-overlay.show-brand .splash-flood {
+      transform: translate(-50%, -50%) scale(11.5);
+      opacity: 1;
+    }
+
+    .splash-overlay.show-brand .splash-overlay__purple {
+      opacity: 1;
+    }
+
+    .splash-overlay.show-brand .splash-brand,
+    .splash-overlay.show-brand .splash-purple__subtitle,
+    .splash-overlay.show-brand .splash-purple__wordmark,
+    .splash-overlay.show-brand .splash-purple__portal,
+    .splash-overlay.show-brand .splash-purple__progress {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .splash-overlay.show-brand .splash-purple__logo {
+      animation: splashLogoPop 0.88s cubic-bezier(0.18, 1.32, 0.32, 1) forwards;
+    }
+
+    .splash-overlay.show-brand .splash-purple__progress::after {
+      transform: scaleX(1);
+    }
+
+    .splash-overlay.exit {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    @keyframes splashOverlayEnter {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes splashVesselAppear {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.7);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    @keyframes splashFillUp {
+      0% {
+        transform: translateY(100%);
+      }
+      20% {
+        transform: translateY(68%);
+      }
+      40% {
+        transform: translateY(40%);
+      }
+      60% {
+        transform: translateY(18%);
+      }
+      75% {
+        transform: translateY(5%);
+      }
+      85% {
+        transform: translateY(-3%);
+      }
+      92% {
+        transform: translateY(1%);
+      }
+      100% {
+        transform: translateY(0%);
+      }
+    }
+
+    @keyframes splashWave1 {
+      0%, 100% {
+        transform: translateX(0) rotate(0deg);
+      }
+      25% {
+        transform: translateX(-18px) rotate(1.5deg);
+      }
+      50% {
+        transform: translateX(12px) rotate(-1deg);
+      }
+      75% {
+        transform: translateX(-8px) rotate(0.8deg);
+      }
+    }
+
+    @keyframes splashWave2 {
+      0%, 100% {
+        transform: translateX(0) rotate(0deg);
+      }
+      33% {
+        transform: translateX(14px) rotate(-1.2deg);
+      }
+      66% {
+        transform: translateX(-10px) rotate(1deg);
+      }
+    }
+
+    @keyframes splashGlowAura {
+      0% {
+        opacity: 0;
+        transform: scale(0.2);
+      }
+      20% {
+        opacity: 0.32;
+        transform: scale(0.7);
+      }
+      100% {
+        opacity: 0.58;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes splashLogoPop {
+      0% {
+        transform: scale(0.74);
+        opacity: 0;
+      }
+      68% {
+        transform: scale(1.08);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+
+
+    @media (max-width: 960px) {
+      :root {
+        --figma-stage-pad: 16px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      :root {
+        --figma-stage-pad: 12px;
+      }
+
+      .splash-vessel {
+        width: 120px;
+        height: 120px;
+      }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body
+  data-auth-page="{% block auth_page %}auth{% endblock %}"
+  style="--figma-height-raw:{% block scene_height_raw %}1212{% endblock %};"
+>
+  <div class="floating-alerts" id="floatingAlerts">
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="floating-alert floating-alert--{{ msg.tags|default:'info' }}">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+    {% block extra_alerts %}{% endblock %}
+  </div>
+
+  <div class="scene-shell">
+    <div class="scene-frame" id="sceneFrame">
+      {% block canvas_content %}{% endblock %}
+    </div>
+  </div>
+
+  <div class="splash-overlay" id="splashOverlay" aria-hidden="true">
+    <div class="splash-overlay__white">
+    </div>
+    <div class="splash-flood" aria-hidden="true"></div>
+    <div class="splash-overlay__purple"></div>
+    <div class="splash-stage-shell" id="splashStageShell" aria-hidden="true">
+      <div class="splash-stage">
+        <div class="splash-vessel">
+          <div class="splash-vessel__liquid"></div>
+          <div class="splash-vessel__glow"></div>
+        </div>
+        <div class="splash-brand">
+          <img class="splash-purple__logo" src="{% static 'student_portal/img/codeit_logo.png' %}" alt="" aria-hidden="true" />
+          <div class="splash-purple__subtitle">VALENZUELA INFORMATION TECHNOLOGY SOCIETY</div>
+          <div class="splash-purple__wordmark">
+            <span class="splash-purple__wordmark-code">CODE</span>
+            <span class="splash-purple__wordmark-it">-IT</span>
+          </div>
+          <div class="splash-purple__portal">QR Attendance System -- Student Portal</div>
+          <div class="splash-purple__progress"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Post-login loading — liquid vessel only, no logo #}
+  <div class="login-loading" id="loginLoading" aria-hidden="true">
+    <div class="ll-vessel">
+      <div class="ll-vessel__liquid"></div>
+      <div class="ll-vessel__glow"></div>
+    </div>
+  </div>
+  <style>
+    .login-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10001;
+      display: none;
+      place-items: center;
+      background: #fff;
+    }
+    .login-loading.active {
+      display: grid;
+    }
+    .ll-vessel {
+      width: 176px;
+      height: 176px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid rgba(255,255,255,0.25);
+      box-shadow: 0 0 28px rgba(83,59,181,0.3), inset 0 0 14px rgba(83,59,181,0.12);
+      position: relative;
+      opacity: 0;
+      animation: llVesselAppear 0.5s ease-out 0.1s forwards;
+    }
+    .ll-vessel__liquid {
+      position: absolute;
+      left: -10px; right: -10px; bottom: 0;
+      height: calc(100% + 20px);
+      background: var(--splash-gradient);
+      box-shadow: 0 0 30px rgba(79,54,140,0.24);
+      transform: translateY(100%);
+      animation: llFillUp 2.4s cubic-bezier(0.25,0.46,0.45,0.94) 0.3s forwards;
+    }
+    .ll-vessel__liquid::before {
+      content: '';
+      position: absolute;
+      top: -14px; left: -60%;
+      width: 220%; height: 28px;
+      background: rgba(108,72,176,0.65);
+      border-radius: 42%;
+      animation: llWave 2s ease-in-out infinite;
+    }
+    .ll-vessel__liquid::after {
+      content: '';
+      position: absolute;
+      top: -10px; left: -40%;
+      width: 190%; height: 22px;
+      background: rgba(140,100,210,0.35);
+      border-radius: 38%;
+      animation: llWave2 1.6s ease-in-out 0.3s infinite;
+    }
+    .ll-vessel__glow {
+      position: absolute;
+      inset: -38px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(111,78,145,0.22), rgba(111,78,145,0.06) 45%, transparent 70%);
+      opacity: 0;
+      animation: llGlow 2.4s ease-out 0.3s forwards;
+    }
+    @keyframes llVesselAppear {
+      0%   { opacity: 0; transform: scale(0.7); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes llFillUp {
+      0%   { transform: translateY(100%); }
+      20%  { transform: translateY(68%); }
+      40%  { transform: translateY(40%); }
+      60%  { transform: translateY(18%); }
+      75%  { transform: translateY(5%); }
+      85%  { transform: translateY(-3%); }
+      92%  { transform: translateY(1%); }
+      100% { transform: translateY(0%); }
+    }
+    @keyframes llWave {
+      0%, 100% { transform: translateX(0) rotate(0deg); }
+      25%  { transform: translateX(-18px) rotate(1.5deg); }
+      50%  { transform: translateX(12px) rotate(-1deg); }
+      75%  { transform: translateX(-8px) rotate(0.8deg); }
+    }
+    @keyframes llWave2 {
+      0%, 100% { transform: translateX(0) rotate(0deg); }
+      33%  { transform: translateX(14px) rotate(-1.2deg); }
+      66%  { transform: translateX(-10px) rotate(1deg); }
+    }
+    @keyframes llGlow {
+      0%   { opacity: 0; transform: scale(0.2); }
+      20%  { opacity: 0.32; transform: scale(0.7); }
+      100% { opacity: 0.58; transform: scale(1); }
+    }
+  </style>
+
+  <script>
+    const sceneFrame = document.getElementById('sceneFrame');
+    const sceneShell = document.querySelector('.scene-shell');
+    const splashOverlay = document.getElementById('splashOverlay');
+    const splashStageShell = document.getElementById('splashStageShell');
+    const floatingAlerts = document.getElementById('floatingAlerts');
+
+    const splashEnabled = {% block splash_enabled %}true{% endblock %};
+    const splashBrandPopMs = 5000;
+    const splashRevealMs = 6600;
+    const splashCleanupMs = 7380;
+
+    /* --- Splash runs only ONCE per browser session --- */
+    const SPLASH_KEY = 'codeit_splash_shown';
+    const splashAlreadyShown = sessionStorage.getItem(SPLASH_KEY) === '1';
+
+    function applySceneScale() {
+      if (!sceneFrame || !sceneShell) {
+        return;
+      }
+
+      const bodyStyles = window.getComputedStyle(document.body);
+      const widthRaw = parseFloat(bodyStyles.getPropertyValue('--figma-width-raw')) || 1440;
+      const heightRaw = parseFloat(bodyStyles.getPropertyValue('--figma-height-raw')) || 1212;
+      const stagePad = parseFloat(bodyStyles.getPropertyValue('--figma-stage-pad')) || 24;
+      const usableWidth = Math.max(window.innerWidth - (stagePad * 2), 320);
+      const usableHeight = Math.max(window.innerHeight - (stagePad * 2), 320);
+      
+      const widthScale = usableWidth / widthRaw;
+      const heightScale = usableHeight / heightRaw;
+      let scale;
+      
+      if (window.innerWidth <= 768) {
+        scale = Math.max(0.42, Math.min(1, widthScale));
+      } else {
+        scale = Math.min(1, widthScale, heightScale);
+      }
+
+      document.body.style.setProperty('--scene-runtime-scale', scale);
+      sceneShell.style.width = (widthRaw * scale) + 'px';
+      sceneShell.style.height = (heightRaw * scale) + 'px';
+    }
+
+    function applySplashScale() {
+      if (!splashStageShell) {
+        return;
+      }
+
+      const bodyStyles = window.getComputedStyle(document.body);
+      const stagePad = parseFloat(bodyStyles.getPropertyValue('--figma-stage-pad')) || 24;
+      const usableWidth = Math.max(window.innerWidth - (stagePad * 2), 320);
+      const usableHeight = Math.max(window.innerHeight - (stagePad * 2), 320);
+      const scale = Math.min(1, usableWidth / 1440, usableHeight / 1024);
+
+      document.body.style.setProperty('--splash-stage-scale', scale);
+      splashStageShell.style.width = (1440 * scale) + 'px';
+      splashStageShell.style.height = (1024 * scale) + 'px';
+    }
+
+    function pushFloatingAlert(message, tone) {
+      if (!floatingAlerts || !message) {
+        return;
+      }
+
+      const alert = document.createElement('div');
+      alert.className = 'floating-alert floating-alert--' + (tone || 'info');
+      alert.textContent = message;
+      floatingAlerts.appendChild(alert);
+    }
+
+    window.pushFloatingAlert = pushFloatingAlert;
+
+    window.togglePw = function(btn) {
+      const input = btn && btn.parentElement ? btn.parentElement.querySelector('input') : null;
+      const icon = btn ? btn.querySelector('i') : null;
+
+      if (!input || !icon) {
+        return;
+      }
+
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+      }
+    };
+
+    function revealScene() {
+      if (!sceneFrame) {
+        return;
+      }
+
+      applySceneScale();
+      applySplashScale();
+
+      /* If splash disabled or already shown this session, skip it */
+      if (!splashEnabled || !splashOverlay || splashAlreadyShown) {
+        if (splashOverlay) splashOverlay.remove();
+        sceneFrame.classList.add('ready');
+        return;
+      }
+
+      /* Mark splash as shown for this session */
+      sessionStorage.setItem(SPLASH_KEY, '1');
+
+      const timings = { brand: splashBrandPopMs, reveal: splashRevealMs, cleanup: splashCleanupMs };
+
+      window.setTimeout(() => {
+        splashOverlay.classList.add('show-brand');
+      }, timings.brand);
+
+      window.setTimeout(() => {
+        sceneFrame.classList.add('ready');
+        splashOverlay.classList.add('exit');
+      }, timings.reveal);
+
+      window.setTimeout(() => {
+        splashOverlay.remove();
+      }, timings.cleanup);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', revealScene, { once: true });
+    } else {
+      revealScene();
+    }
+
+    window.addEventListener('resize', applySceneScale);
+    window.addEventListener('resize', applySplashScale);
+
+    /* Show loading overlay on login form submit */
+    const loginLoading = document.getElementById('loginLoading');
+    if (loginLoading) {
+      document.querySelectorAll('form[method="post"]').forEach(form => {
+        form.addEventListener('submit', () => {
+          loginLoading.classList.add('active');
+        });
+      });
+    }
+  </script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

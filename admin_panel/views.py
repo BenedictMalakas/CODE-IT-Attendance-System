@@ -1,9 +1,9 @@
 import hashlib
 import uuid
-import re
 import json
-from datetime import datetime, timedelta, timezone as dt_timezone, time as dt_time
-
+import secrets
+import re
+from datetime import datetime, timedelta, timezone as dt_timezone
 from functools import wraps
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -11,76 +11,122 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone as dj_timezone
 from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib import messages
-from django.core.paginator import Paginator
 from django.db.models import Count, Q
-from django.core.mail import send_mail
-from django.conf import settings
-from django.db import transaction
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import check_password, make_password
+from django.core.paginator import Paginator
+from django.core.cache import cache
 
-from myapp.models import Admin, Student, Event, QRToken, AttendanceLog, Section, AdminSection, ActivityLog
-from myapp.utils import log_activity, get_client_ip, is_ip_locked, track_login_failure, clear_login_failures, verify_password
-from .forms import LoginForm, EventForm
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
 
-import zoneinfo
-PH_TZ = zoneinfo.ZoneInfo("Asia/Manila")
+from myapp.models import Admin, AdminSection, Section, Student, Event, QRToken, AttendanceLog, ActivityLog
+from .forms import LoginForm, EventForm, AdminRegisterForm
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+def hash_password(raw: str) -> str:
+    return make_password(raw)
+
+
+def verify_password(raw: str, stored: str) -> bool:
+    if not stored:
+        return False
+    if stored.startswith('pbkdf2_'):
+        return check_password(raw, stored)
+    return hashlib.sha256(raw.encode()).hexdigest() == stored
+
+
+def get_client_ip(request):
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded:
+        return x_forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+
+
+def is_ip_locked(ip):
+    return (cache.get(f'login_attempts_{ip}') or 0) >= 5
+
+
+def track_login_failure(ip):
+    key = f'login_attempts_{ip}'
+    current = cache.get(key, 0)
+    cache.set(key, current + 1, timeout=900)
+
+
+def clear_login_failures(ip):
+    cache.delete(f'login_attempts_{ip}')
+
 
 def ph_now():
-    """Return current Philippine time (Asia/Manila) as a timezone-aware datetime."""
-    return datetime.now(PH_TZ)
+    return dj_timezone.now()
 
 
 def auto_update_event_statuses():
-    """Lazy evaluator: auto-start/end events based on their scheduled times.
-    Called on every dashboard/scanner load so we don't need background workers."""
-    now = ph_now()
-    today = now.date()
-    now_time = now.time()
+    today = dj_timezone.now().date()
+    now_time = dj_timezone.now()
 
-    # Auto-start: pending events whose start_time has arrived
-    pending_today = Event.objects.filter(status='pending', date=today, start_time__isnull=False)
-    for event in pending_today:
-        if event.start_time and now_time >= event.start_time:
+    # pending → active: if date is today and start_time has passed
+    for event in Event.objects.filter(status='pending'):
+        if event.date < today:
             event.status = 'active'
             event.save(update_fields=['status'])
+        elif event.date == today and event.start_time:
+            event_start = dj_timezone.make_aware(datetime.combine(event.date, event.start_time))
+            if now_time >= event_start:
+                event.status = 'active'
+                event.save(update_fields=['status'])
 
-    # Auto-end: active events whose end_time has passed
-    active_today = Event.objects.filter(status='active', date=today, end_time__isnull=False)
-    for event in active_today:
-        if event.end_time and now_time >= event.end_time:
+    # active → ended: if date is past or end_time has passed
+    for event in Event.objects.filter(status='active'):
+        if event.date < today:
             event.status = 'ended'
             event.save(update_fields=['status'])
+        elif event.date == today and event.end_time:
+            event_end = dj_timezone.make_aware(datetime.combine(event.date, event.end_time))
+            if now_time >= event_end:
+                event.status = 'ended'
+                event.save(update_fields=['status'])
+
+
+def get_sorted_sections():
+    sections = list(Section.objects.all())
+    def sort_key(s):
+        try:
+            parts = s.name.replace('BSIT ', '').split('-')
+            return (s.year_level, int(parts[-1]) if parts else 0)
+        except (ValueError, IndexError):
+            return (s.year_level, 0)
+    sections.sort(key=sort_key)
+    return sections
+
+
+def log_activity(request, action, target=None, description=None):
+    admin = get_current_admin(request)
+    try:
+        ActivityLog.objects.create(
+            id=uuid.uuid4(),
+            admin=admin,
+            action=action,
+            target=target,
+            description=description,
+        )
+    except Exception:
+        pass
 
 
 def admin_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.session.get('admin_id'):
+            messages.warning(request, 'Session expired. Please log in again.')
             return redirect('admin_panel:login')
+        if request.session.get('force_password_change'):
+            return redirect('admin_panel:force_password_change')
         return view_func(request, *args, **kwargs)
     return wrapper
-
-
-def role_required(*allowed_roles):
-    """Restrict view to specific admin roles."""
-    def decorator(view_func):
-        @wraps(view_func)
-        def wrapper(request, *args, **kwargs):
-            if not request.session.get('admin_id'):
-                return redirect('admin_panel:login')
-            role = request.session.get('admin_role')
-            if role not in allowed_roles:
-                messages.error(request, 'You do not have permission to access that page.')
-                return redirect('admin_panel:dashboard')
-            return view_func(request, *args, **kwargs)
-        return wrapper
-    return decorator
 
 
 def get_current_admin(request):
@@ -93,166 +139,92 @@ def get_current_admin(request):
     return None
 
 
-def get_rep_section_ids(admin):
-    """Get section IDs assigned to a representative."""
-    return list(AdminSection.objects.filter(admin=admin).values_list('section_id', flat=True))
-
-
-def build_section_tiles_with_attendance(event=None):
-    """Build section tiles with present/late/absent counts for a specific event.
-    
-    Absent = Total Students in Section - (Present + Late)
-    If no event is selected/active, all stats are 0.
-    """
-    from myapp.utils import get_sorted_sections
-    sections = get_sorted_sections()
-
-    tiles = []
-    for sec in sections:
-        active_students = Student.objects.filter(section=sec, status='active').count()
-        present = 0
-        late = 0
-        absent = 0
-        if event:
-            students_in_sec = Student.objects.filter(section=sec, status='active')
-            logs = AttendanceLog.objects.filter(event=event, student__in=students_in_sec)
-            present = logs.filter(status='present').count()
-            late = logs.filter(status='late').count()
-            # Absent = everyone who hasn't scanned yet
-            absent = active_students - (present + late)
-            if absent < 0:
-                absent = 0
-        tiles.append({
-            'section': sec,
-            'active_students': active_students,
-            'present': present,
-            'late': late,
-            'absent': absent,
-        })
-    return tiles
-
-
-def build_pagination_query(request):
-    """Preserve current filters while swapping page numbers."""
-    query = request.GET.copy()
-    query.pop('page', None)
-    return query.urlencode()
-
-
-def ensure_student_qr(student):
-    """Create a QR token for a student when one does not already exist."""
-    import qrcode
-    from io import BytesIO
-    from django.core.files.base import ContentFile
-    from django.core.files.storage import default_storage
-
-    existing = QRToken.objects.filter(student=student).first()
-    if existing:
-        saved_path = existing.qr_path or ''
-        if saved_path.startswith('/media/'):
-            saved_path = saved_path[len('/media/'):]
-        full_path = default_storage.path(saved_path) if saved_path and hasattr(default_storage, 'path') else saved_path
-        return existing, False, full_path
-
-    token = str(uuid.uuid4())
-    qr = qrcode.QRCode(version=1, box_size=10, border=4)
-    qr.add_data(token)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color='black', back_color='white')
-
-    buffer = BytesIO()
-    img.save(buffer, format='PNG')
-    buffer.seek(0)
-
-    safe_sid = student.student_id.replace('-', '_')
-    filename = f'qr_{safe_sid}.png'
-    relative_path = f'qr_codes/{filename}'
-
-    if default_storage.exists(relative_path):
-        default_storage.delete(relative_path)
-
-    saved_path = default_storage.save(relative_path, ContentFile(buffer.read()))
-    qr_relative = f'/media/{saved_path}'
-    full_path = default_storage.path(saved_path) if hasattr(default_storage, 'path') else saved_path
-
-    qr_token = QRToken.objects.create(
-        id=uuid.uuid4(),
-        student=student,
-        token=token,
-        qr_path=qr_relative,
-    )
-    return qr_token, True, full_path
-
-
-def activate_student_and_prepare_qr(student):
-    student.status = 'active'
-    student.rejection_note = None
-    student.save(update_fields=['status', 'rejection_note'])
-    return ensure_student_qr(student)
-
-
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
 
 def login_view(request):
-    """VITS / Representative login only. Chairperson is blocked here."""
-    current_admin = get_current_admin(request)
-    if current_admin:
-        # If already logged in as chairperson, redirect them to their own dashboard
-        if current_admin.role == 'chairperson':
-            messages.info(request, 'You are already logged in. Redirecting to your dashboard.')
-            return redirect('admin_panel:chairperson_dashboard')
+    if request.session.get('admin_id'):
         return redirect('admin_panel:dashboard')
-    elif request.session.get('admin_id'):
-        # Only clear admin keys, don't flush entire session
-        for key in ['admin_id', 'admin_name', 'admin_role', 'force_password_change']:
-            request.session.pop(key, None)
-
-    ip = get_client_ip(request)
-    if is_ip_locked(ip):
-        messages.error(request, 'Too many failed attempts. Try again after 15 minutes.')
-        return render(request, 'admin_panel/login.html', {'form': LoginForm()})
 
     form = LoginForm()
     if request.method == 'POST':
+        ip = get_client_ip(request)
+        if is_ip_locked(ip):
+            messages.error(request, 'Too many failed attempts. Try again after 15 minutes.')
+            return render(request, 'admin_panel/login.html', {'form': form})
+
         form = LoginForm(request.POST)
         if form.is_valid():
-            email       = form.cleaned_data['email']
-            password    = form.cleaned_data['password']
-            chosen_role = form.cleaned_data['role']
+            email     = form.cleaned_data['email']
+            password  = form.cleaned_data['password']
+            role_mode = request.POST.get('role_mode', 'vits')
+            if role_mode not in ('vits', 'representative'):
+                role_mode = 'vits'
             try:
                 admin = Admin.objects.get(email=email, is_active=True)
-                if verify_password(password, admin.password_hash):
-                    # Chairperson uses the hidden endpoint, not this form
-                    if admin.role == 'chairperson':
-                        messages.error(request, 'Invalid email or password.')
-                    elif admin.role != chosen_role:
-                        role_display = admin.get_role_display()
-                        messages.error(request, f'This account is registered as a {role_display}. Please select the correct role.')
-                    else:
-                        clear_login_failures(ip)
-                        # Transparent hash migration
-                        if not admin.password_hash.startswith('pbkdf2_'):
-                            admin.password_hash = make_password(password)
-                            admin.save(update_fields=['password_hash'])
-
-                        # Flush any existing session before creating new one
-                        request.session.flush()
-                        request.session['admin_id']   = str(admin.id)
-                        request.session['admin_name'] = admin.name
-                        request.session['admin_role'] = admin.role
-                        request.session['force_password_change'] = admin.force_password_change
-                        request.session.cycle_key()
-                        return redirect('admin_panel:dashboard')
-                else:
+                if not verify_password(password, admin.password_hash):
+                    raise Admin.DoesNotExist
+                if admin.role == Admin.Role.CHAIRPERSON:
+                    messages.error(request, 'Please use the chairperson login page.')
                     track_login_failure(ip)
-                    messages.error(request, 'Invalid email or password.')
+                    return render(request, 'admin_panel/login.html', {'form': form})
+                if admin.role != role_mode:
+                    messages.error(request, f'This account is registered as {admin.get_role_display()}. Please select the correct role.')
+                    track_login_failure(ip)
+                    return render(request, 'admin_panel/login.html', {'form': form})
+                # Hash migration
+                if not admin.password_hash.startswith('pbkdf2_'):
+                    admin.password_hash = make_password(password)
+                    admin.save(update_fields=['password_hash'])
+                clear_login_failures(ip)
+                request.session['admin_id']             = str(admin.id)
+                request.session['admin_name']           = admin.name
+                request.session['admin_role']           = admin.role
+                request.session['force_password_change'] = admin.force_password_change
+                request.session.cycle_key()
+                return redirect('admin_panel:dashboard')
             except Admin.DoesNotExist:
-                track_login_failure(ip)
                 messages.error(request, 'Invalid email or password.')
+                track_login_failure(ip)
 
     return render(request, 'admin_panel/login.html', {'form': form})
+
+
+def chairperson_login_view(request):
+    if request.session.get('admin_id'):
+        return redirect('admin_panel:dashboard')
+
+    form = LoginForm()
+    if request.method == 'POST':
+        ip = get_client_ip(request)
+        if is_ip_locked(ip):
+            messages.error(request, 'Too many failed attempts. Try again after 15 minutes.')
+            return render(request, 'admin_panel/chairperson_login.html', {'form': form})
+
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            email    = form.cleaned_data['email']
+            password = form.cleaned_data['password']
+            try:
+                admin = Admin.objects.get(email=email, role=Admin.Role.CHAIRPERSON, is_active=True)
+                if not verify_password(password, admin.password_hash):
+                    raise Admin.DoesNotExist
+                if not admin.password_hash.startswith('pbkdf2_'):
+                    admin.password_hash = make_password(password)
+                    admin.save(update_fields=['password_hash'])
+                clear_login_failures(ip)
+                request.session['admin_id']             = str(admin.id)
+                request.session['admin_name']           = admin.name
+                request.session['admin_role']           = admin.role
+                request.session['force_password_change'] = admin.force_password_change
+                request.session.cycle_key()
+                return redirect('admin_panel:dashboard')
+            except Admin.DoesNotExist:
+                messages.error(request, 'Invalid credentials.')
+                track_login_failure(ip)
+
+    return render(request, 'admin_panel/chairperson_login.html', {'form': form})
 
 
 def logout_view(request):
@@ -260,449 +232,314 @@ def logout_view(request):
     return redirect('admin_panel:login')
 
 
-# ---------------------------------------------------------------------------
-# Forced Password Change (VITS/Rep first login)
-# ---------------------------------------------------------------------------
-
-@admin_required
-@require_POST
-def force_change_password_view(request):
-    admin = get_current_admin(request)
-    if not admin or not admin.force_password_change:
+def register_view(request):
+    if request.session.get('admin_id'):
         return redirect('admin_panel:dashboard')
 
-    new_pw  = request.POST.get('new_password', '').strip()
-    confirm = request.POST.get('confirm_password', '').strip()
+    form = AdminRegisterForm()
+    if request.method == 'POST':
+        form = AdminRegisterForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            if Admin.objects.filter(email=email).exists():
+                messages.error(request, 'An admin with that email already exists.')
+            else:
+                Admin.objects.create(
+                    id=uuid.uuid4(),
+                    name=form.cleaned_data['name'],
+                    email=email,
+                    password_hash=hash_password(form.cleaned_data['password']),
+                    role=form.cleaned_data['role'],
+                    is_active=True,
+                    force_password_change=False,
+                )
+                messages.success(request, 'Account created! You can now log in.')
+                return redirect('admin_panel:login')
 
-    # Validate
-    if len(new_pw) < 8:
-        messages.error(request, 'Password must be at least 8 characters.')
-        return redirect('admin_panel:dashboard')
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', new_pw):
-        messages.error(request, 'Password must contain at least one special character.')
-        return redirect('admin_panel:dashboard')
-    if new_pw != confirm:
-        messages.error(request, 'Passwords do not match.')
-        return redirect('admin_panel:dashboard')
-
-    admin.password_hash = make_password(new_pw)
-    admin.force_password_change = False
-    admin.save()
-    request.session['force_password_change'] = False
-    messages.success(request, 'Password changed successfully! Welcome.')
-    return redirect('admin_panel:dashboard')
+    return render(request, 'admin_panel/register.html', {'form': form})
 
 
-# ---------------------------------------------------------------------------
-# Chairperson hidden login
-# ---------------------------------------------------------------------------
-
-def chairperson_login_view(request):
-    """Chairperson-only login. VITS/Rep are rejected here."""
-    current_admin = get_current_admin(request)
-    if current_admin:
-        if current_admin.role == 'chairperson':
-            return redirect('admin_panel:chairperson_dashboard')
-        # Non-chairperson trying to use this endpoint — redirect them back to their own dashboard
-        messages.info(request, 'You are already logged in. Redirecting to your dashboard.')
-        return redirect('admin_panel:dashboard')
-
-    ip = get_client_ip(request)
-    if is_ip_locked(ip):
-        messages.error(request, 'Too many failed attempts. Try again after 15 minutes.')
-        return render(request, 'admin_panel/chairperson_login.html')
+def force_password_change_view(request):
+    if not request.session.get('admin_id'):
+        return redirect('admin_panel:login')
 
     if request.method == 'POST':
-        email    = request.POST.get('email', '').strip()
-        password = request.POST.get('password', '').strip()
-        try:
-            admin = Admin.objects.get(email=email, is_active=True, role='chairperson')
-            if verify_password(password, admin.password_hash):
-                clear_login_failures(ip)
-                # Transparent hash migration
-                if not admin.password_hash.startswith('pbkdf2_'):
-                    admin.password_hash = make_password(password)
-                    admin.save(update_fields=['password_hash'])
+        new_pw  = request.POST.get('new_password', '').strip()
+        confirm = request.POST.get('confirm_password', '').strip()
 
-                # Flush any existing session before creating new one
-                request.session.flush()
-                request.session['admin_id']   = str(admin.id)
-                request.session['admin_name'] = admin.name
-                request.session['admin_role'] = admin.role
+        if len(new_pw) < 8:
+            messages.error(request, 'Password must be at least 8 characters.')
+        elif not re.search(r'[!@#$%^&*(),.?":{}|<>]', new_pw):
+            messages.error(request, 'Password must contain at least one special character.')
+        elif new_pw != confirm:
+            messages.error(request, 'Passwords do not match.')
+        else:
+            admin = get_current_admin(request)
+            if admin:
+                admin.password_hash          = hash_password(new_pw)
+                admin.force_password_change  = False
+                admin.save(update_fields=['password_hash', 'force_password_change'])
                 request.session['force_password_change'] = False
-                request.session.cycle_key()
-                return redirect('admin_panel:chairperson_dashboard')
-            else:
-                track_login_failure(ip)
-                messages.error(request, 'Invalid credentials.')
-        except Admin.DoesNotExist:
-            track_login_failure(ip)
-            messages.error(request, 'Invalid credentials.')
+                messages.success(request, 'Password updated successfully.')
+                return redirect('admin_panel:dashboard')
 
-    return render(request, 'admin_panel/chairperson_login.html')
+    return render(request, 'admin_panel/force_password_change.html')
 
 
 # ---------------------------------------------------------------------------
-# Dashboard (routes by role)
+# Dashboard
 # ---------------------------------------------------------------------------
 
 @admin_required
 def dashboard_view(request):
     auto_update_event_statuses()
-    role = request.session.get('admin_role')
-    if role == 'chairperson':
-        return redirect('admin_panel:chairperson_dashboard')
-    elif role == 'representative':
-        return _rep_dashboard(request)
-    else:
-        return _vits_dashboard(request)
 
-
-def _vits_dashboard(request):
     total_events     = Event.objects.count()
     total_students   = Student.objects.filter(status='active').count()
     pending_students = Student.objects.filter(status='pending').count()
     total_logs       = AttendanceLog.objects.count()
-    now              = ph_now()
-    today            = now.date()
-    today_events     = Event.objects.filter(date=today).order_by('start_time', 'name')
-    recent_events    = Event.objects.order_by('-date', '-start_time')[:5]
+    total_sections   = Section.objects.count()
+    total_admins     = Admin.objects.filter(is_active=True).count()
 
-    # Dashboard section overview: only show stats for active events (check-in phase)
-    # When no active event exists, tiles reset to 0
-    active_events = Event.objects.filter(status='active').order_by('-date', '-start_time')
-    all_events = Event.objects.all().order_by('-date', '-start_time')
+    today        = dj_timezone.now().date()
+    today_events = Event.objects.filter(date=today)
+    recent_events = Event.objects.order_by('-date', '-start_time')[:5]
+    upcoming_events = Event.objects.filter(date__gte=today).order_by('date', 'start_time')[:5]
 
+    # Event selector for section overview
+    all_events = Event.objects.order_by('-date', '-start_time')
+    selected_event_id = request.GET.get('event')
     selected_event = None
-    event_id = request.GET.get('event_id')
-    if event_id:
+    if selected_event_id:
         try:
-            selected_event = Event.objects.get(id=event_id, status='active')
+            selected_event = Event.objects.get(id=selected_event_id)
         except Event.DoesNotExist:
             pass
-    if not selected_event:
-        selected_event = active_events.first()
 
-    # Pass None when no active event -> tiles show 0
-    section_tiles = build_section_tiles_with_attendance(event=selected_event)
+    # Build section cards filtered by selected event
+    section_cards = []
+    for section in Section.objects.order_by('year_level', 'name')[:13]:
+        students = Student.objects.filter(section=section)
+        if selected_event:
+            section_logs = AttendanceLog.objects.filter(student__section=section, event=selected_event)
+        else:
+            section_logs = AttendanceLog.objects.none()
+        present = section_logs.filter(status='present').count()
+        late = section_logs.filter(status='late').count()
+        absent = section_logs.filter(status='absent').count()
+        section_cards.append({
+            'name': section.name,
+            'year_level': section.year_level,
+            'total_students': students.count(),
+            'active_students': students.filter(status='active').count(),
+            'pending_students': students.filter(status='pending').count(),
+            'present': present,
+            'late': late,
+            'absent': absent,
+            'present_height': min(260, present * 7),
+            'late_height': min(260, late * 7),
+            'absent_height': min(260, absent * 7),
+        })
+    recent_students = Student.objects.select_related('section').order_by('-created_at')[:9]
 
     context = {
         'total_events':     total_events,
         'total_students':   total_students,
         'pending_students': pending_students,
         'total_logs':       total_logs,
+        'total_sections':   total_sections,
+        'total_admins':     total_admins,
         'today_events':     today_events,
         'recent_events':    recent_events,
-        'section_tiles':    section_tiles,
-        'active_events':    active_events,
-        'all_events':       all_events,
-        'selected_event_id': str(selected_event.id) if selected_event else '',
+        'upcoming_events':  upcoming_events,
         'admin_name':       request.session.get('admin_name', 'Admin'),
-        'admin_role':       request.session.get('admin_role'),
-        'force_password_change': request.session.get('force_password_change', False),
+        'admin_role':       request.session.get('admin_role', 'vits'),
+        'all_events':       all_events,
+        'selected_event':   selected_event,
+        'section_cards':    section_cards,
+        'recent_students':  recent_students,
     }
     return render(request, 'admin_panel/dashboard.html', context)
 
 
-def _rep_dashboard(request):
-    admin = get_current_admin(request)
-    section_ids = get_rep_section_ids(admin)
-    sections = Section.objects.filter(id__in=section_ids)
-
-    now = ph_now()
-    today = now.date()
-    today_events = Event.objects.filter(date=today, status='active')
-
-    # Build per-section stats for today's active events
-    section_stats = []
-    for sec in sections:
-        students_in_section = Student.objects.filter(section=sec, status='active')
-        for evt in today_events:
-            logs = AttendanceLog.objects.filter(event=evt, student__in=students_in_section)
-            section_stats.append({
-                'section': sec,
-                'event': evt,
-                'present': logs.filter(status='present').count(),
-                'late': logs.filter(status='late').count(),
-                'absent': logs.filter(status='absent').count(),
-                'total_students': students_in_section.count(),
-            })
-
-    context = {
-        'sections': sections,
-        'section_stats': section_stats,
-        'today_events': today_events,
-        'admin_name': request.session.get('admin_name', 'Admin'),
-        'admin_role': 'representative',
-        'force_password_change': request.session.get('force_password_change', False),
-    }
-    return render(request, 'admin_panel/rep_dashboard.html', context)
-
-
-# ---------------------------------------------------------------------------
-# Chairperson Dashboard
-# ---------------------------------------------------------------------------
-
-@role_required('chairperson')
-def chairperson_dashboard_view(request):
-    auto_update_event_statuses()
-    total_events     = Event.objects.count()
-    active_events    = Event.objects.filter(status='active').order_by('-date', '-start_time')
-    all_events       = Event.objects.all().order_by('-date', '-start_time')
-    total_students   = Student.objects.filter(status='active').count()
-    pending_students = Student.objects.filter(status='pending').count()
-    total_sections   = Section.objects.count()
-    total_admins     = Admin.objects.filter(is_active=True).exclude(role='chairperson').count()
-
-    # Dashboard section overview: only for ACTIVE events (check-in phase)
-    # Resets to 0 when no active event
-    selected_event = None
-    event_id = request.GET.get('event_id')
-    if event_id:
-        try:
-            selected_event = Event.objects.get(id=event_id, status='active')
-        except Event.DoesNotExist:
-            pass
-    if not selected_event:
-        selected_event = active_events.first()
-
-    section_tiles = build_section_tiles_with_attendance(event=selected_event)
-
-    context = {
-        'total_events':     total_events,
-        'active_events':    active_events,
-        'all_events':       all_events,
-        'total_students':   total_students,
-        'pending_students': pending_students,
-        'total_sections':   total_sections,
-        'total_admins':     total_admins,
-        'section_tiles':    section_tiles,
-        'selected_event_id': str(selected_event.id) if selected_event else '',
-        'admin_name':       request.session.get('admin_name', 'Admin'),
-        'admin_role':       'chairperson',
-    }
-    return render(request, 'admin_panel/chairperson_dashboard.html', context)
-
-
-# ---------------------------------------------------------------------------
-# Chart data API (Chairperson + VITS)
-# ---------------------------------------------------------------------------
-
 @admin_required
-def chart_data_api(request):
-    role = request.session.get('admin_role')
-    if role not in ('chairperson', 'vits'):
-        return JsonResponse({'error': 'Forbidden'}, status=403)
-
-    event_id = request.GET.get('event_id')
-    if not event_id:
-        return JsonResponse({'error': 'event_id required'}, status=400)
-
-    try:
-        event = Event.objects.get(id=event_id)
-    except Event.DoesNotExist:
-        return JsonResponse({'error': 'Event not found'}, status=404)
-
-    from myapp.utils import get_sorted_sections
-    sections = get_sorted_sections()
-    labels = [s.name for s in sections]
-    present_data = []
-    late_data = []
-    absent_data = []
-
-    for sec in sections:
-        students_in_sec = Student.objects.filter(section=sec, status='active')
-        total_in_sec = students_in_sec.count()
-        logs = AttendanceLog.objects.filter(event=event, student__in=students_in_sec)
-        present = logs.filter(status='present').count()
-        late = logs.filter(status='late').count()
-        absent = total_in_sec - (present + late)
-        if absent < 0:
-            absent = 0
-        present_data.append(present)
-        late_data.append(late)
-        absent_data.append(absent)
-
-    return JsonResponse({
-        'labels': labels,
-        'present': present_data,
-        'late': late_data,
-        'absent': absent_data,
-        'event_name': event.name,
-    })
-
-
-# ---------------------------------------------------------------------------
-# Section Management (Chairperson only)
-# ---------------------------------------------------------------------------
-
-@role_required('chairperson')
 def sections_manage_view(request):
-    # Fetch sections and apply numeric sorting (BSIT 1-1, 1-2, ..., 1-10)
-    sections_list = list(Section.objects.all())
-    def sort_key(s):
-        try:
-            # name is "BSIT {year}-{number}"
-            # Extract the number after the dash
-            num_part = s.name.split('-')[-1]
-            return (s.year_level, int(num_part))
-        except (ValueError, IndexError):
-            return (s.year_level, s.name)
-    
-    sections_list.sort(key=sort_key)
+    import re as _re
+
     if request.method == 'POST':
-        year = request.POST.get('year_level', '1')
-        section_number = request.POST.get('section_number', '').strip()
+        year_level_raw = request.POST.get('year_level', '1')
+        try:
+            year_level = int(year_level_raw)
+            if year_level not in (1, 2, 3, 4):
+                year_level = 1
+        except (TypeError, ValueError):
+            year_level = 1
 
-        if year and section_number:
-            try:
-                total_to_create = int(section_number)
-                added_count = 0
-                for i in range(1, total_to_create + 1):
-                    name = f"BSIT {year}-{i}"
-                    if not Section.objects.filter(name=name).exists():
-                        Section.objects.create(id=uuid.uuid4(), name=name, year_level=int(year))
-                        added_count += 1
-                
-                if added_count > 0:
-                    log_activity(request, "Sections Created", f"Year {year}", f"Created {added_count} sections for year {year}")
-                    messages.success(request, f'Successfully created {added_count} new section(s) for Year {year}.')
-                else:
-                    messages.info(request, f'No new sections created (all sections up to {total_to_create} already exist).')
-            except ValueError:
-                messages.error(request, 'Please enter a valid number for the total sections.')
-        else:
-            messages.error(request, 'Please fill in all fields.')
+        # Auto-generate name: find max existing index for this year
+        existing = Section.objects.filter(year_level=year_level)
+        max_idx = 0
+        for s in existing:
+            m = _re.match(r'BSIT\s+\d+-(\d+)', s.name, _re.IGNORECASE)
+            if m:
+                idx = int(m.group(1))
+                if idx > max_idx:
+                    max_idx = idx
+        section_name = f'BSIT {year_level}-{max_idx + 1}'
+
+        if Section.objects.filter(name__iexact=section_name).exists():
+            messages.warning(request, f'{section_name} already exists.')
+            return redirect('admin_panel:sections_manage')
+
+        Section.objects.create(id=uuid.uuid4(), name=section_name, year_level=year_level)
+        log_activity(request, 'ADD_SECTION', description=f'Added section {section_name}')
+        messages.success(request, f'{section_name} added.')
         return redirect('admin_panel:sections_manage')
-    year_filter = request.GET.get('year', 'all')
-    if year_filter in {'1', '2', '3', '4'}:
-        sections_list = [section for section in sections_list if str(section.year_level) == year_filter]
 
-    paginator = Paginator(sections_list, 25)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
+    # Filter
+    year_filter = request.GET.get('year', 'all')
+    qs = Section.objects.order_by('year_level', 'name')
+    if year_filter != 'all':
+        try:
+            qs = qs.filter(year_level=int(year_filter))
+        except (TypeError, ValueError):
+            pass
+
+    # Annotate with student counts
+    sections = []
+    for section in qs:
+        section_students = Student.objects.filter(section=section)
+        sections.append({
+            'id': section.id,
+            'name': section.name,
+            'year_level': section.year_level,
+            'total_students': section_students.count(),
+            'active_students': section_students.filter(status='active').count(),
+            'pending_students': section_students.filter(status='pending').count(),
+        })
+
+    # Pagination
+    paginator = Paginator(sections, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'admin_panel/sections_manage.html', {
-        'sections': page_obj,
-        'page_obj': page_obj,
-        'year_filter': year_filter,
-        'pagination_query': build_pagination_query(request),
+        'sections':       page_obj,
+        'page_obj':       page_obj,
+        'total_sections': qs.count(),
+        'year_filter':    year_filter,
+        'admin_role':     request.session.get('admin_role', 'vits'),
     })
 
 
-@role_required('chairperson')
-@require_POST
-def section_delete_view(request, pk):
-    section = get_object_or_404(Section, id=pk)
-    name = section.name
-    section.delete()
-    log_activity(request, "Section Deleted", name, f"Deleted section {name}")
-    messages.success(request, f'Section "{name}" deleted.')
+@admin_required
+def delete_section_view(request, pk):
+    if request.method != 'POST':
+        return redirect('admin_panel:sections_manage')
+    try:
+        section = Section.objects.get(id=pk)
+        name = section.name
+        section.delete()
+        log_activity(request, 'DELETE_SECTION', description=f'Deleted section {name}')
+        messages.success(request, f'{name} deleted.')
+    except Section.DoesNotExist:
+        messages.error(request, 'Section not found.')
     return redirect('admin_panel:sections_manage')
 
 
-# ---------------------------------------------------------------------------
-# Admin (Officer/Rep) Management (Chairperson only)
-# ---------------------------------------------------------------------------
 
-@role_required('chairperson')
+@admin_required
 def admins_manage_view(request):
-    admins = Admin.objects.filter(is_active=True).exclude(role='chairperson').order_by('role', 'name')
-    from myapp.utils import get_sorted_sections
-    sections = get_sorted_sections()
-
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'add':
-            name     = request.POST.get('name', '').strip()
-            email    = request.POST.get('email', '').strip()
-            role     = request.POST.get('role', 'vits')
-            sec_ids  = request.POST.getlist('sections')
-
-            if not all([name, email]):
+            name  = request.POST.get('name', '').strip()
+            email = request.POST.get('email', '').strip()
+            role  = request.POST.get('role', Admin.Role.VITS)
+            if role not in (Admin.Role.VITS, Admin.Role.REPRESENTATIVE):
+                role = Admin.Role.VITS
+            if not name or not email:
                 messages.error(request, 'Name and email are required.')
             elif Admin.objects.filter(email=email).exists():
-                messages.error(request, 'An admin with that email already exists.')
+                messages.error(request, 'An officer with that email already exists.')
             else:
-                # Auto-generate secure password
-                import secrets
-                default_password = secrets.token_urlsafe(12)
-
+                generated_password = secrets.token_urlsafe(12)
                 new_admin = Admin.objects.create(
                     id=uuid.uuid4(),
                     name=name,
                     email=email,
-                    password_hash=make_password(default_password),
+                    password_hash=hash_password(generated_password),
                     role=role,
                     is_active=True,
-                    force_password_change=True,  # Must change on first login
+                    force_password_change=True,
                 )
                 # Assign sections for representatives
-                if role == 'representative' and sec_ids:
-                    for sid in sec_ids:
-                        AdminSection.objects.create(id=uuid.uuid4(), admin=new_admin, section_id=sid)
+                if role == Admin.Role.REPRESENTATIVE:
+                    section_ids = request.POST.getlist('section_ids')
+                    for sid in section_ids:
+                        try:
+                            section = Section.objects.get(id=sid)
+                            AdminSection.objects.get_or_create(
+                                id=uuid.uuid4(),
+                                admin=new_admin,
+                                section=section,
+                            )
+                        except Section.DoesNotExist:
+                            pass
 
-                role_display = new_admin.get_role_display()
-                log_activity(request, "Admin Added", name, f"Added {role_display} with email {email}")
-
-                # Send email with credentials
+                # Email credentials to new admin
                 try:
-                    send_mail(
-                        subject=f'CODE-IT System — You have been added as {role_display}',
-                        message=(
-                            f'Hello {name},\n\n'
-                            f'You have been added as a {role_display} in the CODE-IT Attendance System.\n\n'
-                            f'Your login credentials:\n'
-                            f'  Email: {email}\n'
-                            f'  Password: {default_password}\n\n'
-                            f'IMPORTANT: You will be required to change your password on your first login.\n\n'
-                            f'Login at the admin panel to get started.\n\n'
-                            f'— CODE-IT System'
-                        ),
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[email],
-                        fail_silently=False,
+                    from django.core.mail import send_mail
+                    from django.conf import settings
+                    subject = f'CODE-IT Admin Account — Your Login Credentials'
+                    body = (
+                        f'Hi {name},\n\n'
+                        f'An admin account has been created for you in the CODE-IT Attendance System.\n\n'
+                        f'Email: {email}\n'
+                        f'Temporary Password: {generated_password}\n'
+                        f'Role: {role.title()}\n\n'
+                        f'You will be prompted to change your password on first login.\n\n'
+                        f'— CODE-IT Attendance System'
                     )
-                    messages.success(request, f'{role_display} "{name}" added. Credentials sent to {email}.')
-                except Exception as e:
-                    messages.warning(request,
-                        f'{role_display} "{name}" added, but email failed to send: {str(e)}. '
-                        f'Default password: {default_password}'
-                    )
+                    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=True)
+                except Exception:
+                    pass
+
+                log_activity(request, 'ADMIN_CREATED', target=name, description=f'Created {role} account for {email}')
+                messages.success(request, f'Officer account created. Temporary password: {generated_password} (also emailed).')
+
+        elif action == 'delete':
+            admin_id = request.POST.get('admin_id')
+            try:
+                admin = Admin.objects.get(id=admin_id)
+                if admin.role == Admin.Role.CHAIRPERSON:
+                    messages.error(request, 'Chairperson account cannot be deleted here.')
+                else:
+                    name = admin.name
+                    log_activity(request, 'ADMIN_DELETED', target=name, description=f'Deleted {admin.role} account {admin.email}')
+                    admin.delete()
+                    messages.success(request, f'{name} removed.')
+            except Admin.DoesNotExist:
+                messages.error(request, 'Officer account not found.')
         return redirect('admin_panel:admins_manage')
 
-    # Annotate with assigned sections
-    admin_data = []
-    for a in admins:
-        assigned = AdminSection.objects.filter(admin=a).select_related('section')
-        admin_data.append({
-            'admin': a,
-            'sections': [asc.section for asc in assigned],
+    admins = Admin.objects.order_by('name')
+    all_sections = Section.objects.order_by('year_level', 'name')
+
+    # Build sections map per admin
+    admins_with_sections = []
+    for admin in admins:
+        assigned = AdminSection.objects.filter(admin=admin).select_related('section')
+        admins_with_sections.append({
+            'admin': admin,
+            'sections': [a.section.name for a in assigned],
         })
 
     return render(request, 'admin_panel/admins_manage.html', {
-        'admin_data': admin_data,
-        'sections': sections,
+        'admins': admins,
+        'admins_with_sections': admins_with_sections,
+        'total_admins': admins.count(),
+        'admin_role': request.session.get('admin_role', 'vits'),
+        'all_sections': all_sections,
     })
-
-
-@role_required('chairperson')
-@require_POST
-def admin_remove_view(request, pk):
-    admin = get_object_or_404(Admin, id=pk)
-    if admin.role == 'chairperson':
-        messages.error(request, 'Cannot remove the chairperson.')
-        return redirect('admin_panel:admins_manage')
-
-    name = admin.name
-
-    # Clean up section assignments first
-    AdminSection.objects.filter(admin=admin).delete()
-
-    admin.delete()
-
-    log_activity(request, "Admin Removed", name, f"Permanently removed admin account for {name}")
-    messages.success(request, f'{name} has been permanently removed.')
-    return redirect('admin_panel:admins_manage')
 
 
 # ---------------------------------------------------------------------------
@@ -711,21 +548,14 @@ def admin_remove_view(request, pk):
 
 @admin_required
 def events_view(request):
-    auto_update_event_statuses()
-    role = request.session.get('admin_role')
     events = Event.objects.order_by('-date', '-start_time')
-    paginator = Paginator(events, 25)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
     return render(request, 'admin_panel/events.html', {
-        'events': page_obj,
-        'page_obj': page_obj,
-        'pagination_query': build_pagination_query(request),
-        'admin_role': role,
-        'force_password_change': request.session.get('force_password_change', False),
+        'events': events,
+        'admin_role': request.session.get('admin_role', 'vits'),
     })
 
 
-@role_required('chairperson', 'vits')
+@admin_required
 def event_create_view(request):
     form = EventForm()
     if request.method == 'POST':
@@ -734,225 +564,100 @@ def event_create_view(request):
             event            = form.save(commit=False)
             event.id         = uuid.uuid4()
             event.created_by = get_current_admin(request)
-
-            now = ph_now()
-            event_date = event.date
-            event_start = event.start_time  # may be None now
-
-            if event_date < now.date():
-                messages.error(request, 'Cannot create an event in the past.')
-                return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
-
-            if event_start and event_date == now.date():
-                now_mins = now.hour * 60 + now.minute
-                start_mins = event_start.hour * 60 + event_start.minute
-                if start_mins < now_mins:
-                    messages.error(
-                        request,
-                        f'Cannot set start time to {event_start.strftime("%I:%M %p")} — '
-                        f'that time has already passed. Current PH time is {now.strftime("%I:%M %p")}.'
-                    )
-                    return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
-
-            # End time must be later than start time (if both set)
-            if event.end_time and event_start and event.end_time <= event_start:
-                messages.error(request, 'End time must be later than start time.')
-                return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
-
-            event.status = 'pending'  # Events start as pending
             event.save()
-
-            log_activity(request, "Event Created", event.name, f"Created event scheduled for {event.date}")
-
-            if event_start:
-                messages.success(request, f'Event "{event.name}" created. It will auto-start at {event_start.strftime("%I:%M %p")}.')
-            else:
-                messages.success(request, f'Event "{event.name}" created. Press Start when ready.')
+            log_activity(request, 'EVENT_CREATED', target=event.name, description=f'Created event "{event.name}" on {event.date}')
+            messages.success(request, f'Event "{event.name}" created successfully.')
             return redirect('admin_panel:events')
     return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
 
 
-@role_required('chairperson', 'vits')
+@admin_required
 def event_edit_view(request, pk):
     event = get_object_or_404(Event, id=pk)
     form  = EventForm(instance=event)
     if request.method == 'POST':
         form = EventForm(request.POST, instance=event)
         if form.is_valid():
-            updated = form.save(commit=False)
-
-            # Time integrity check for edits too
-            now = ph_now()
-            if updated.start_time and updated.date == now.date() and event.status == 'pending':
-                now_mins = now.hour * 60 + now.minute
-                start_mins = updated.start_time.hour * 60 + updated.start_time.minute
-                if start_mins < now_mins:
-                    messages.error(
-                        request,
-                        f'Cannot set start time to {updated.start_time.strftime("%I:%M %p")} — '
-                        f'that time has already passed. Current PH time is {now.strftime("%I:%M %p")}.'
-                    )
-                    return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Edit', 'event': event})
-
-            # End time must be later than start time (if both set)
-            if updated.end_time and updated.start_time and updated.end_time <= updated.start_time:
-                messages.error(request, 'End time must be later than start time.')
-                return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Edit', 'event': event})
-
-            updated.save()
-            log_activity(request, "Event Updated", event.name, f"Updated event details for {event.name}")
+            form.save()
+            log_activity(request, 'EVENT_EDITED', target=event.name, description=f'Edited event "{event.name}"')
             messages.success(request, f'Event "{event.name}" updated.')
             return redirect('admin_panel:events')
     return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Edit', 'event': event})
 
 
-@role_required('chairperson', 'vits')
+@admin_required
 @require_POST
 def event_delete_view(request, pk):
     event = get_object_or_404(Event, id=pk)
-    name  = event.name
+    if event.status != 'pending':
+        messages.error(request, f'Only pending events can be deleted. "{event.name}" is {event.status}.')
+        return redirect('admin_panel:events')
+    name = event.name
+    log_activity(request, 'EVENT_DELETED', target=name, description=f'Deleted event "{name}"')
     event.delete()
-    log_activity(request, "Event Deleted", name, f"Deleted event {name}")
     messages.success(request, f'Event "{name}" deleted.')
     return redirect('admin_panel:events')
 
 
-@role_required('chairperson', 'vits')
+@admin_required
 @require_POST
-def event_start_view(request, pk):
-    """Manually start a pending event. Auto-stamps start_time if blank."""
+def start_event_view(request, pk):
     event = get_object_or_404(Event, id=pk)
     if event.status != 'pending':
-        messages.warning(request, f'Event "{event.name}" is already {event.status}.')
+        messages.error(request, f'Only pending events can be started.')
         return redirect('admin_panel:events')
-
-    now = ph_now()
-
-    # If no start_time was set, stamp it with the current time
-    if not event.start_time:
-        event.start_time = now.time()
-        messages.info(request, f'Start time auto-set to {now.strftime("%I:%M %p")}.')
-    elif event.date == now.date() and event.start_time < now.time():
-        messages.warning(
-            request,
-            f'Warning: The scheduled start time ({event.start_time.strftime("%I:%M %p")}) '
-            f'has already passed. Current PH time is {now.strftime("%I:%M %p")}. '
-            f'The event has been started anyway — attendance timing will use the original start time.'
-        )
-
     event.status = 'active'
-    event.save()
-    log_activity(request, "Event Started", event.name, f"Manually started event {event.name}")
-    messages.success(request, f'Event "{event.name}" is now ACTIVE.')
+    if not event.start_time:
+        event.start_time = dj_timezone.now().time()
+    event.save(update_fields=['status', 'start_time'])
+    log_activity(request, 'EVENT_STARTED', target=event.name, description=f'Started event "{event.name}"')
+    messages.success(request, f'Event "{event.name}" started.')
     return redirect('admin_panel:events')
 
 
-@role_required('chairperson', 'vits')
+@admin_required
 @require_POST
-def event_end_view(request, pk):
-    event = get_object_or_404(Event, id=pk)
-    event.status = 'ended'
-    event.save()
-    log_activity(request, "Event Ended", event.name, f"Manually ended event {event.name}")
-    messages.success(request, f'Event "{event.name}" has been ended. Scanner is now in Exit Mode.')
-    return redirect('admin_panel:events')
-
-
-@role_required('chairperson')
-@require_POST
-def event_close_view(request, pk):
-    """Chairperson permanently closes an event. No more scans allowed."""
-    event = get_object_or_404(Event, id=pk)
-    if event.status not in ('ended',):
-        messages.warning(request, f'Only ended events can be closed.')
-        return redirect('admin_panel:events')
-    event.status = 'closed'
-    event.save()
-    log_activity(request, "Event Closed", event.name, f"Permanently closed event {event.name}")
-    messages.success(request, f'Event "{event.name}" has been CLOSED. No further scans will be accepted.')
-    return redirect('admin_panel:events')
-
-
-@role_required('chairperson', 'vits')
-@require_POST
-def event_extend_grace_view(request, pk):
-    """Extend the late cutoff by 15 minutes for an active event."""
+def end_event_view(request, pk):
     event = get_object_or_404(Event, id=pk)
     if event.status != 'active':
-        messages.warning(request, f'Grace period can only be extended for active events.')
+        messages.error(request, f'Only active events can be ended.')
+        return redirect('admin_panel:events')
+    event.status = 'ended'
+    event.save(update_fields=['status'])
+    log_activity(request, 'EVENT_ENDED', target=event.name, description=f'Ended event "{event.name}" — check-out mode enabled')
+    messages.success(request, f'Event "{event.name}" ended. Check-out scanning is now enabled.')
+    return redirect('admin_panel:events')
+
+
+@admin_required
+@require_POST
+def close_event_view(request, pk):
+    event = get_object_or_404(Event, id=pk)
+    if request.session.get('admin_role') != 'chairperson':
+        messages.error(request, 'Only the chairperson can close events.')
+        return redirect('admin_panel:events')
+    if event.status != 'ended':
+        messages.error(request, 'Only ended events can be closed.')
+        return redirect('admin_panel:events')
+    event.status = 'closed'
+    event.save(update_fields=['status'])
+    log_activity(request, 'EVENT_CLOSED', target=event.name, description=f'Closed event "{event.name}" — final comparison enabled')
+    messages.success(request, f'Event "{event.name}" closed. Final comparison is now available.')
+    return redirect('admin_panel:events')
+
+
+@admin_required
+@require_POST
+def extend_grace_event_view(request, pk):
+    event = get_object_or_404(Event, id=pk)
+    if event.status != 'active':
+        messages.error(request, 'Grace period can only be extended for active events.')
         return redirect('admin_panel:events')
     event.late_cutoff_mins += 15
     event.save(update_fields=['late_cutoff_mins'])
-    log_activity(request, "Grace Period Extended", event.name, f"Extended late cutoff to {event.late_cutoff_mins} mins")
-    messages.success(request, f'Grace period extended! Late cutoff is now {event.late_cutoff_mins} minutes.')
+    log_activity(request, 'GRACE_EXTENDED', target=event.name, description=f'Extended grace period to {event.late_cutoff_mins} mins for "{event.name}"')
+    messages.success(request, f'Grace period extended to {event.late_cutoff_mins} minutes.')
     return redirect('admin_panel:events')
-
-
-@role_required('chairperson', 'vits')
-@require_POST
-@transaction.atomic
-def revoke_qr_view(request, pk):
-    """Revoke a compromised QR code and generate a fresh one."""
-    import qrcode
-    import os
-
-    student = get_object_or_404(Student, id=pk)
-    if student.status != 'active':
-        messages.error(request, f'{student.name} must be active to regenerate a QR code.')
-        return redirect('admin_panel:students')
-
-    # Delete old token
-    QRToken.objects.filter(student=student).delete()
-
-    # Generate new token and QR
-    new_token = str(uuid.uuid4())
-    qr_dir = os.path.join(settings.MEDIA_ROOT, 'qr_codes')
-    os.makedirs(qr_dir, exist_ok=True)
-
-    safe_sid = student.student_id.replace('-', '_')
-    filename = f'qr_{safe_sid}.png'
-    full_path = os.path.join(qr_dir, filename)
-
-    qr = qrcode.QRCode(version=1, box_size=10, border=4)
-    qr.add_data(new_token)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color='black', back_color='white')
-    img.save(full_path)
-
-    qr_relative = f'/media/qr_codes/{filename}'
-    QRToken.objects.create(
-        id=uuid.uuid4(),
-        student=student,
-        token=new_token,
-        qr_path=qr_relative,
-    )
-
-    # Email the new QR
-    if student.email:
-        try:
-            from django.core.mail import EmailMessage
-            email = EmailMessage(
-                subject='CODE-IT: Your QR Code Has Been Reset',
-                body=(
-                    f'Hi {student.first_name},\n\n'
-                    f'Your QR code has been revoked and a new one has been generated.\n'
-                    f'Your old QR code is no longer valid.\n\n'
-                    f'Please use the attached QR code for future attendance.\n\n'
-                    f'— CODE-IT Attendance System'
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[student.email],
-            )
-            email.attach_file(full_path)
-            email.send(fail_silently=False)
-            log_activity(request, "QR Token Revoked", student.name, f"Revoked and regenerated QR token for {student.name}")
-            messages.success(request, f'QR revoked and new one emailed to {student.email}.')
-        except Exception as e:
-            messages.warning(request, f'QR regenerated but email failed: {e}')
-    else:
-        messages.success(request, f'QR revoked and regenerated for {student.name}.')
-
-    return redirect('admin_panel:students')
 
 
 # ---------------------------------------------------------------------------
@@ -963,16 +668,12 @@ def revoke_qr_view(request, pk):
 @require_POST
 def finalize_event_view(request, event_id):
     event = get_object_or_404(Event, id=event_id)
-
-    # Count how many are still absent (pre-marked but didn't scan)
     absent_logs = AttendanceLog.objects.filter(event=event, status='absent')
-    count       = absent_logs.count()
-
+    count = absent_logs.count()
     if count == 0:
         messages.info(request, f'No absent students to finalize for "{event.name}".')
     else:
         messages.success(request, f'Event "{event.name}" finalized — {count} student(s) marked as Absent.')
-
     return redirect('admin_panel:attendance', event_id=event_id)
 
 
@@ -985,16 +686,12 @@ def set_expected_students_view(request, event_id):
     event    = get_object_or_404(Event, id=event_id)
     students = Student.objects.filter(status='active').order_by('last_name', 'first_name')
 
-    # IDs of students already in the expected list for this event
-    existing_logs   = AttendanceLog.objects.filter(event=event).select_related('student')
-    expected_ids    = set(str(log.student.id) for log in existing_logs)
-    locked_ids      = set(str(log.student.id) for log in existing_logs if log.status in ('present', 'late'))
+    existing_logs = AttendanceLog.objects.filter(event=event).select_related('student')
+    expected_ids  = set(str(log.student.id) for log in existing_logs)
+    locked_ids    = set(str(log.student.id) for log in existing_logs if log.status in ('present', 'late'))
 
     if request.method == 'POST':
         selected_ids = set(request.POST.getlist('student_ids'))
-        admin        = get_current_admin(request)
-
-        # Add new expected students (not already in the list)
         added = 0
         for student in students:
             sid = str(student.id)
@@ -1009,7 +706,6 @@ def set_expected_students_view(request, event_id):
                 )
                 added += 1
 
-        # Remove unchecked students — only if they are still absent (not scanned yet)
         removed = 0
         for log in existing_logs:
             sid = str(log.student.id)
@@ -1017,190 +713,131 @@ def set_expected_students_view(request, event_id):
                 log.delete()
                 removed += 1
 
-        log_activity(request, "Expected List Updated", event.name, f"Updated expected students for {event.name} (+{added}, -{removed})")
         messages.success(request, f'Expected list updated — {added} added, {removed} removed.')
         return redirect('admin_panel:attendance', event_id=event_id)
 
     context = {
-        'event':       event,
-        'students':    students,
+        'event':        event,
+        'students':     students,
         'expected_ids': expected_ids,
-        'locked_ids':  locked_ids,
+        'locked_ids':   locked_ids,
     }
     return render(request, 'admin_panel/expected_students.html', context)
 
 
 # ---------------------------------------------------------------------------
-# Attendance (timestamps) — with Start / End / Final overviews
+# Attendance
 # ---------------------------------------------------------------------------
 
 @admin_required
 def attendance_view(request, event_id):
     event = get_object_or_404(Event, id=event_id)
-    admin = get_current_admin(request)
-    role  = request.session.get('admin_role')
-
-    logs = (
+    logs  = (
         AttendanceLog.objects
         .filter(event=event)
-        .select_related('student', 'scanned_by', 'student__section')
+        .select_related('student', 'scanned_by')
         .order_by('scanned_at')
     )
 
-    # Representatives only see their assigned sections
-    if role == 'representative':
-        section_ids = get_rep_section_ids(admin)
-        logs = logs.filter(student__section_id__in=section_ids)
+    status_filter = request.GET.get('status', 'all')
+    if status_filter in ('present', 'late', 'absent'):
+        logs_filtered = logs.filter(status=status_filter)
+    else:
+        logs_filtered = logs
 
-    all_logs = logs
+    paginator = Paginator(logs_filtered, 25)
+    page_obj  = paginator.get_page(request.GET.get('page'))
 
-    # Check if event has ended
-    event_ended = event.status in ('ended', 'closed')
+    present = logs.filter(status='present').count()
+    late    = logs.filter(status='late').count()
+    absent  = logs.filter(status='absent').count()
+    total   = logs.count()
 
-    # ── BUILD SECTION OVERVIEWS ──
-    from myapp.utils import get_sorted_sections
-    sections = get_sorted_sections()
-    all_students = Student.objects.filter(status='active').select_related('section')
+    # Check-out stats for ended/closed events
+    checked_out     = logs.filter(scanned_out_at__isnull=False).count()
+    not_checked_out = logs.filter(status__in=('present', 'late'), scanned_out_at__isnull=True).count()
 
-    # --- CHECK-IN OVERVIEW (Start Event phase) ---
-    checkin_tiles = []
-    for sec in sections:
-        total = all_students.filter(section=sec).count()
-        sec_logs = all_logs.filter(student__section=sec)
-        present = sec_logs.filter(status='present').count()
-        late = sec_logs.filter(status='late').count()
-        absent = total - (present + late)
-        if absent < 0:
-            absent = 0
-        checkin_tiles.append({
-            'section': sec,
-            'total': total,
-            'present': present,
-            'late': late,
-            'absent': absent,
+    # Year filter for section tiles
+    year_filter = request.GET.get('year', 'all')
+    all_sections = Section.objects.order_by('year_level', 'name')
+    if year_filter and year_filter != 'all':
+        try:
+            all_sections = all_sections.filter(year_level=int(year_filter))
+        except (ValueError, TypeError):
+            pass
+
+    # Distinct year levels for dropdown
+    year_levels = Section.objects.values_list('year_level', flat=True).distinct().order_by('year_level')
+
+    # Section-level check-in tiles (ALL sections)
+    section_tiles = []
+    for section in all_sections:
+        s_logs = logs.filter(student__section=section)
+        section_tiles.append({
+            'name': section.name,
+            'year_level': section.year_level,
+            'total_students': Student.objects.filter(section=section, status='active').count(),
+            'present': s_logs.filter(status='present').count(),
+            'late': s_logs.filter(status='late').count(),
+            'absent': s_logs.filter(status='absent').count(),
         })
 
-    # --- CHECK-OUT OVERVIEW (End/Exit phase) ---
+    # Section-level check-out tiles (ALL sections, for ended/closed events)
     checkout_tiles = []
     if event.status in ('ended', 'closed'):
-        for sec in sections:
-            total = all_students.filter(section=sec).count()
-            sec_logs = all_logs.filter(student__section=sec)
-            checked_out = sec_logs.filter(scanned_out_at__isnull=False).count()
-            missed_exit = total - checked_out
-            if missed_exit < 0:
-                missed_exit = 0
+        for section in all_sections:
+            s_logs = logs.filter(student__section=section)
             checkout_tiles.append({
-                'section': sec,
-                'total': total,
-                'checked_out': checked_out,
-                'missed_exit': missed_exit,
+                'name': section.name,
+                'year_level': section.year_level,
+                'checked_out': s_logs.filter(scanned_out_at__isnull=False).count(),
+                'not_checked_out': s_logs.filter(
+                    status__in=('present', 'late'),
+                    scanned_out_at__isnull=True
+                ).count(),
             })
-
-    # --- FINAL COMPARISON (only when CLOSED) ---
-    final_tiles = []
-    student_final_list = []
-    if event.status == 'closed':
-        for sec in sections:
-            sec_students = all_students.filter(section=sec)
-            total = sec_students.count()
-            final_present = 0
-            final_absent = 0
-            for st in sec_students:
-                log = all_logs.filter(student=st).first()
-                checked_in = log and log.status in ('present', 'late') if log else False
-                checked_out = log and log.scanned_out_at is not None if log else False
-                is_final_present = checked_in and checked_out
-                if is_final_present:
-                    final_present += 1
-                else:
-                    final_absent += 1
-                student_final_list.append({
-                    'student': st,
-                    'section_name': sec.name,
-                    'year_level': sec.year_level,
-                    'checkin_status': log.status if log else 'absent',
-                    'checkin_time': log.scanned_at if log else None,
-                    'checkout_time': log.scanned_out_at if log else None,
-                    'final_status': 'present' if is_final_present else 'absent',
-                })
-            final_tiles.append({
-                'section': sec,
-                'total': total,
-                'final_present': final_present,
-                'final_absent': final_absent,
-            })
-        # Sort alphabetically: year_level, section name, then last_name
-        student_final_list.sort(key=lambda x: (
-            x['year_level'],
-            x['section_name'],
-            x['student'].last_name.lower(),
-            x['student'].first_name.lower(),
-        ))
-
-    # Collect unique year levels and sections for dropdown filters
-    year_levels = sorted(set(s.year_level for s in sections))
-    section_names = [s.name for s in sections]
-    paginator = Paginator(all_logs, 25)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
 
     context = {
-        'event':       event,
-        'logs':        page_obj,
-        'page_obj':    page_obj,
-        'present':     all_logs.filter(status='present').count(),
-        'late':        all_logs.filter(status='late').count(),
-        'absent':      all_logs.filter(status='absent').count(),
-        'total':       all_logs.count(),
-        'event_ended': event_ended,
-        'admin_role':  role,
-        # Section overviews
-        'checkin_tiles':  checkin_tiles,
-        'checkout_tiles': checkout_tiles,
-        'final_tiles':    final_tiles,
-        'student_final_list': student_final_list,
-        'year_levels':   year_levels,
-        'section_names': section_names,
-        'pagination_query': build_pagination_query(request),
+        'event':            event,
+        'logs':             logs_filtered,
+        'page_obj':         page_obj,
+        'status_filter':    status_filter,
+        'present':          present,
+        'late':             late,
+        'absent':           absent,
+        'total':            total,
+        'checked_out':      checked_out,
+        'not_checked_out':  not_checked_out,
+        'section_tiles':    section_tiles,
+        'checkout_tiles':   checkout_tiles,
+        'year_filter':      year_filter,
+        'year_levels':      year_levels,
     }
     return render(request, 'admin_panel/attendance.html', context)
 
 
 # ---------------------------------------------------------------------------
-# QR Scanner (VITS only)
+# QR Scanner
 # ---------------------------------------------------------------------------
 
-@role_required('vits')
+@admin_required
 def scanner_view(request, event_id):
-    auto_update_event_statuses()
     event = get_object_or_404(Event, id=event_id)
-
-    # Closed events cannot be scanned
-    if event.status == 'closed':
-        messages.error(request, f'Event "{event.name}" is closed. No scanning allowed.')
-        return redirect('admin_panel:events')
-
-    # Allow scanning for pending (early comers), active, and ended (exit mode)
-    scan_mode = 'check_in'
-    if event.status == 'ended':
-        scan_mode = 'check_out'
-    elif event.status == 'pending':
-        scan_mode = 'early'
     return render(request, 'admin_panel/scanner.html', {
         'event': event,
-        'scan_mode': scan_mode,
+        'is_checkout_mode': event.status == 'ended',
     })
 
 
-@role_required('vits')
+@admin_required
 @require_POST
 def scan_qr_api(request, event_id):
-    auto_update_event_statuses()
     event = get_object_or_404(Event, id=event_id)
 
-    # Closed events reject all scans
+    if event.status == 'pending':
+        return JsonResponse({'success': False, 'message': 'Event has not started yet.'})
     if event.status == 'closed':
-        return JsonResponse({'success': False, 'message': 'This event is closed. No scanning allowed.'}, status=403)
+        return JsonResponse({'success': False, 'message': 'Event is closed. No more scanning allowed.'})
 
     try:
         data  = json.loads(request.body)
@@ -1212,7 +849,7 @@ def scan_qr_api(request, event_id):
         return JsonResponse({'success': False, 'message': 'No QR token provided.'})
 
     try:
-        qr_token = QRToken.objects.select_related('student', 'student__section').get(token=token)
+        qr_token = QRToken.objects.select_related('student').get(token=token)
     except QRToken.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Unrecognized QR code.'})
 
@@ -1221,43 +858,45 @@ def scan_qr_api(request, event_id):
     if student.status != 'active':
         return JsonResponse({'success': False, 'message': f'Student "{student.name}" is not active.'})
 
-    now   = ph_now()
+    now   = dj_timezone.now()
     admin = get_current_admin(request)
 
-    # ── EXIT MODE (event ended) ──
+    # --- CHECK-OUT MODE (event ended) ---
     if event.status == 'ended':
         existing = AttendanceLog.objects.filter(student=student, event=event).first()
         if not existing:
-            return JsonResponse({'success': False, 'message': f'{student.name} has no check-in record for this event.'})
+            return JsonResponse({'success': False, 'message': f'{student.name} was not checked in for this event.'})
+        if existing.status == 'absent':
+            return JsonResponse({'success': False, 'message': f'{student.name} was marked absent.'})
         if existing.scanned_out_at:
             return JsonResponse({
                 'success': False,
                 'already_scanned': True,
                 'message': f'{student.name} already checked out at {existing.scanned_out_at.strftime("%I:%M:%S %p")}.',
+                'student_name': student.name,
+                'student_id':   student.student_id,
+                'status':       'checkout',
             })
         existing.scanned_out_at = now
         existing.save(update_fields=['scanned_out_at'])
         return JsonResponse({
             'success':      True,
+            'checkout':     True,
             'student_name': student.name,
             'student_id':   student.student_id,
-            'section':      student.section.name if student.section else '',
-            'status':       'checked_out',
+            'section':      student.section.name,
+            'status':       'checkout',
             'scanned_at':   now.strftime('%I:%M:%S %p'),
-            'message':      f'{student.name} checked out successfully.',
         })
 
-    # ── CHECK-IN MODE (pending = early comers, active = normal) ──
-    # Determine present vs late
-    if event.status == 'active' and event.start_time:
-        event_start = datetime.combine(event.date, event.start_time, tzinfo=PH_TZ)
+    # --- CHECK-IN MODE (event active) ---
+    if event.start_time:
+        event_start = dj_timezone.make_aware(datetime.combine(event.date, event.start_time))
         cutoff      = event_start + timedelta(minutes=event.late_cutoff_mins)
         status      = 'present' if now <= cutoff else 'late'
     else:
-        # Pending event or no start_time: everyone is "present" (early comers)
         status = 'present'
 
-    # Double-scan prevention
     existing = AttendanceLog.objects.filter(student=student, event=event).first()
 
     if existing:
@@ -1269,13 +908,12 @@ def scan_qr_api(request, event_id):
                 'student_name':    student.name,
                 'student_id':      student.student_id,
                 'status':          existing.status,
-                'id_photo':        student.id_photo_path or '',
             })
-        # Was pre-marked as absent — update to present/late
+        # Was pre-marked absent → update to present/late
         existing.status     = status
         existing.scanned_by = admin
         existing.scanned_at = now
-        existing.save()
+        existing.save(update_fields=['status', 'scanned_by', 'scanned_at'])
     else:
         AttendanceLog.objects.create(
             id=uuid.uuid4(),
@@ -1290,10 +928,9 @@ def scan_qr_api(request, event_id):
         'success':      True,
         'student_name': student.name,
         'student_id':   student.student_id,
-        'section':      student.section.name if student.section else '',
+        'section':      student.section.name,
         'status':       status,
         'scanned_at':   now.strftime('%I:%M:%S %p'),
-        'id_photo':     student.id_photo_path or '',
     })
 
 
@@ -1304,22 +941,12 @@ def scan_qr_api(request, event_id):
 @admin_required
 def export_attendance_view(request, event_id):
     event = get_object_or_404(Event, id=event_id)
-    admin = get_current_admin(request)
-    role  = request.session.get('admin_role')
-
-    logs = (
+    logs  = (
         AttendanceLog.objects
         .filter(event=event)
-        .select_related('student', 'scanned_by', 'student__section')
+        .select_related('student', 'scanned_by')
         .order_by('scanned_at')
     )
-
-    if role == 'representative':
-        section_ids = get_rep_section_ids(admin)
-        logs = logs.filter(student__section_id__in=section_ids)
-
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -1333,11 +960,10 @@ def export_attendance_view(request, event_id):
 
     ws.merge_cells('A2:G2')
     sub_cell           = ws['A2']
-    start_str = event.start_time.strftime('%I:%M %p') if event.start_time else 'Manual'
-    sub_cell.value     = f'Date: {event.date}  |  Start: {start_str}  |  Late cutoff: {event.late_cutoff_mins} mins'
+    sub_cell.value     = f'Date: {event.date}  |  Start: {event.start_time.strftime("%I:%M %p") if event.start_time else "N/A"}  |  Late cutoff: {event.late_cutoff_mins} mins  |  Status: {event.status.upper()}'
     sub_cell.alignment = Alignment(horizontal='center')
 
-    headers     = ['Student ID', 'Name', 'Section', 'Year', 'Status', 'Scanned At', 'Scanned By']
+    headers     = ['Student ID', 'Name', 'Year', 'Section', 'Status', 'Scanned At (In)', 'Scanned Out At']
     header_fill = PatternFill(start_color='1F3864', end_color='1F3864', fill_type='solid')
     header_font = Font(color='FFFFFF', bold=True)
 
@@ -1350,15 +976,16 @@ def export_attendance_view(request, event_id):
     status_colors = {'present': 'C6EFCE', 'late': 'FFEB9C', 'absent': 'FFC7CE'}
 
     for row_idx, log in enumerate(logs, start=5):
-        scanned_at = log.scanned_at.strftime('%Y-%m-%d %I:%M:%S %p') if log.scanned_at else '—'
+        scanned_at     = log.scanned_at.strftime('%Y-%m-%d %I:%M:%S %p') if log.scanned_at else '—'
+        scanned_out_at = log.scanned_out_at.strftime('%Y-%m-%d %I:%M:%S %p') if log.scanned_out_at else '—'
         row_data = [
             log.student.student_id,
             log.student.name,
-            log.student.section.name if log.student.section else '',
             log.student.year_level,
+            log.student.section.name,
             log.status.upper(),
             scanned_at,
-            log.scanned_by.name if log.scanned_by else '—',
+            scanned_out_at,
         ]
         row_fill = PatternFill(
             start_color=status_colors.get(log.status, 'FFFFFF'),
@@ -1372,15 +999,22 @@ def export_attendance_view(request, event_id):
                 cell.fill = row_fill
                 cell.font = Font(bold=True)
 
-    for col, width in enumerate([15, 25, 15, 8, 12, 25, 20], start=1):
+    for col, width in enumerate([15, 25, 8, 15, 12, 25, 25], start=1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = width
 
-    from django.utils.text import slugify
-    safe_name = slugify(event.name)
+    summary_row = ws.max_row + 2
+    ws.cell(row=summary_row, column=1, value='Summary').font = Font(bold=True)
+    ws.cell(row=summary_row, column=2, value=f'Present: {logs.filter(status="present").count()}')
+    ws.cell(row=summary_row, column=3, value=f'Late: {logs.filter(status="late").count()}')
+    ws.cell(row=summary_row, column=4, value=f'Absent: {logs.filter(status="absent").count()}')
+    ws.cell(row=summary_row, column=5, value=f'Total: {logs.count()}')
+    ws.cell(row=summary_row, column=6, value=f'Checked Out: {logs.filter(scanned_out_at__isnull=False).count()}')
+
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = f'attachment; filename="attendance_{safe_name}_{event.date}.xlsx"'
+    safe_name = event.name.replace(' ', '_').replace('/', '-')
+    response['Content-Disposition'] = f'attachment; filename="Attendance_{safe_name}_{event.date}.xlsx"'
     wb.save(response)
     return response
 
@@ -1391,162 +1025,190 @@ def export_attendance_view(request, event_id):
 
 @admin_required
 def students_view(request):
-    admin = get_current_admin(request)
-    role  = request.session.get('admin_role')
-
-    status_filter = request.GET.get('status', 'all')
-    section_filter = request.GET.get('section', '')
-    students = Student.objects.select_related('section').order_by('-created_at')
-    from myapp.utils import get_sorted_sections
-    sections = get_sorted_sections()
-
-    if role == 'representative':
-        section_ids = get_rep_section_ids(admin)
-        students = students.filter(section_id__in=section_ids)
-        sections = sections.filter(id__in=section_ids)
+    status_filter  = request.GET.get('status', 'all')
+    section_filter = request.GET.get('section', 'all')
+    students       = Student.objects.select_related('section').order_by('-created_at')
 
     if status_filter in ('pending', 'active', 'rejected'):
         students = students.filter(status=status_filter)
-
-    if section_filter:
+    if section_filter != 'all':
         students = students.filter(section_id=section_filter)
 
     paginator = Paginator(students, 25)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
+    page_obj  = paginator.get_page(request.GET.get('page'))
 
+    # Bulk approve
+    if request.method == 'POST' and request.POST.get('action') == 'bulk_approve':
+        selected_ids = request.POST.getlist('student_ids')
+        approved_count = 0
+        for sid in selected_ids:
+            try:
+                _bulk_approve_student(request, sid)
+                approved_count += 1
+            except Exception:
+                pass
+        log_activity(request, 'BULK_APPROVE', description=f'Bulk approved {approved_count} students')
+        messages.success(request, f'{approved_count} student(s) approved.')
+        return redirect('admin_panel:students')
+
+    all_sections = Section.objects.order_by('year_level', 'name')
     return render(request, 'admin_panel/students.html', {
-        'students':      page_obj,
-        'page_obj':      page_obj,
-        'sections':      sections,
-        'status_filter': status_filter,
+        'students':       page_obj,
+        'page_obj':       page_obj,
+        'status_filter':  status_filter,
         'section_filter': section_filter,
-        'admin_role':    role,
-        'pagination_query': build_pagination_query(request),
-        'force_password_change': request.session.get('force_password_change', False),
+        'all_sections':   all_sections,
     })
 
 
-@role_required('chairperson', 'vits')
-@require_POST
-@transaction.atomic
-def students_bulk_approve_view(request):
-    student_ids = request.POST.getlist('student_ids')
-    if not student_ids:
-        messages.info(request, 'Select at least one student to approve.')
-        return redirect('admin_panel:students')
+def _bulk_approve_student(request, student_id):
+    import qrcode
+    import os
+    from io import BytesIO
+    from django.core.files.storage import default_storage
+    from django.conf import settings
 
-    approved_count = 0
-    qr_created_count = 0
-    students = Student.objects.filter(id__in=student_ids).select_related('section')
+    student = Student.objects.get(id=student_id)
+    if student.status == 'active':
+        return
+    student.status         = 'active'
+    student.rejection_note = ''
+    student.save()
 
-    for student in students:
-        if student.status in ('pending', 'rejected'):
-            _, qr_created, _ = activate_student_and_prepare_qr(student)
-            approved_count += 1
-            qr_created_count += int(qr_created)
-
-    if approved_count == 0:
-        messages.info(request, 'No selected students were eligible for approval.')
+    if not QRToken.objects.filter(student=student).exists():
+        token_value = secrets.token_urlsafe(32)
+        qr_token    = QRToken.objects.create(
+            id=uuid.uuid4(), student=student, token=token_value, qr_path=''
+        )
     else:
-        log_activity(
-            request,
-            "Students Approved",
-            "Bulk Student Approval",
-            f"Approved {approved_count} student(s) in bulk."
-        )
-        messages.success(
-            request,
-            f'Approved {approved_count} student(s). Generated {qr_created_count} new QR code(s).'
-        )
+        qr_token = QRToken.objects.get(student=student)
 
-    return redirect('admin_panel:students')
-
-
-@role_required('chairperson', 'vits')
-@require_POST
-@transaction.atomic
-def student_approve_view(request, pk):
-    from django.core.mail import EmailMessage
-
-    student = get_object_or_404(Student, id=pk)
-    _, qr_created, qr_file_path = activate_student_and_prepare_qr(student)
-
-    # --- Email QR code to student ---
-    if qr_created and student.email and qr_file_path:
-        try:
-            email = EmailMessage(
-                subject='CODE-IT: Your Account Has Been Approved! 🎉',
+    try:
+        qr_img   = qrcode.make(qr_token.token, box_size=10, border=2)
+        buf      = BytesIO()
+        qr_img.save(buf, format='PNG')
+        buf.seek(0)
+        filename = f'qr_{student.id}.png'
+        if default_storage.exists(filename):
+            default_storage.delete(filename)
+        saved_path       = default_storage.save(filename, buf)
+        qr_token.qr_path = default_storage.url(saved_path)
+        qr_token.save()
+        if student.email:
+            from django.core.mail import EmailMessage
+            buf.seek(0)
+            mail = EmailMessage(
+                subject=f'Your CODE-IT QR Code — {student.name}',
                 body=(
-                    f'Hi {student.first_name},\n\n'
-                    f'Great news! Your CODE-IT student account has been approved.\n\n'
-                    f'Student ID: {student.student_id}\n'
-                    f'Section: {student.section.name}\n'
-                    f'Status: ACTIVE\n\n'
-                    f'Your unique QR code is attached to this email. '
-                    f'Please save it — you will need to present this code '
-                    f'for attendance scanning at every event.\n\n'
-                    f'You can also view your QR code anytime by logging into '
-                    f'the CODE-IT Student Portal.\n\n'
-                    f'— CODE-IT Attendance System'
+                    f'Hi {student.name},\n\nYour account has been approved!\n\n'
+                    f'Your QR code is attached. Show it at events to record attendance.\n\n'
+                    f'Student ID: {student.student_id}\nSection: {student.section}\n\n— CODE-IT'
                 ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=settings.EMAIL_HOST_USER,
                 to=[student.email],
             )
-            email.attach_file(qr_file_path)
-            email.send(fail_silently=False)
-            messages.success(
-                request,
-                f'{student.name} approved. QR code generated and emailed to {student.email}.'
-            )
-            log_activity(request, "Student Approved", student.name, f"Approved registration for {student.name} and sent QR email")
-        except Exception as e:
-            messages.warning(
-                request,
-                f'{student.name} approved and QR generated, '
-                f'but email failed to send: {e}. '
-                f'The student can still view their QR in the portal.'
-            )
-    else:
-        messages.success(request, f'{student.name} approved.')
+            mail.attach('qr_code.png', buf.getvalue(), 'image/png')
+            mail.send(fail_silently=True)
+    except Exception:
+        pass
 
+
+@admin_required
+@require_POST
+def student_approve_view(request, pk):
+    student = get_object_or_404(Student, id=pk)
+
+    if student.status == 'active':
+        messages.info(request, f'{student.name} is already active.')
+        return redirect('admin_panel:students')
+
+    student.status         = 'active'
+    student.rejection_note = ''
+    student.save()
+
+    qr_token = None
+    if not QRToken.objects.filter(student=student).exists():
+        token_value = secrets.token_urlsafe(32)
+        qr_token    = QRToken.objects.create(
+            id=uuid.uuid4(), student=student, token=token_value, qr_path=''
+        )
+    else:
+        qr_token = QRToken.objects.get(student=student)
+
+    import qrcode
+    from io import BytesIO
+    from django.core.files.storage import default_storage
+    from django.conf import settings
+    import os
+
+    try:
+        qr_img = qrcode.make(qr_token.token, box_size=10, border=2)
+        buf    = BytesIO()
+        qr_img.save(buf, format='PNG')
+        buf.seek(0)
+        filename = f'qr_{student.id}.png'
+        filepath = os.path.join(settings.MEDIA_ROOT, filename)
+        if default_storage.exists(filepath):
+            default_storage.delete(filepath)
+        saved_path       = default_storage.save(filename, buf)
+        qr_token.qr_path = default_storage.url(saved_path)
+        qr_token.save()
+    except Exception as e:
+        messages.error(request, f'Failed to save QR Image for {student.name}: {e}')
+
+    if student.email:
+        try:
+            from django.core.mail import EmailMessage
+            buf.seek(0)
+            subject = f'Your CODE-IT QR Code — {student.name}'
+            body = (
+                f'Hi {student.name},\n\nYour account has been approved! 🎉\n\n'
+                f'Your QR code is attached to this email. '
+                f'Show it at events to record your attendance.\n\n'
+                f'Student ID: {student.student_id}\nSection: {student.section}\n\n— CODE-IT Attendance System'
+            )
+            email = EmailMessage(subject=subject, body=body,
+                                 from_email=settings.EMAIL_HOST_USER, to=[student.email])
+            email.attach('qr_code.png', buf.getvalue(), 'image/png')
+            email.send(fail_silently=False)
+            messages.success(request, f'{student.name} approved — QR code emailed to {student.email}.')
+        except Exception as e:
+            messages.error(request, f'{student.name} approved BUT email failed: {e}')
+    else:
+        messages.success(request, f'{student.name} approved — no email on file, QR generated only.')
+
+    log_activity(request, 'STUDENT_APPROVED', target=student.name, description=f'Approved student {student.student_id}')
     return redirect('admin_panel:students')
 
 
-@role_required('chairperson', 'vits')
+@admin_required
 @require_POST
 def student_reject_view(request, pk):
     student                = get_object_or_404(Student, id=pk)
     note                   = request.POST.get('rejection_note', '').strip()
     student.status         = 'rejected'
-    student.rejection_note = note or 'Rejected by admin.'
+    student.rejection_note = note or 'No reason provided.'
     student.save()
-    log_activity(request, "Student Rejected", student.name, f"Rejected registration for {student.name}. Note: {note}")
+    log_activity(request, 'STUDENT_REJECTED', target=student.name, description=f'Rejected student {student.student_id}: {student.rejection_note}')
     messages.warning(request, f'{student.name} rejected.')
     return redirect('admin_panel:students')
 
 
-@role_required('chairperson', 'vits')
+@admin_required
 @require_POST
 def student_delete_view(request, pk):
     student = get_object_or_404(Student, id=pk)
     name    = student.name
+    log_activity(request, 'STUDENT_DELETED', target=name, description=f'Deleted student {student.student_id}')
     student.delete()
-    log_activity(request, "Student Deleted", name, f"Deleted student record for {name}")
     messages.success(request, f'Student "{name}" has been deleted.')
     return redirect('admin_panel:students')
 
 
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# Generate / Regenerate QR Code
-# ---------------------------------------------------------------------------
-
-@role_required('chairperson', 'vits')
+@admin_required
 @require_POST
 def generate_qr_view(request, pk):
-    """Manual QR generation/regeneration tool."""
     import qrcode
-    import secrets
     import os
     from io import BytesIO
     from django.core.files.storage import default_storage
@@ -1558,52 +1220,36 @@ def generate_qr_view(request, pk):
         messages.error(request, f'{student.name} must be active to generate a QR code.')
         return redirect('admin_panel:students')
 
-    # Get or create QR token
     try:
         qr_token = QRToken.objects.get(student=student)
     except QRToken.DoesNotExist:
         qr_token = QRToken.objects.create(
-            id=uuid.uuid4(),
-            student=student,
-            token=secrets.token_urlsafe(32),
-            qr_path='',
+            id=uuid.uuid4(), student=student, token=secrets.token_urlsafe(32), qr_path=''
         )
 
-    # Generate QR image
     try:
         qr_img   = qrcode.make(qr_token.token, box_size=10, border=2)
         buf      = BytesIO()
         qr_img.save(buf, format='PNG')
         buf.seek(0)
-
         filename = f'qr_{student.id}.png'
-        filepath = os.path.join(django_settings.MEDIA_ROOT, filename)
-
-        # Overwrite if exists
         if default_storage.exists(filename):
             default_storage.delete(filename)
-
         saved_path       = default_storage.save(filename, buf)
         qr_token.qr_path = default_storage.url(saved_path)
         qr_token.save()
 
-        # Send QR via email
         if student.email:
             try:
                 from django.core.mail import EmailMessage
                 buf.seek(0)
-                subject = f'Your CODE-IT QR Code — {student.name}'
-                body = (
-                    f'Hi {student.name},\n\n'
-                    f'Your QR code has been generated!\n\n'
-                    f'Show this QR code at events to record your attendance.\n\n'
-                    f'Student ID: {student.student_id}\n'
-                    f'Section: {student.section}\n\n'
-                    f'— CODE-IT Attendance System'
-                )
                 mail = EmailMessage(
-                    subject=subject,
-                    body=body,
+                    subject=f'Your CODE-IT QR Code — {student.name}',
+                    body=(
+                        f'Hi {student.name},\n\nYour QR code has been generated!\n\n'
+                        f'Show it at events to record your attendance.\n\n'
+                        f'Student ID: {student.student_id}\nSection: {student.section}\n\n— CODE-IT'
+                    ),
                     from_email=django_settings.EMAIL_HOST_USER,
                     to=[student.email],
                 )
@@ -1618,87 +1264,137 @@ def generate_qr_view(request, pk):
     except Exception as e:
         messages.error(request, f'QR generation failed: {e}')
 
+    log_activity(request, 'QR_GENERATED', target=student.name, description=f'Generated QR for student {student.student_id}')
+    return redirect('admin_panel:students')
+
+
+@admin_required
+@require_POST
+def revoke_qr_view(request, pk):
+    import qrcode
+    import os
+    from io import BytesIO
+    from django.core.files.storage import default_storage
+    from django.conf import settings as django_settings
+
+    student = get_object_or_404(Student, id=pk)
+
+    if student.status != 'active':
+        messages.error(request, f'{student.name} must be active to revoke QR.')
+        return redirect('admin_panel:students')
+
+    # Delete old token
+    QRToken.objects.filter(student=student).delete()
+
+    # Create new token
+    new_token = secrets.token_urlsafe(32)
+    qr_token  = QRToken.objects.create(
+        id=uuid.uuid4(), student=student, token=new_token, qr_path=''
+    )
+
+    try:
+        qr_img   = qrcode.make(qr_token.token, box_size=10, border=2)
+        buf      = BytesIO()
+        qr_img.save(buf, format='PNG')
+        buf.seek(0)
+        filename = f'qr_{student.id}_rev.png'
+        if default_storage.exists(filename):
+            default_storage.delete(filename)
+        saved_path       = default_storage.save(filename, buf)
+        qr_token.qr_path = default_storage.url(saved_path)
+        qr_token.save()
+
+        if student.email:
+            try:
+                from django.core.mail import EmailMessage
+                buf.seek(0)
+                mail = EmailMessage(
+                    subject=f'Your New CODE-IT QR Code — {student.name}',
+                    body=(
+                        f'Hi {student.name},\n\nYour QR code has been revoked and a new one generated.\n\n'
+                        f'Please use the new QR code attached to this email.\n\n'
+                        f'Student ID: {student.student_id}\nSection: {student.section}\n\n— CODE-IT'
+                    ),
+                    from_email=django_settings.EMAIL_HOST_USER,
+                    to=[student.email],
+                )
+                mail.attach('new_qr_code.png', buf.getvalue(), 'image/png')
+                mail.send(fail_silently=False)
+                messages.success(request, f'QR code revoked and new one emailed to {student.email}.')
+            except Exception as e:
+                messages.warning(request, f'QR revoked but email failed: {e}')
+        else:
+            messages.success(request, f'QR code revoked and new one generated for {student.name}.')
+
+    except Exception as e:
+        messages.error(request, f'QR revocation failed: {e}')
+
+    log_activity(request, 'QR_REVOKED', target=student.name, description=f'Revoked and regenerated QR for student {student.student_id}')
     return redirect('admin_panel:students')
 
 
 # ---------------------------------------------------------------------------
-# Sections API (for student registration dynamic dropdown)
+# Activity Logs
 # ---------------------------------------------------------------------------
 
-def sections_by_year_api(request):
-    """Public API: returns sections filtered by year_level."""
-    year = request.GET.get('year', '')
-    if not year or not year.isdigit():
-        return JsonResponse([], safe=False)
-    sections = list(Section.objects.filter(year_level=int(year)))
-    
-    def sort_key(s):
-        try:
-            num_part = s.name.split('-')[-1]
-            return int(num_part)
-        except (ValueError, IndexError):
-            return s.name
-            
-    sections.sort(key=sort_key)
-    
-    data = [{'id': str(s.id), 'name': s.name} for s in sections]
-    return JsonResponse(data, safe=False)
-
-
-@role_required('chairperson')
+@admin_required
 def activity_logs_view(request):
-    """View to display the audit trail of administrative actions."""
+    if request.session.get('admin_role') not in ('chairperson', 'vits'):
+        messages.error(request, 'You do not have permission to view activity logs.')
+        return redirect('admin_panel:dashboard')
+
     logs = ActivityLog.objects.select_related('admin').order_by('-created_at')
 
-    # Simple filtering
-    action_query = request.GET.get('action_type', '')
-    admin_query  = request.GET.get('admin_id', '')
-    date_from = request.GET.get('date_from', '').strip()
-    date_to = request.GET.get('date_to', '').strip()
+    action_filter = request.GET.get('action', 'all')
+    admin_filter  = request.GET.get('admin_id', 'all')
+    date_from     = request.GET.get('date_from', '')
+    date_to       = request.GET.get('date_to', '')
 
-    if action_query:
-        logs = logs.filter(action=action_query)
-    if admin_query:
-        logs = logs.filter(admin_id=admin_query)
+    if action_filter != 'all':
+        logs = logs.filter(action=action_filter)
+    if admin_filter != 'all':
+        logs = logs.filter(admin_id=admin_filter)
     if date_from:
-        logs = logs.filter(created_at__date__gte=date_from)
+        try:
+            logs = logs.filter(created_at__date__gte=date_from)
+        except Exception:
+            pass
     if date_to:
-        logs = logs.filter(created_at__date__lte=date_to)
+        try:
+            logs = logs.filter(created_at__date__lte=date_to)
+        except Exception:
+            pass
 
-    # For filter dropdowns
-    action_types = ActivityLog.objects.values_list('action', flat=True).distinct().order_by('action')
-    admins       = Admin.objects.filter(is_active=True).order_by('name')
+    # Clear logs (chairperson only)
+    if request.method == 'POST' and request.POST.get('action') == 'clear_logs':
+        if request.session.get('admin_role') == 'chairperson':
+            ActivityLog.objects.all().delete()
+            admin = get_current_admin(request)
+            ActivityLog.objects.create(
+                id=uuid.uuid4(),
+                admin=admin,
+                action='LOGS_CLEARED',
+                description='Admin cleared all activity logs',
+            )
+            messages.success(request, 'All activity logs cleared.')
+            return redirect('admin_panel:activity_logs')
+        else:
+            messages.error(request, 'Only the chairperson can clear activity logs.')
+
+    distinct_actions = ActivityLog.objects.values_list('action', flat=True).distinct().order_by('action')
+    all_admins       = Admin.objects.filter(is_active=True).order_by('name')
+
     paginator = Paginator(logs, 25)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
+    page_obj  = paginator.get_page(request.GET.get('page'))
 
-    context = {
-        'logs':         page_obj,
-        'page_obj':     page_obj,
-        'action_types': action_types,
-        'admins':       admins,
-        'selected_action': action_query,
-        'selected_admin':  admin_query,
-        'date_from':    date_from,
-        'date_to':      date_to,
-        'pagination_query': build_pagination_query(request),
-        'admin_name':   request.session.get('admin_name', 'Admin'),
-        'admin_role':   'chairperson',
-    }
-    return render(request, 'admin_panel/activity_logs.html', context)
-@role_required('chairperson')
-def clear_activity_logs_view(request):
-    """Destructive action to clear all activity logs."""
-    if request.method == 'POST':
-        count = ActivityLog.objects.all().count()
-        ActivityLog.objects.all().delete()
-        
-        # Log the clearing action itself (Meta-logging)
-        log_activity(
-            request, 
-            action="Logs Cleared", 
-            target="System Audit Trail", 
-            description=f"Admin cleared {count} log entries."
-        )
-        
-        messages.success(request, f"System audit trail cleared successfully ({count} entries removed).")
-    return redirect('admin_panel:activity_logs')
+    return render(request, 'admin_panel/activity_logs.html', {
+        'logs':             page_obj,
+        'page_obj':         page_obj,
+        'action_filter':    action_filter,
+        'admin_filter':     admin_filter,
+        'date_from':        date_from,
+        'date_to':          date_to,
+        'distinct_actions': distinct_actions,
+        'all_admins':       all_admins,
+        'admin_role':       request.session.get('admin_role', 'vits'),
+    })

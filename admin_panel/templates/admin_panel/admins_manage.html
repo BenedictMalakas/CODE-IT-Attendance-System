@@ -1,199 +1,132 @@
 {% extends 'admin_panel/base.html' %}
 
-{% block title %}Manage Admins{% endblock %}
+{% block title %}Officers{% endblock %}
 {% block nav_admins %}active{% endblock %}
 
 {% block content %}
-<!-- Section Title -->
-<div class="section-title-band" style="margin-bottom:20px;">
-  <h2>Officer & Representative Management</h2>
-</div>
+<section class="figma-panel mb-4" style="min-height:596px;">
+  <h1 class="figma-panel__title mb-3">Officers & Representatives</h1>
 
-<!-- Current Officers Table -->
-<div class="folder-card">
-  <div class="folder-tab">Current Officer & Representative</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span>
-    <span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span>
-    <span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:0; overflow:hidden; border-radius:14px;">
-      <table class="codeit-table">
+  <div class="figma-card">
+    <div class="figma-card__header">
+      <p class="figma-panel__title" style="color:var(--orange);">Current Officers & Representatives</p>
+    </div>
+
+    <div class="figma-table-wrap">
+      <table class="figma-table">
         <thead>
           <tr>
             <th>Name</th>
             <th>Email</th>
             <th>Role</th>
-            <th>Sections</th>
-            <th style="text-align:center;">Actions</th>
+            <th>Sections Assigned</th>
+            <th>Force PW Change</th>
+            <th class="text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {% for item in admin_data %}
+          {% for item in admins_with_sections %}
           <tr>
-            <td style="font-weight:700;">{{ item.admin.name }}</td>
-            <td style="font-size:0.82rem;">{{ item.admin.email }}</td>
+            <td>{{ item.admin.name }}</td>
+            <td>{{ item.admin.email }}</td>
+            <td>{{ item.admin.get_role_display }}</td>
             <td>
-              {% if item.admin.role == 'vits' %}
-                <span class="badge bg-primary px-3" style="border-radius:10px;">VITS</span>
+              {% if item.sections %}
+                {% for sec in item.sections %}
+                  <span class="figma-badge present" style="font-size:11px;">{{ sec }}</span>
+                {% endfor %}
               {% else %}
-                <span class="badge bg-info text-dark px-3" style="border-radius:10px;">Rep</span>
+                <span class="figma-muted">—</span>
               {% endif %}
             </td>
-            <td style="font-size:0.82rem;">
-              {% for sec in item.sections %}
-                <span class="badge bg-light text-dark" style="border:1px solid #ddd; border-radius:8px;">{{ sec.name }}</span>
-              {% empty %}
-                <span style="color:var(--text-muted);">—</span>
-              {% endfor %}
+            <td>
+              {% if item.admin.force_password_change %}
+                <span class="figma-badge late">Pending</span>
+              {% else %}
+                <span class="figma-muted">Done</span>
+              {% endif %}
             </td>
-            <td style="text-align:center;">
-              <button type="button" class="delete-btn"
-                      data-bs-toggle="modal" data-bs-target="#removeAdminModal"
-                      data-admin-id="{{ item.admin.id }}"
-                      data-admin-name="{{ item.admin.name }}">
-                REMOVE
-              </button>
+            <td class="text-center">
+              {% if item.admin.role != 'chairperson' %}
+              <form method="post" class="figma-action-row">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="admin_id" value="{{ item.admin.id }}">
+                <button type="submit" class="figma-icon-btn figma-icon-btn--delete" title="Delete"
+                        onclick="return confirm('Remove {{ item.admin.name }}?')">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </form>
+              {% else %}
+                <span class="figma-muted small">Protected</span>
+              {% endif %}
             </td>
           </tr>
           {% empty %}
-          <tr>
-            <td colspan="5" style="text-align:center; color:var(--text-muted); padding:32px; font-weight:600; text-transform:uppercase; font-size:0.85rem;">
-              No officers or representatives yet
-            </td>
+          <tr class="figma-empty-row">
+            <td colspan="6">No officers or representatives yet</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
-</div>
+</section>
 
-<!-- Add Officer Section -->
-<div style="display:flex; justify-content:flex-end; margin-top:20px;">
-  <button type="button" class="btn-codeit" data-bs-toggle="modal" data-bs-target="#addAdminModal">
-    <i class="fa fa-user-plus"></i> Add Officer & Representative
-  </button>
-</div>
+<section class="figma-panel">
+  <h2 class="figma-section-heading mb-4">Add Officer / Representative</h2>
 
-<!-- Add Admin Modal -->
-<div class="modal fade" id="addAdminModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content" style="border-radius:18px; border:3px solid var(--card-border); overflow:visible;">
-      <div class="modal-body" style="padding:0;">
-        <div class="folder-card" style="margin-top:0;">
-          <div class="folder-tab">Add Officer / Representative</div>
-          <div class="folder-body" style="border:none;">
-            <span class="screw screw-tl"></span>
-            <span class="screw screw-tr"></span>
-            <span class="screw screw-bl"></span>
-            <span class="screw screw-br"></span>
-            <div class="folder-inner" style="padding:32px;">
-              <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="add" />
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <label class="codeit-label">Full Name</label>
-                    <input type="text" name="name" class="codeit-input" placeholder="e.g. John Doe" required />
-                  </div>
-                  <div class="col-md-6">
-                    <label class="codeit-label">Email</label>
-                    <input type="email" name="email" class="codeit-input" placeholder="e.g. john@school.edu" required />
-                  </div>
-                  <div class="col-md-6">
-                    <label class="codeit-label">Role</label>
-                    <select name="role" class="codeit-select" id="roleSelectModal">
-                      <option value="vits">VITS Officer</option>
-                      <option value="representative">Representative</option>
-                    </select>
-                  </div>
-                  <div class="col-md-6" id="sectionGroupModal" style="display:none;">
-                    <label class="codeit-label">Assign Sections</label>
-                    <div style="max-height:140px; overflow-y:auto; background:rgba(255,255,255,0.2);
-                         border-radius:12px; padding:10px;">
-                      {% for sec in sections %}
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="sections"
-                               value="{{ sec.id }}" id="secModal_{{ sec.id }}">
-                        <label class="form-check-label" for="secModal_{{ sec.id }}"
-                               style="font-size:0.85rem; font-weight:600;">
-                          {{ sec.name }} (Year {{ sec.year_level }})
-                        </label>
-                      </div>
-                      {% endfor %}
-                    </div>
-                  </div>
-                </div>
-                <div style="margin-top:16px; padding:12px; background:rgba(255,255,255,0.15);
-                     border-radius:12px; font-size:0.82rem; color:var(--text-dark);">
-                  <i class="fa fa-info-circle me-1" style="color:var(--accent-orange);"></i>
-                  A secure, random password will be auto-generated and emailed to the user.
-                </div>
-                <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end;">
-                  <button type="button" class="btn-codeit btn-codeit-sm" data-bs-dismiss="modal"
-                          style="background:#999; color:#fff;">Cancel</button>
-                  <button type="submit" class="btn-codeit btn-codeit-sm">
-                    <i class="fa fa-user-plus"></i> Add & Send Email
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+  <form method="post" id="addOfficerForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <div class="figma-form-grid mb-4">
+      <div>
+        <label class="form-label">Full Name</label>
+        <input class="form-control" type="text" name="name" placeholder="e.g. Karl Pagaray" required>
+      </div>
+      <div>
+        <label class="form-label">Email</label>
+        <input class="form-control" type="email" name="email" placeholder="e.g. KarlPagaray@school.edu" required>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- Remove Admin Modal -->
-<div class="modal fade" id="removeAdminModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius:18px; border:3px solid var(--card-border);">
-      <div class="modal-header border-0">
-        <h5 class="modal-title" style="font-weight:800; color:var(--accent-red);">
-          <i class="fa fa-user-slash me-2"></i>Remove Officer
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        Are you sure you want to permanently remove <strong id="removeAdminName"></strong>?
-        <div class="alert alert-warning mt-2 mb-0 py-2 small" style="border-radius:10px;">
-          <i class="fa fa-warning me-1"></i>This administrator will no longer be able to log in.
-        </div>
-      </div>
-      <div class="modal-footer border-0">
-        <button class="btn-codeit btn-codeit-sm" data-bs-dismiss="modal"
-                style="background:#999; color:#fff;">Cancel</button>
-        <form id="removeAdminForm" method="post">
-          {% csrf_token %}
-          <button type="submit" class="btn-codeit btn-codeit-sm btn-codeit-red">
-            <i class="fa fa-trash"></i> Remove
-          </button>
-        </form>
+    <div class="mb-4">
+      <label class="form-label">Role</label>
+      <select class="form-control" name="role" id="roleSelect" style="max-width:300px;">
+        <option value="vits">VITS Officer</option>
+        <option value="representative">Representative</option>
+      </select>
+    </div>
+
+    <div id="sectionAssign" style="display:none;" class="mb-4">
+      <label class="form-label">Assign Sections <span class="figma-muted small">(for Representatives)</span></label>
+      <div class="d-flex flex-wrap gap-2">
+        {% for sec in all_sections %}
+        <label class="d-flex align-items-center gap-2 figma-muted small" style="cursor:pointer;">
+          <input type="checkbox" name="section_ids" value="{{ sec.id }}" class="form-check-input mt-0">
+          {{ sec.name }}
+        </label>
+        {% endfor %}
       </div>
     </div>
-  </div>
-</div>
+
+    <div class="d-flex align-items-center justify-content-between gap-4 flex-wrap">
+      <p class="figma-muted small mb-0"><i class="fa fa-circle-info me-1"></i>A random password will be generated and emailed to the new officer.</p>
+      <button class="figma-btn" type="submit" style="min-width:220px;"><i class="fa fa-plus"></i> Add & Send Email</button>
+    </div>
+  </form>
+</section>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  // Role select toggles section assignment
-  const roleSelectModal = document.getElementById('roleSelectModal');
-  const sectionGroupModal = document.getElementById('sectionGroupModal');
-  if (roleSelectModal) {
-    roleSelectModal.addEventListener('change', () => {
-      sectionGroupModal.style.display = roleSelectModal.value === 'representative' ? 'block' : 'none';
-    });
-  }
+  const roleSelect    = document.getElementById('roleSelect');
+  const sectionAssign = document.getElementById('sectionAssign');
 
-  // Remove admin modal logic
-  document.getElementById('removeAdminModal')?.addEventListener('show.bs.modal', e => {
-    const btn = e.relatedTarget;
-    document.getElementById('removeAdminName').textContent = btn.dataset.adminName;
-    document.getElementById('removeAdminForm').action =
-      `/admin-panel/admins/${btn.dataset.adminId}/remove/`;
-  });
+  function toggleSections() {
+    sectionAssign.style.display = roleSelect.value === 'representative' ? 'block' : 'none';
+  }
+  roleSelect?.addEventListener('change', toggleSections);
+  toggleSections();
 </script>
 {% endblock %}

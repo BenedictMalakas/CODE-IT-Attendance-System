@@ -1,141 +1,140 @@
 {% extends 'admin_panel/base.html' %}
 
-{% block title %}Set Expected Students – {{ event.name }}{% endblock %}
+{% block title %}Set Expected Students - {{ event.name }}{% endblock %}
+{% block page_title %}Expected Students{% endblock %}
 {% block nav_events %}active{% endblock %}
 
 {% block extra_head %}
 <style>
-  .student-card {
-    border: 2px solid #e0e0e0; border-radius: 12px;
-    padding: .75rem 1rem; cursor: pointer;
-    transition: border-color .15s, background .15s;
-    user-select: none; font-family: var(--font);
+  .expected-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 14px;
   }
-  .student-card:hover { border-color: var(--accent-orange); background: #FFF8F4; }
-  .student-card.selected { border-color: var(--accent-orange); background: #FFF3EE; }
-  .student-card.locked { border-color: #22C55E; background: #F0FFF4; cursor: not-allowed; opacity: .85; }
-  .student-card input[type=checkbox] { display: none; }
+
+  .student-card {
+    min-height: 88px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.62);
+    box-shadow: var(--codeit-ring);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+
+  .student-card.locked {
+    cursor: not-allowed;
+    opacity: 0.82;
+  }
+
+  .student-card:has(input:checked) {
+    background: rgba(83, 59, 181, 0.12);
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Event info -->
-<div class="folder-card" style="margin-top:0;">
-  <div class="folder-tab">{{ event.name }}</div>
-  <div class="folder-body">
-    <span class="screw screw-tl"></span><span class="screw screw-tr"></span>
-    <span class="screw screw-bl"></span><span class="screw screw-br"></span>
-    <div class="folder-inner white" style="padding:14px 20px;">
-      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <span style="color:var(--text-muted); font-size:.85rem;">
-          <i class="fa fa-calendar me-1"></i>{{ event.date }} &nbsp;|&nbsp;
-          <i class="fa fa-clock me-1"></i>{{ event.start_time|time:"g:i A" }}
-        </span>
-        <a href="{% url 'admin_panel:attendance' event.id %}" class="btn-codeit btn-codeit-sm" style="font-size:.78rem;padding:5px 14px;background:#999;color:#fff;">
-          <i class="fa fa-arrow-left me-1"></i>Back to Attendance
-        </a>
-      </div>
+<section class="figma-panel mb-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+      <p class="figma-subtitle mb-1">Expected Students</p>
+      <h1 class="figma-heading">{{ event.name }}</h1>
+      <p class="figma-muted mb-0">{{ event.date|date:"M d, Y" }} | {{ event.start_time|time:"g:i A" }}</p>
     </div>
+    <a href="{% url 'admin_panel:attendance' event.id %}" class="figma-btn figma-btn--plain">
+      <i class="fa fa-arrow-left"></i> Attendance
+    </a>
   </div>
-</div>
-
-<!-- Instructions -->
-<div style="background:rgba(59,130,246,.1); border:2px solid rgba(59,130,246,.3); border-radius:14px; padding:14px 18px; margin-top:20px; font-size:.88rem; color:var(--text-dark);">
-  <i class="fa fa-circle-info me-2" style="color:#3B82F6;"></i>
-  <strong>How this works:</strong> Check the students expected to attend. They will be pre-marked as <strong>Absent</strong> and updated to <strong>Present</strong> or <strong>Late</strong> when they scan their QR code.
-  <br><span style="color:#22C55E;font-weight:700;"><i class="fa fa-lock me-1"></i>Green cards</span> have already scanned and cannot be unchecked.
-</div>
+</section>
 
 <form method="post" id="expectedForm">
   {% csrf_token %}
 
-  <!-- Toolbar -->
-  <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between" style="margin:20px 0 16px;">
-    <div class="d-flex gap-2">
-      <button type="button" class="btn-codeit btn-codeit-sm" style="font-size:.82rem;padding:6px 16px;background:#E0E0E0;color:var(--text-dark);" onclick="selectAll()">
-        <i class="fa fa-check-double me-1"></i>Select All
-      </button>
-      <button type="button" class="btn-codeit btn-codeit-sm" style="font-size:.82rem;padding:6px 16px;background:#E0E0E0;color:var(--text-dark);" onclick="clearAll()">
-        <i class="fa fa-xmark me-1"></i>Clear All
-      </button>
+  <section class="figma-card p-4 mb-4">
+    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="figma-btn figma-btn--plain" onclick="selectAll()">
+          <i class="fa fa-check-double"></i> Select All
+        </button>
+        <button type="button" class="figma-btn figma-btn--plain" onclick="clearAll()">
+          <i class="fa fa-xmark"></i> Clear
+        </button>
+      </div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <input type="text" id="searchBox" class="form-control" placeholder="Search student..." style="width:220px;">
+        <span class="figma-badge" id="selectedCount">0 selected</span>
+      </div>
     </div>
-    <div class="d-flex align-items-center gap-2">
-      <input type="text" id="searchBox" class="codeit-input" placeholder="Search student..." style="max-width:200px;font-size:.82rem;padding:6px 14px;">
-      <span class="badge" style="background:var(--card-border);color:#fff;border-radius:8px;padding:6px 12px;font-size:.82rem;" id="selectedCount">0 selected</span>
-    </div>
-  </div>
+  </section>
 
-  <!-- Student grid -->
-  <div class="row g-2 mb-4" id="studentGrid">
+  <section class="expected-grid mb-4" id="studentGrid">
     {% for student in students %}
     {% with sid=student.id|stringformat:"s" %}
-    <div class="col-12 col-sm-6 col-md-4 col-lg-3 student-item"
-         data-name="{{ student.name|lower }}" data-id="{{ student.student_id|lower }}">
+    <div class="student-item" data-name="{{ student.name|lower }}" data-id="{{ student.student_id|lower }}">
       {% if sid in locked_ids %}
-        <label class="student-card locked w-100 d-flex align-items-center gap-2">
+        <label class="student-card locked">
           <input type="checkbox" name="student_ids" value="{{ student.id }}" checked disabled>
           <div class="flex-grow-1">
-            <div style="font-weight:700;font-size:.85rem;">{{ student.name }}</div>
-            <div style="color:var(--text-muted);font-size:.78rem;">{{ student.student_id }} · {{ student.section }}</div>
+            <div class="cell-name">{{ student.name }}</div>
+            <div class="figma-muted small">{{ student.student_id }} | {{ student.section }}</div>
           </div>
-          <i class="fa fa-lock" style="color:#22C55E;"></i>
+          <i class="fa fa-lock text-success"></i>
         </label>
         <input type="hidden" name="student_ids" value="{{ student.id }}">
       {% else %}
-        <label class="student-card w-100 d-flex align-items-center gap-2 {% if sid in expected_ids %}selected{% endif %}"
-               onclick="toggleCard(this)">
+        <label class="student-card">
           <input type="checkbox" name="student_ids" value="{{ student.id }}" {% if sid in expected_ids %}checked{% endif %}>
           <div class="flex-grow-1">
-            <div style="font-weight:700;font-size:.85rem;">{{ student.name }}</div>
-            <div style="color:var(--text-muted);font-size:.78rem;">{{ student.student_id }} · {{ student.section }}</div>
+            <div class="cell-name">{{ student.name }}</div>
+            <div class="figma-muted small">{{ student.student_id }} | {{ student.section }}</div>
           </div>
-          <i class="fa fa-check check-icon" style="color:#22C55E;{% if sid not in expected_ids %}display:none{% endif %}"></i>
         </label>
       {% endif %}
     </div>
     {% endwith %}
     {% empty %}
-    <div class="col-12" style="text-align:center;color:var(--text-muted);padding:32px;">No active students found.</div>
+      <div class="figma-card p-4">No active students found.</div>
     {% endfor %}
-  </div>
+  </section>
 
-  <div class="d-flex gap-2">
-    <button type="submit" class="btn-codeit"><i class="fa fa-save me-1"></i>Save Expected List</button>
-    <a href="{% url 'admin_panel:attendance' event.id %}" class="btn-codeit" style="background:#999;color:#fff;">Cancel</a>
+  <div class="d-flex gap-2 flex-wrap">
+    <button type="submit" class="figma-btn"><i class="fa fa-save"></i> Save Expected List</button>
+    <a href="{% url 'admin_panel:attendance' event.id %}" class="figma-btn figma-btn--plain">Cancel</a>
   </div>
 </form>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  function toggleCard(label) {
-    const cb = label.querySelector('input[type=checkbox]');
-    cb.checked = !cb.checked;
-    label.classList.toggle('selected', cb.checked);
-    label.querySelector('.check-icon').style.display = cb.checked ? '' : 'none';
+  function updateCount() {
+    const count = document.querySelectorAll('input[name=student_ids]:checked').length;
+    document.getElementById('selectedCount').textContent = count + ' selected';
+  }
+
+  function selectAll() {
+    document.querySelectorAll('.student-item:not([hidden]) .student-card:not(.locked) input[type=checkbox]').forEach(cb => {
+      cb.checked = true;
+    });
     updateCount();
   }
-  function selectAll() {
-    document.querySelectorAll('.student-item:not([style*="display: none"]) .student-card:not(.locked)').forEach(label => {
-      const cb = label.querySelector('input[type=checkbox]');
-      if (!cb.checked) { cb.checked = true; label.classList.add('selected'); label.querySelector('.check-icon').style.display = ''; }
-    }); updateCount();
-  }
+
   function clearAll() {
-    document.querySelectorAll('.student-card:not(.locked)').forEach(label => {
-      const cb = label.querySelector('input[type=checkbox]');
-      if (cb.checked) { cb.checked = false; label.classList.remove('selected'); label.querySelector('.check-icon').style.display = 'none'; }
-    }); updateCount();
+    document.querySelectorAll('.student-card:not(.locked) input[type=checkbox]').forEach(cb => {
+      cb.checked = false;
+    });
+    updateCount();
   }
-  function updateCount() {
-    document.getElementById('selectedCount').textContent = document.querySelectorAll('input[name=student_ids]:checked').length + ' selected';
-  }
-  document.getElementById('searchBox').addEventListener('input', function() {
+
+  document.getElementById('studentGrid')?.addEventListener('change', updateCount);
+  document.getElementById('searchBox')?.addEventListener('input', function() {
     const q = this.value.toLowerCase();
     document.querySelectorAll('.student-item').forEach(item => {
-      item.style.display = (item.dataset.name.includes(q) || item.dataset.id.includes(q)) ? '' : 'none';
+      item.hidden = !(item.dataset.name.includes(q) || item.dataset.id.includes(q));
     });
   });
+
   updateCount();
 </script>
 {% endblock %}
