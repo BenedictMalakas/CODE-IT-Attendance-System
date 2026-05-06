@@ -424,18 +424,19 @@ def sections_manage_view(request):
             
         return redirect('admin_panel:sections_manage')
 
-    # Filter
+    # Filter and sort
     year_filter = request.GET.get('year', 'all')
-    qs = Section.objects.order_by('year_level', 'name')
+    qs_list = get_sorted_sections()
     if year_filter != 'all':
         try:
-            qs = qs.filter(year_level=int(year_filter))
+            y = int(year_filter)
+            qs_list = [s for s in qs_list if s.year_level == y]
         except (TypeError, ValueError):
             pass
 
     # Annotate with student counts
     sections = []
-    for section in qs:
+    for section in qs_list:
         section_students = Student.objects.filter(section=section)
         sections.append({
             'id': section.id,
@@ -453,7 +454,7 @@ def sections_manage_view(request):
     return render(request, 'admin_panel/sections_manage.html', {
         'sections':       page_obj,
         'page_obj':       page_obj,
-        'total_sections': qs.count(),
+        'total_sections': len(qs_list),
         'year_filter':    year_filter,
         'admin_role':     request.session.get('admin_role', 'vits'),
     })
