@@ -181,3 +181,26 @@ DDOS_RATE_WINDOW = 60       # Window in seconds
 DDOS_BLOCK_DURATION = 300   # Block duration in seconds
 DDOS_MAX_BODY_SIZE = 10     # Max body size in MB
 DDOS_WHITELIST_IPS = ['127.0.0.1']
+
+# ---------------------------------------------------------------------------
+# Defense Security Configurations
+# ---------------------------------------------------------------------------
+
+if not DEBUG:
+    # Tell Django it's behind a secure proxy (Nginx) so it knows HTTPS is active
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    
+    # 1. Secure Cookie Configuration
+    SESSION_COOKIE_SECURE = True          # Cookies only transmit over HTTPS
+    SESSION_COOKIE_HTTPONLY = True        # JavaScript cannot read the cookie (XSS protection)
+    SESSION_COOKIE_SAMESITE = 'Lax'       # Prevents Cross-Site Request Forgery (CSRF)
+    
+    # 2. CSRF Security
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = True
+    
+    # 3. HTTP Strict Transport Security (HSTS)
+    SECURE_HSTS_SECONDS = 31536000        # Force HTTPS for 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True            # Redirect HTTP -> HTTPS at the Django level
