@@ -575,6 +575,22 @@ def event_create_view(request):
     if request.method == 'POST':
         form = EventForm(request.POST)
         if form.is_valid():
+            event_date = form.cleaned_data.get('date')
+            event_start_time = form.cleaned_data.get('start_time')
+            
+            # Time Zone Validation: Prevent past events
+            if event_date:
+                now = dj_timezone.localtime(dj_timezone.now())
+                if event_start_time:
+                    event_dt = dj_timezone.make_aware(datetime.combine(event_date, event_start_time))
+                    if event_dt < now:
+                        messages.error(request, 'You cannot schedule an event in the past.')
+                        return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
+                else:
+                    if event_date < now.date():
+                        messages.error(request, 'You cannot schedule an event on a past date.')
+                        return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
+
             event            = form.save(commit=False)
             event.id         = uuid.uuid4()
             event.created_by = get_current_admin(request)
