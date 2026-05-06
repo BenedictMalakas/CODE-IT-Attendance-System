@@ -64,18 +64,19 @@
     </table>
   </div>
 </section>
+{% endif %}
 
+{% if admin_role != 'representative' %}
 <section class="figma-panel figma-add-section">
   <p class="figma-panel__title mb-0">Add Section</p>
   <form method="post" action="{% url 'admin_panel:sections_manage' %}" class="d-flex align-items-center gap-3 flex-wrap">
     {% csrf_token %}
     <select class="form-select form-select-sm" name="year_level" style="width:200px; min-height:38px !important; font-size:13px !important; padding:6px 14px !important;">
-      <option>1st Year</option>
-      <option>2nd Year</option>
-      <option>3rd Year</option>
-      <option>4th Year</option>
+      <option value="1">1st Year</option>
+      <option value="2">2nd Year</option>
+      <option value="3">3rd Year</option>
+      <option value="4">4th Year</option>
     </select>
-    <input class="form-control form-control-sm" name="section_name" placeholder="Section name" style="width:180px; min-height:38px !important; font-size:13px !important; padding:6px 14px !important;">
     <button class="figma-btn figma-btn--sm" type="submit"><i class="fa fa-plus"></i> Add Section</button>
   </form>
 </section>

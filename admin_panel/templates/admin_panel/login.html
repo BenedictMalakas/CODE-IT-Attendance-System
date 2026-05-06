@@ -95,10 +95,16 @@
       transform: translateY(-50%);
       background: none; border: none; padding: 4px;
       color: #888; cursor: pointer; font-size: 16px;
-      line-height: 1; z-index: 2;
+      line-height: 1; z-index: 5;
       transition: color 0.18s ease;
     }
     .pw-toggle:hover { color: #130257; }
+
+    /* Hide browser's built-in password reveal (Edge / Chrome) */
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-webkit-credentials-auto-fill-button {
+      display: none !important;
+    }
 
     /* ── Liquid splash ── */
     .splash-overlay {
@@ -274,7 +280,7 @@
           <div class="pw-wrapper">
             {{ form.password }}
             <button type="button" class="pw-toggle" id="pwToggle" aria-label="Toggle password visibility">
-              <i class="fa fa-eye"></i>
+              <i class="fa-solid fa-eye"></i>
             </button>
           </div>
         </div>
@@ -297,10 +303,12 @@
         const icon = pwToggle.querySelector('i');
         if (input.type === 'password') {
           input.type = 'text';
-          icon.classList.replace('fa-eye', 'fa-eye-slash');
+          icon.classList.remove('fa-eye');
+          icon.classList.add('fa-eye-slash');
         } else {
           input.type = 'password';
-          icon.classList.replace('fa-eye-slash', 'fa-eye');
+          icon.classList.remove('fa-eye-slash');
+          icon.classList.add('fa-eye');
         }
       });
     }

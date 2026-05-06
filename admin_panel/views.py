@@ -295,10 +295,18 @@ def dashboard_view(request):
     auto_update_event_statuses()
 
     total_events     = Event.objects.count()
-    total_students   = Student.objects.filter(status='active').count()
-    pending_students = Student.objects.filter(status='pending').count()
-    total_logs       = AttendanceLog.objects.count()
-    total_sections   = Section.objects.count()
+    
+    current_admin = get_current_admin(request)
+    admin_role = request.session.get('admin_role', 'vits')
+    assigned_sections = Section.objects.all()
+
+    if admin_role == 'representative':
+        assigned_sections = Section.objects.filter(assigned_admins__admin=current_admin)
+    
+    total_students   = Student.objects.filter(status='active', section__in=assigned_sections).count()
+    pending_students = Student.objects.filter(status='pending', section__in=assigned_sections).count()
+    total_logs       = AttendanceLog.objects.filter(student__section__in=assigned_sections).count()
+    total_sections   = assigned_sections.count()
     total_admins     = Admin.objects.filter(is_active=True).count()
 
     today        = dj_timezone.now().date()
@@ -318,7 +326,7 @@ def dashboard_view(request):
 
     # Build section cards filtered by selected event
     section_cards = []
-    for section in Section.objects.order_by('year_level', 'name'):
+    for section in assigned_sections.order_by('year_level', 'name'):
         students = Student.objects.filter(section=section)
         if selected_event:
             section_logs = AttendanceLog.objects.filter(student__section=section, event=selected_event)
@@ -340,7 +348,7 @@ def dashboard_view(request):
             'late_height': min(260, late * 7),
             'absent_height': min(260, absent * 7),
         })
-    recent_students = Student.objects.select_related('section').order_by('-created_at')[:9]
+    recent_students = Student.objects.filter(section__in=assigned_sections).select_related('section').order_by('-created_at')[:9]
 
     context = {
         'total_events':     total_events,
@@ -507,6 +515,9 @@ def admins_manage_view(request):
                 messages.success(request, f'Officer account created. Temporary password: {generated_password} (also emailed).')
 
         elif action == 'delete':
+            if request.session.get('admin_role') != 'chairperson':
+                messages.error(request, 'Only the chairperson can remove officer accounts.')
+                return redirect('admin_panel:admins_manage')
             admin_id = request.POST.get('admin_id')
             try:
                 admin = Admin.objects.get(id=admin_id)
@@ -557,6 +568,9 @@ def events_view(request):
 
 @admin_required
 def event_create_view(request):
+    if request.session.get('admin_role') == 'representative':
+        messages.error(request, 'Representatives do not have permission to create events.')
+        return redirect('admin_panel:events')
     form = EventForm()
     if request.method == 'POST':
         form = EventForm(request.POST)
@@ -573,6 +587,9 @@ def event_create_view(request):
 
 @admin_required
 def event_edit_view(request, pk):
+    if request.session.get('admin_role') == 'representative':
+        messages.error(request, 'Representatives do not have permission to edit events.')
+        return redirect('admin_panel:events')
     event = get_object_or_404(Event, id=pk)
     form  = EventForm(instance=event)
     if request.method == 'POST':
@@ -588,6 +605,9 @@ def event_edit_view(request, pk):
 @admin_required
 @require_POST
 def event_delete_view(request, pk):
+    if request.session.get('admin_role') == 'representative':
+        messages.error(request, 'Representatives do not have permission to delete events.')
+        return redirect('admin_panel:events')
     event = get_object_or_404(Event, id=pk)
     name = event.name
     log_activity(request, 'EVENT_DELETED', target=name, description=f'Deleted event "{name}"')
@@ -1028,7 +1048,15 @@ def export_attendance_view(request, event_id):
 def students_view(request):
     status_filter  = request.GET.get('status', 'all')
     section_filter = request.GET.get('section', 'all')
-    students       = Student.objects.select_related('section').order_by('-created_at')
+    
+    current_admin = get_current_admin(request)
+    admin_role = request.session.get('admin_role', 'vits')
+    
+    assigned_sections = Section.objects.order_by('year_level', 'name')
+    if admin_role == 'representative':
+        assigned_sections = assigned_sections.filter(assigned_admins__admin=current_admin)
+
+    students = Student.objects.filter(section__in=assigned_sections).select_related('section').order_by('-created_at')
 
     if status_filter in ('pending', 'active', 'rejected'):
         students = students.filter(status=status_filter)
@@ -1052,7 +1080,7 @@ def students_view(request):
         messages.success(request, f'{approved_count} student(s) approved.')
         return redirect('admin_panel:students')
 
-    all_sections = Section.objects.order_by('year_level', 'name')
+    all_sections = assigned_sections
     return render(request, 'admin_panel/students.html', {
         'students':       page_obj,
         'page_obj':       page_obj,

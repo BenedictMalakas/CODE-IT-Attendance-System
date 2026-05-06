@@ -9,7 +9,9 @@
 
   <div class="d-flex align-items-center gap-3 mt-3 mb-3">
     <p class="figma-section-heading">All Events <span class="figma-muted" style="font-size:12px; margin-left:4px;">Event Directory</span></p>
+    {% if request.session.admin_role != 'representative' %}
     <a href="{% url 'admin_panel:event_create' %}" class="figma-btn ms-auto"><i class="fa fa-plus"></i> Create Event</a>
+    {% endif %}
   </div>
 
   <div class="figma-table-wrap">
@@ -35,22 +37,27 @@
           <td class="text-center">
             <div class="figma-action-row">
 
-              {% if event.status == 'pending' %}
-              <form method="post" action="{% url 'admin_panel:start_event' event.id %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="figma-icon-btn figma-icon-btn--start" title="Start Event"><i class="fa fa-play"></i></button>
-              </form>
+              {% if request.session.admin_role != 'representative' %}
+                {% if event.status == 'pending' %}
+                <form method="post" action="{% url 'admin_panel:start_event' event.id %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="figma-icon-btn figma-icon-btn--start" title="Start Event"><i class="fa fa-play"></i></button>
+                </form>
+                {% endif %}
+
+                {% if event.status == 'active' %}
+                <form method="post" action="{% url 'admin_panel:end_event' event.id %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="figma-icon-btn figma-icon-btn--end" title="End Event (enable check-out)"><i class="fa fa-stop"></i></button>
+                </form>
+                <form method="post" action="{% url 'admin_panel:extend_grace' event.id %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="figma-icon-btn figma-icon-btn--link" title="Extend Grace +15 mins"><i class="fa fa-clock"></i></button>
+                </form>
+                {% endif %}
               {% endif %}
 
               {% if event.status == 'active' %}
-              <form method="post" action="{% url 'admin_panel:end_event' event.id %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="figma-icon-btn figma-icon-btn--end" title="End Event (enable check-out)"><i class="fa fa-stop"></i></button>
-              </form>
-              <form method="post" action="{% url 'admin_panel:extend_grace' event.id %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="figma-icon-btn figma-icon-btn--link" title="Extend Grace +15 mins"><i class="fa fa-clock"></i></button>
-              </form>
               <a href="{% url 'admin_panel:scanner' event.id %}" class="figma-icon-btn figma-icon-btn--link" title="Open Scanner"><i class="fa fa-qrcode"></i></a>
               {% endif %}
 
@@ -70,16 +77,18 @@
               <a href="{% url 'admin_panel:attendance' event.id %}" class="figma-icon-btn figma-icon-btn--view" title="View Attendance"><i class="fa fa-list"></i></a>
               <a href="{% url 'admin_panel:export' event.id %}" class="figma-icon-btn figma-icon-btn--excel" title="Export to Excel"><i class="fa fa-file-excel"></i></a>
 
-              {% if event.status == 'pending' %}
-              <a href="{% url 'admin_panel:event_edit' event.id %}" class="figma-icon-btn" title="Edit"><i class="fa fa-pen"></i></a>
-              {% endif %}
+              {% if request.session.admin_role != 'representative' %}
+                {% if event.status == 'pending' %}
+                <a href="{% url 'admin_panel:event_edit' event.id %}" class="figma-icon-btn" title="Edit"><i class="fa fa-pen"></i></a>
+                {% endif %}
 
-              <button type="button" class="figma-icon-btn figma-icon-btn--delete"
-                      data-bs-toggle="modal" data-bs-target="#deleteModal"
-                      data-event-id="{{ event.id }}" data-event-name="{{ event.name }}"
-                      title="Delete Event">
-                <i class="fa fa-trash"></i>
-              </button>
+                <button type="button" class="figma-icon-btn figma-icon-btn--delete"
+                        data-bs-toggle="modal" data-bs-target="#deleteModal"
+                        data-event-id="{{ event.id }}" data-event-name="{{ event.name }}"
+                        title="Delete Event">
+                  <i class="fa fa-trash"></i>
+                </button>
+              {% endif %}
 
             </div>
           </td>

@@ -34,18 +34,25 @@
         <i class="fa fa-user-graduate"></i> Students
       </a>
     {% endif %}
-    {# Section + Officers — Chairperson and Representative #}
-    {% if request.session.admin_role != 'vits' %}
+    {# Section — Chairperson and VITS #}
+    {% if request.session.admin_role != 'representative' %}
       <a href="{% url 'admin_panel:sections_manage' %}" class="{% block nav_sections %}{% endblock %}">
         <i class="fa fa-tablet-screen-button"></i> Section
       </a>
+    {% endif %}
+
+    {# Officers & Reps — Chairperson ONLY #}
+    {% if request.session.admin_role == 'chairperson' %}
       <a href="{% url 'admin_panel:admins_manage' %}" class="{% block nav_admins %}{% endblock %}">
         <i class="fa fa-user-shield"></i> Officers &amp; Reps
       </a>
     {% endif %}
+
+    {# Events — All Roles #}
     <a href="{% url 'admin_panel:events' %}" class="{% block nav_events %}{% endblock %}">
       <i class="fa fa-calendar-plus"></i> Events
     </a>
+
     {% if request.session.admin_role == 'chairperson' or request.session.admin_role == 'vits' %}
     <a href="{% url 'admin_panel:activity_logs' %}" class="{% block nav_activity %}{% endblock %}">
       <i class="fa fa-clock-rotate-left"></i> Activity Logs

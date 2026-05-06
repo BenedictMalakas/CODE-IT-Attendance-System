@@ -222,7 +222,7 @@
         <div class="pw-wrapper">
           {{ form.password }}
           <button type="button" class="pw-toggle" id="pwToggle" aria-label="Toggle password visibility">
-            <i class="fa fa-eye"></i>
+            <i class="fa-solid fa-eye"></i>
           </button>
         </div>
       </div>
@@ -241,10 +241,12 @@
         const icon = pwToggle.querySelector('i');
         if (input.type === 'password') {
           input.type = 'text';
-          icon.classList.replace('fa-eye', 'fa-eye-slash');
+          icon.classList.remove('fa-eye');
+          icon.classList.add('fa-eye-slash');
         } else {
           input.type = 'password';
-          icon.classList.replace('fa-eye-slash', 'fa-eye');
+          icon.classList.remove('fa-eye-slash');
+          icon.classList.add('fa-eye');
         }
       });
     }

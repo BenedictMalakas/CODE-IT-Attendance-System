@@ -42,7 +42,7 @@ class Admin(models.Model):
 class AdminSection(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE, db_column='admin_id', related_name='admin_sections')
-    section = models.ForeignKey(Section, on_delete=models.CASCADE, db_column='section_id', related_name='admin_sections')
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, db_column='section_id', related_name='assigned_admins')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

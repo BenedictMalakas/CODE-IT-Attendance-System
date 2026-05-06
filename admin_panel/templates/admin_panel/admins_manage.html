@@ -48,15 +48,19 @@
             </td>
             <td class="text-center">
               {% if item.admin.role != 'chairperson' %}
-              <form method="post" class="figma-action-row">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="admin_id" value="{{ item.admin.id }}">
-                <button type="submit" class="figma-icon-btn figma-icon-btn--delete" title="Delete"
-                        onclick="return confirm('Remove {{ item.admin.name }}?')">
-                  <i class="fa fa-trash"></i>
-                </button>
-              </form>
+                {% if request.session.admin_role == 'chairperson' %}
+                <form method="post" class="figma-action-row">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="admin_id" value="{{ item.admin.id }}">
+                  <button type="submit" class="figma-icon-btn figma-icon-btn--delete" title="Delete"
+                          onclick="return confirm('Remove {{ item.admin.name }}?')">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </form>
+                {% else %}
+                  <span class="figma-muted small">Access Denied</span>
+                {% endif %}
               {% else %}
                 <span class="figma-muted small">Protected</span>
               {% endif %}
