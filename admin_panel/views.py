@@ -372,13 +372,13 @@ def dashboard_view(request):
 
 @admin_required
 def sections_manage_view(request):
+    if request.session.get('admin_role') != 'chairperson':
+        messages.error(request, 'Only the Chairperson can manage sections.')
+        return redirect('admin_panel:dashboard')
+
     import re as _re
 
     if request.method == 'POST':
-        if request.session.get('admin_role') != 'chairperson':
-            messages.error(request, 'Only the Chairperson can add sections.')
-            return redirect('admin_panel:sections_manage')
-
         year_level_raw = request.POST.get('year_level', '1')
         count_raw = request.POST.get('count', '1')
         
@@ -462,6 +462,10 @@ def sections_manage_view(request):
 
 @admin_required
 def delete_section_view(request, pk):
+    if request.session.get('admin_role') != 'chairperson':
+        messages.error(request, 'Only the Chairperson can delete sections.')
+        return redirect('admin_panel:dashboard')
+
     if request.method != 'POST':
         return redirect('admin_panel:sections_manage')
     try:

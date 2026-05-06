@@ -34,8 +34,8 @@
         <i class="fa fa-user-graduate"></i> Students
       </a>
     {% endif %}
-    {# Section — Chairperson and VITS #}
-    {% if request.session.admin_role != 'representative' %}
+    {# Section — Chairperson ONLY #}
+    {% if request.session.admin_role == 'chairperson' %}
       <a href="{% url 'admin_panel:sections_manage' %}" class="{% block nav_sections %}{% endblock %}">
         <i class="fa fa-tablet-screen-button"></i> Section
       </a>
