@@ -9,6 +9,7 @@
 <div class="figma-grid-2" style="gap:24px; align-items:start;">
 
   {# ── Left: Add Section ── #}
+  {% if admin_role == 'chairperson' %}
   <section class="figma-panel" style="max-width:420px;">
     <p class="figma-section-heading mb-1">Add Section</p>
     <p class="figma-muted small mb-4">Name is auto-generated as BSIT {year}-{index}</p>
@@ -24,11 +25,16 @@
           <option value="4">4th Year</option>
         </select>
       </div>
+      <div class="mb-3">
+        <label class="form-label">Number of Sections to Add</label>
+        <input type="number" class="form-control" name="count" value="1" min="1" max="20" required>
+      </div>
       <button class="figma-btn" type="submit" style="width:100%;">
-        <i class="fa fa-plus"></i> Add Section
+        <i class="fa fa-plus"></i> Add Section(s)
       </button>
     </form>
   </section>
+  {% endif %}
 
   {# ── Right: All Sections Table ── #}
   <section class="figma-panel">

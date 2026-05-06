@@ -375,7 +375,13 @@ def sections_manage_view(request):
     import re as _re
 
     if request.method == 'POST':
+        if request.session.get('admin_role') != 'chairperson':
+            messages.error(request, 'Only the Chairperson can add sections.')
+            return redirect('admin_panel:sections_manage')
+
         year_level_raw = request.POST.get('year_level', '1')
+        count_raw = request.POST.get('count', '1')
+        
         try:
             year_level = int(year_level_raw)
             if year_level not in (1, 2, 3, 4):
@@ -383,24 +389,39 @@ def sections_manage_view(request):
         except (TypeError, ValueError):
             year_level = 1
 
-        # Auto-generate name: find max existing index for this year
-        existing = Section.objects.filter(year_level=year_level)
-        max_idx = 0
-        for s in existing:
-            m = _re.match(r'BSIT\s+\d+-(\d+)', s.name, _re.IGNORECASE)
-            if m:
-                idx = int(m.group(1))
-                if idx > max_idx:
-                    max_idx = idx
-        section_name = f'BSIT {year_level}-{max_idx + 1}'
+        try:
+            count = int(count_raw)
+            if count < 1: count = 1
+            if count > 20: count = 20  # Limit max bulk creation
+        except (TypeError, ValueError):
+            count = 1
 
-        if Section.objects.filter(name__iexact=section_name).exists():
-            messages.warning(request, f'{section_name} already exists.')
-            return redirect('admin_panel:sections_manage')
+        added_sections = []
+        for _ in range(count):
+            # Auto-generate name: find max existing index for this year
+            existing = Section.objects.filter(year_level=year_level)
+            max_idx = 0
+            for s in existing:
+                m = _re.match(r'BSIT\s+\d+-(\d+)', s.name, _re.IGNORECASE)
+                if m:
+                    idx = int(m.group(1))
+                    if idx > max_idx:
+                        max_idx = idx
+            section_name = f'BSIT {year_level}-{max_idx + 1}'
 
-        Section.objects.create(id=uuid.uuid4(), name=section_name, year_level=year_level)
-        log_activity(request, 'ADD_SECTION', description=f'Added section {section_name}')
-        messages.success(request, f'{section_name} added.')
+            if not Section.objects.filter(name__iexact=section_name).exists():
+                Section.objects.create(id=uuid.uuid4(), name=section_name, year_level=year_level)
+                added_sections.append(section_name)
+
+        if added_sections:
+            log_activity(request, 'ADD_SECTION', description=f'Added sections: {", ".join(added_sections)}')
+            if len(added_sections) == 1:
+                messages.success(request, f'{added_sections[0]} added.')
+            else:
+                messages.success(request, f'Successfully added {len(added_sections)} sections.')
+        else:
+            messages.warning(request, 'No new sections were added.')
+            
         return redirect('admin_panel:sections_manage')
 
     # Filter
@@ -583,7 +604,8 @@ def event_create_view(request):
                 now = dj_timezone.localtime(dj_timezone.now())
                 if event_start_time:
                     event_dt = dj_timezone.make_aware(datetime.combine(event_date, event_start_time))
-                    if event_dt < now:
+                    # Allow a 1-minute grace period so "exactly now" works
+                    if event_dt < (now - timedelta(minutes=1)):
                         messages.error(request, 'You cannot schedule an event in the past.')
                         return render(request, 'admin_panel/event_form.html', {'form': form, 'action': 'Create'})
                 else:
