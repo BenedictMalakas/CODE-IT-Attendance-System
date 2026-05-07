@@ -117,6 +117,6 @@ class DDoSProtectionMiddleware:
         response['X-Content-Type-Options'] = 'nosniff'
         response['X-Frame-Options'] = 'DENY'
         response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-        response['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+        response['Permissions-Policy'] = 'camera=(self), microphone=(), geolocation=()'
 
         return response

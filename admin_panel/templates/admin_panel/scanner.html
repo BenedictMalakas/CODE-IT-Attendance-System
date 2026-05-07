@@ -138,7 +138,22 @@
       qrbox: { width: 280, height: 280 },
       rememberLastUsedCamera: true,
     });
-    scanner.render(onScanSuccess, function() {});
+    scanner.render(onScanSuccess, (errorMessage) => {
+      // If we get a permission error, show a friendly message
+      if (errorMessage.includes("NotAllowedError") || errorMessage.includes("Permission denied")) {
+        const reader = document.getElementById('qr-reader');
+        if (reader && !reader.querySelector('.custom-error')) {
+          reader.innerHTML = `
+            <div class="custom-error p-4 text-center">
+              <i class="fa fa-video-slash mb-3" style="font-size: 48px; color: var(--orange);"></i>
+              <p class="mb-2"><strong>Camera Access Denied</strong></p>
+              <p class="small figma-muted">Please allow camera permissions in your browser settings to use the scanner.</p>
+              <button class="figma-btn figma-btn--sm mt-2" onclick="location.reload()">Retry</button>
+            </div>
+          `;
+        }
+      }
+    });
     document.getElementById('btnStart').disabled = true;
     document.getElementById('btnStop').disabled  = false;
   }

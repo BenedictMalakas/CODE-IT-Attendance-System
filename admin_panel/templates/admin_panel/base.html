@@ -53,7 +53,8 @@
       <i class="fa fa-calendar-plus"></i> Events
     </a>
 
-    {% if request.session.admin_role == 'chairperson' or request.session.admin_role == 'vits' %}
+    {# Activity Logs removed per user request #}
+    {% if False %}
     <a href="{% url 'admin_panel:activity_logs' %}" class="{% block nav_activity %}{% endblock %}">
       <i class="fa fa-clock-rotate-left"></i> Activity Logs
     </a>

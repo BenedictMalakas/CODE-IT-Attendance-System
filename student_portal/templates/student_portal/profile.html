@@ -37,7 +37,7 @@
 
     <div>
       <h2 class="profile-qr-title">Your QR Code</h2>
-      <div class="qr-frame" style="width:355px;">
+      <div class="qr-frame mb-3" style="width:355px;">
         {% if qr_token and qr_token.qr_path %}
           <img src="{{ qr_token.qr_path }}" alt="Student QR code" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
           <div class="qr-fallback"><i class="fa fa-qrcode"></i></div>
@@ -48,6 +48,13 @@
           </div>
         {% endif %}
       </div>
+      {% if qr_token and qr_token.qr_path %}
+      <div class="text-center mt-3">
+        <a href="{{ qr_token.qr_path }}" download="My_QR_Code.png" class="btn btn-link p-0 text-decoration-none" style="color: var(--violet); font-weight: 600; font-size: 16px;">
+          <i class="fa fa-download me-2"></i>Download QR Code
+        </a>
+      </div>
+      {% endif %}
     </div>
   </div>
 </section>
