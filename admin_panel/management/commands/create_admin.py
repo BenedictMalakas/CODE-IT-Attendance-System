@@ -1,5 +1,5 @@
-import hashlib
 import uuid
+from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
 from myapp.models import Admin
 
@@ -16,7 +16,7 @@ class Command(BaseCommand):
         email    = options['email']
         password = options['password']
         name     = options['name']
-        pw_hash  = hashlib.sha256(password.encode()).hexdigest()
+        pw_hash  = make_password(password)
 
         admin, created = Admin.objects.update_or_create(
             email=email,
