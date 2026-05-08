@@ -12,6 +12,53 @@ class LoginForm(forms.Form):
 
 
 class EventForm(forms.ModelForm):
+    expected_year_section = forms.ChoiceField(
+        choices=[],  # Built dynamically in __init__
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Expected Year/Section'
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from myapp.models import Section
+
+        # Build grouped choices: All → Year levels → Individual sections
+        choices = [('', 'All (Open to everyone)')]
+
+        # Year-level choices
+        year_labels = {1: '1st Year', 2: '2nd Year', 3: '3rd Year', 4: '4th Year'}
+        year_choices = [(f'year_{y}', label) for y, label in year_labels.items()]
+        choices.append(('By Year Level', year_choices))
+
+        # Individual section choices
+        sections = Section.objects.all().order_by('year_level', 'name')
+        section_choices = [(f'section_{s.id}', s.name) for s in sections]
+        if section_choices:
+            choices.append(('By Section', section_choices))
+
+        self.fields['expected_year_section'].choices = choices
+
+        # Pre-select current value when editing
+        if self.instance and self.instance.pk:
+            selected_sections = self.instance.expected_sections.all()
+            if selected_sections.exists():
+                # Check if it matches a full year level
+                year_levels = selected_sections.values_list('year_level', flat=True).distinct()
+                if year_levels.count() == 1:
+                    year = year_levels.first()
+                    all_sections_for_year = Section.objects.filter(year_level=year)
+                    if set(selected_sections.values_list('id', flat=True)) == set(all_sections_for_year.values_list('id', flat=True)):
+                        self.initial['expected_year_section'] = f'year_{year}'
+                    else:
+                        # Single specific section
+                        if selected_sections.count() == 1:
+                            self.initial['expected_year_section'] = f'section_{selected_sections.first().id}'
+                else:
+                    # Multiple sections from different years — pick first section
+                    if selected_sections.count() == 1:
+                        self.initial['expected_year_section'] = f'section_{selected_sections.first().id}'
+
     class Meta:
         model = Event
         fields = ['name', 'date', 'start_time', 'end_time', 'late_cutoff_mins']

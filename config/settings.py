@@ -21,11 +21,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
+from dotenv import load_dotenv
+import dj_database_url
+
+# Load the local .env file early so variables are available
+env_path = BASE_DIR / '.env'
+load_dotenv(env_path, override=True)
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-default-key-for-dev')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+# Reads DJANGO_DEBUG from .env, defaults to False for safety
+DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = ['codeit-attendancesystem.me', 'www.codeit-attendancesystem.me', '127.0.0.1', 'localhost']
 
@@ -48,6 +56,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'config.middleware.DDoSProtectionMiddleware',
@@ -76,13 +85,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
-from dotenv import load_dotenv
-import dj_database_url
-
-# Load the local .env file
-env_path = BASE_DIR / '.env'
-load_dotenv(env_path, override=True)  # override=True ensures it always loads
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -186,7 +188,7 @@ DDOS_WHITELIST_IPS = ['127.0.0.1']
 # ---------------------------------------------------------------------------
 
 if not DEBUG:
-    # Tell Django it's behind a secure proxy (Nginx) so it knows HTTPS is active
+    # Tell Django it's behind a secure proxy (Nginx/Azure) so it knows HTTPS is active
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     
     # 1. Secure Cookie Configuration
@@ -198,8 +200,11 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     CSRF_COOKIE_HTTPONLY = True
     
-    # 3. HTTP Strict Transport Security (HSTS)
-    SECURE_HSTS_SECONDS = 31536000        # Force HTTPS for 1 year
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_SSL_REDIRECT = True            # Redirect HTTP -> HTTPS at the Django level
+    # Only enable HSTS and SSL redirect if we are NOT on a local environment
+    # Local environments often use HTTP, and HSTS will permanently break localhost testing
+    if os.getenv('WEBSITE_HOSTNAME') or os.getenv('ENVIRONMENT') == 'production':
+        # 3. HTTP Strict Transport Security (HSTS)
+        SECURE_HSTS_SECONDS = 31536000        # Force HTTPS for 1 year
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+        SECURE_HSTS_PRELOAD = True
+        SECURE_SSL_REDIRECT = True            # Redirect HTTP -> HTTPS at the Django level

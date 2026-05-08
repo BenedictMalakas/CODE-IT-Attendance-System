@@ -50,7 +50,7 @@
       </div>
       {% if qr_token and qr_token.qr_path %}
       <div class="text-center mt-3">
-        <a href="{{ qr_token.qr_path }}" download="My_QR_Code.png" class="btn btn-link p-0 text-decoration-none" style="color: var(--violet); font-weight: 600; font-size: 16px;">
+        <a href="{% url 'student_portal:download_qr' %}" class="btn btn-link p-0 text-decoration-none" style="color: var(--violet); font-weight: 600; font-size: 16px;">
           <i class="fa fa-download me-2"></i>Download QR Code
         </a>
       </div>

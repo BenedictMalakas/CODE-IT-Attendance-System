@@ -34,9 +34,9 @@
     </div>
 
     {% if qr_token.qr_path %}
-      <button onclick="downloadQR()" class="portal-btn mt-4">
+      <a href="{% url 'student_portal:download_qr' %}" class="portal-btn mt-4">
         <i class="fa fa-download"></i> Download QR
-      </button>
+      </a>
     {% endif %}
   {% else %}
     <div class="portal-card p-5 mx-auto" style="max-width:520px;">
@@ -46,19 +46,4 @@
     </div>
   {% endif %}
 </section>
-{% endblock %}
-
-{% block extra_js %}
-{% if qr_token.qr_path %}
-<script>
-  function downloadQR() {
-    const link = document.createElement('a');
-    link.download = 'my_qr_code.png';
-    link.href = document.getElementById('qr-img').src;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-</script>
-{% endif %}
 {% endblock %}

@@ -622,6 +622,18 @@ def event_create_view(request):
             event.id         = uuid.uuid4()
             event.created_by = get_current_admin(request)
             event.save()
+
+            # Handle the combined expected_year_section dropdown
+            choice = form.cleaned_data.get('expected_year_section', '')
+            if choice.startswith('year_'):
+                year_level = int(choice.replace('year_', ''))
+                event.expected_sections.set(Section.objects.filter(year_level=year_level))
+            elif choice.startswith('section_'):
+                section_id = choice.replace('section_', '')
+                event.expected_sections.set(Section.objects.filter(id=section_id))
+            else:
+                event.expected_sections.clear()  # Open to all
+
             log_activity(request, 'EVENT_CREATED', target=event.name, description=f'Created event "{event.name}" on {event.date}')
             messages.success(request, f'Event "{event.name}" created successfully.')
             return redirect('admin_panel:events')
@@ -638,7 +650,20 @@ def event_edit_view(request, pk):
     if request.method == 'POST':
         form = EventForm(request.POST, instance=event)
         if form.is_valid():
-            form.save()
+            ev = form.save(commit=False)
+            ev.save()
+            
+            # Handle the combined expected_year_section dropdown
+            choice = form.cleaned_data.get('expected_year_section', '')
+            if choice.startswith('year_'):
+                year_level = int(choice.replace('year_', ''))
+                ev.expected_sections.set(Section.objects.filter(year_level=year_level))
+            elif choice.startswith('section_'):
+                section_id = choice.replace('section_', '')
+                ev.expected_sections.set(Section.objects.filter(id=section_id))
+            else:
+                ev.expected_sections.clear()  # Open to all
+
             log_activity(request, 'EVENT_EDITED', target=event.name, description=f'Edited event "{event.name}"')
             messages.success(request, f'Event "{event.name}" updated.')
             return redirect('admin_panel:events')
@@ -701,8 +726,33 @@ def close_event_view(request, pk):
         return redirect('admin_panel:events')
     event.status = 'closed'
     event.save(update_fields=['status'])
-    log_activity(request, 'EVENT_CLOSED', target=event.name, description=f'Closed event "{event.name}" — final comparison enabled')
-    messages.success(request, f'Event "{event.name}" closed. Final comparison is now available.')
+
+    # Auto-mark absent: create "absent" logs for expected students with no record
+    expected_sections = event.expected_sections.all()
+    if expected_sections.exists():
+        expected_students = Student.objects.filter(status='active', section__in=expected_sections)
+    else:
+        # Event was open to all — mark ALL active students
+        expected_students = Student.objects.filter(status='active')
+
+    already_logged_ids = set(
+        AttendanceLog.objects.filter(event=event).values_list('student_id', flat=True)
+    )
+    absent_created = 0
+    for student in expected_students:
+        if student.id not in already_logged_ids:
+            AttendanceLog.objects.create(
+                id=uuid.uuid4(),
+                student=student,
+                event=event,
+                scanned_by=None,
+                status='absent',
+                scanned_at=None,
+            )
+            absent_created += 1
+
+    log_activity(request, 'EVENT_CLOSED', target=event.name, description=f'Closed event "{event.name}" — {absent_created} student(s) marked absent')
+    messages.success(request, f'Event "{event.name}" closed. {absent_created} student(s) marked absent. Final comparison is now available.')
     return redirect('admin_panel:events')
 
 
@@ -744,7 +794,12 @@ def finalize_event_view(request, event_id):
 @admin_required
 def set_expected_students_view(request, event_id):
     event    = get_object_or_404(Event, id=event_id)
-    students = Student.objects.filter(status='active').order_by('last_name', 'first_name')
+    
+    expected_sections = event.expected_sections.all()
+    if expected_sections.exists():
+        students = Student.objects.filter(status='active', section__in=expected_sections).order_by('last_name', 'first_name')
+    else:
+        students = Student.objects.filter(status='active').order_by('last_name', 'first_name')
 
     existing_logs = AttendanceLog.objects.filter(event=event).select_related('student')
     expected_ids  = set(str(log.student.id) for log in existing_logs)
@@ -817,19 +872,25 @@ def attendance_view(request, event_id):
     checked_out     = logs.filter(scanned_out_at__isnull=False).count()
     not_checked_out = logs.filter(status__in=('present', 'late'), scanned_out_at__isnull=True).count()
 
-    # Year filter for section tiles
+    # Year filter for section tiles — scoped to expected sections
     year_filter = request.GET.get('year', 'all')
-    all_sections = Section.objects.order_by('year_level', 'name')
+    expected_sections = event.expected_sections.all()
+    if expected_sections.exists():
+        # Event is restricted — only show expected sections
+        all_sections = expected_sections.order_by('year_level', 'name')
+        year_levels = all_sections.values_list('year_level', flat=True).distinct().order_by('year_level')
+    else:
+        # Event is open to everyone — show all sections
+        all_sections = Section.objects.order_by('year_level', 'name')
+        year_levels = Section.objects.values_list('year_level', flat=True).distinct().order_by('year_level')
+
     if year_filter and year_filter != 'all':
         try:
             all_sections = all_sections.filter(year_level=int(year_filter))
         except (ValueError, TypeError):
             pass
 
-    # Distinct year levels for dropdown
-    year_levels = Section.objects.values_list('year_level', flat=True).distinct().order_by('year_level')
-
-    # Section-level check-in tiles (ALL sections)
+    # Section-level check-in tiles
     section_tiles = []
     for section in all_sections:
         s_logs = logs.filter(student__section=section)

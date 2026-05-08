@@ -25,7 +25,6 @@
         <i class="fa fa-qrcode"></i> {% if event.status == 'ended' %}Check-Out{% else %}Scanner{% endif %}
       </a>
       {% endif %}
-      <a href="{% url 'admin_panel:set_expected' event.id %}" class="figma-btn figma-btn--plain figma-btn--sm"><i class="fa fa-users"></i> Expected</a>
       <a href="{% url 'admin_panel:export' event.id %}" class="figma-btn figma-btn--plain figma-btn--sm"><i class="fa fa-file-excel"></i> Export</a>
       <a href="{% url 'admin_panel:events' %}" class="figma-btn figma-btn--plain figma-btn--sm"><i class="fa fa-arrow-left"></i> Back</a>
     </div>
@@ -52,12 +51,12 @@
   </div>
 
   {# Check-In Section Tiles with Year Filter #}
-  <div class="mt-3">
-    <div class="d-flex align-items-center justify-content-between mb-2">
+  <div class="mt-4 pt-2">
+    <div class="d-flex align-items-center justify-content-between mb-3">
       <p class="figma-section-heading mb-0">Check-In by Section</p>
       <form method="get" class="d-flex align-items-center gap-2">
         {% if status_filter and status_filter != 'all' %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
-        <select name="year" class="form-select form-select-sm" style="width:150px; font-size:12px;" onchange="this.form.submit()">
+        <select name="year" class="form-select form-select-sm" style="width:150px; font-size:12px; min-height:38px !important; padding-top:4px !important; padding-bottom:4px !important;" onchange="this.form.submit()">
           <option value="all" {% if year_filter == 'all' %}selected{% endif %}>All Sections</option>
           {% for yl in year_levels %}
           <option value="{{ yl }}" {% if year_filter == yl|stringformat:"d" %}selected{% endif %}>
@@ -120,8 +119,8 @@
 </section>
 {% endif %}
 
-{# Final Comparison (ended or closed events) #}
-{% if event.status == 'ended' or event.status == 'closed' %}
+{# Final Comparison (only after chairman closes the event) #}
+{% if event.status == 'closed' %}
 <section class="figma-panel mb-3">
   <h2 class="figma-section-heading mb-2">Final Comparison</h2>
   <div class="figma-table-wrap">
@@ -137,7 +136,6 @@
       </thead>
       <tbody>
         {% for log in logs %}
-        {% if log.status != 'absent' %}
         <tr>
           <td>
             <div class="cell-name">{{ log.student.name }}</div>
@@ -148,7 +146,7 @@
             {% if log.scanned_at %}{{ log.scanned_at|time:"g:i:s A" }}{% else %}—{% endif %}
           </td>
           <td class="figma-muted small">
-            {% if log.scanned_out_at %}{{ log.scanned_out_at|time:"g:i:s A" }}{% else %}<span class="figma-badge absent">No check-out</span>{% endif %}
+            {% if log.scanned_out_at %}{{ log.scanned_out_at|time:"g:i:s A" }}{% elif log.status == 'absent' %}<span class="figma-badge absent">Absent</span>{% else %}<span class="figma-badge absent">No check-out</span>{% endif %}
           </td>
           <td class="figma-muted small">
             {% if log.scanned_at and log.scanned_out_at %}
@@ -156,7 +154,8 @@
             {% else %}—{% endif %}
           </td>
         </tr>
-        {% endif %}
+        {% empty %}
+        <tr><td colspan="5" class="text-center figma-muted py-3">No attendance records.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -181,7 +180,7 @@
       {# Status filter #}
       <form method="get" class="d-flex gap-2 ms-2">
         {% if year_filter and year_filter != 'all' %}<input type="hidden" name="year" value="{{ year_filter }}">{% endif %}
-        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" style="width:130px; font-size:12px;">
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" style="width:130px; font-size:12px; min-height:38px !important; padding-top:4px !important; padding-bottom:4px !important;">
           <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
           <option value="present" {% if status_filter == 'present' %}selected{% endif %}>Present</option>
           <option value="late" {% if status_filter == 'late' %}selected{% endif %}>Late</option>

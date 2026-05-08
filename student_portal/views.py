@@ -4,6 +4,8 @@ import re
 from functools import wraps
 
 from django.shortcuts import render, redirect
+from django.http import HttpResponse
+from django.db.models import Q
 from django.contrib import messages
 from django.utils import timezone as dj_timezone
 from django.contrib.auth.hashers import check_password, make_password
@@ -205,7 +207,11 @@ def dashboard_view(request):
 
     today  = dj_timezone.now().date()
     logs   = AttendanceLog.objects.filter(student=student).select_related('event')
-    events = Event.objects.filter(date__gte=today, status='active').order_by('date', 'start_time')[:5]
+    events = Event.objects.filter(
+        date__gte=today, status='active'
+    ).filter(
+        Q(expected_sections=student.section) | Q(expected_sections__isnull=True)
+    ).distinct().order_by('date', 'start_time')[:5]
 
     total_present = logs.filter(status='present').count()
     total_late    = logs.filter(status='late').count()
@@ -249,6 +255,43 @@ def my_qr_view(request):
         'student':  student,
         'qr_token': qr_token,
     })
+
+
+@student_required
+def download_qr_view(request):
+    """Serve the QR code PNG as a proper file download."""
+    student = get_current_student(request)
+    if not student:
+        return redirect('student_portal:login')
+
+    try:
+        qr_token = QRToken.objects.get(student=student)
+    except QRToken.DoesNotExist:
+        messages.error(request, 'No QR code found.')
+        return redirect('student_portal:dashboard')
+
+    if not qr_token.qr_path:
+        messages.error(request, 'QR code image not available.')
+        return redirect('student_portal:dashboard')
+
+    from django.core.files.storage import default_storage
+    import os
+
+    # qr_path is like /media/qr_xxxx.png — extract the filename
+    filename = os.path.basename(qr_token.qr_path)
+
+    try:
+        f = default_storage.open(filename, 'rb')
+        image_data = f.read()
+        f.close()
+    except Exception:
+        messages.error(request, 'QR code file not found on server.')
+        return redirect('student_portal:dashboard')
+
+    response = HttpResponse(image_data, content_type='image/png')
+    safe_name = f'QR_Code_{student.student_id}.png'
+    response['Content-Disposition'] = f'attachment; filename="{safe_name}"'
+    return response
 
 
 # ---------------------------------------------------------------------------

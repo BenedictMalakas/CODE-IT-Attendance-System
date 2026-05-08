@@ -94,6 +94,7 @@ class Event(models.Model):
     status = models.CharField(max_length=20, choices=EventStatus.choices, default=EventStatus.PENDING)
     created_by = models.ForeignKey(Admin, on_delete=models.CASCADE, db_column='created_by', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    expected_sections = models.ManyToManyField(Section, db_table='event_sections', related_name='expected_events', blank=True)
 
     class Meta:
         managed = False

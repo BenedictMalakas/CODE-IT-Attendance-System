@@ -34,9 +34,15 @@
         {{ form.name }}
       </div>
 
-      <div class="mb-5" style="max-width:493px;">
-        <label class="form-label">Date</label>
-        {{ form.date }}
+      <div class="figma-form-grid mb-5">
+        <div>
+          <label class="form-label">Date</label>
+          {{ form.date }}
+        </div>
+        <div>
+          <label class="form-label">Expected Year/Section</label>
+          {{ form.expected_year_section }}
+        </div>
       </div>
 
       <div class="figma-form-grid mb-5">

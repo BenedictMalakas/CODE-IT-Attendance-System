@@ -14,6 +14,7 @@ urlpatterns = [
 
     # My QR
     path('my-qr/', views.my_qr_view, name='my_qr'),
+    path('download-qr/', views.download_qr_view, name='download_qr'),
 
     # My Attendance
     path('attendance/', views.attendance_view, name='attendance'),
