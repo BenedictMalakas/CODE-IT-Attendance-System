@@ -336,6 +336,7 @@ def dashboard_view(request):
         late = section_logs.filter(status='late').count()
         absent = section_logs.filter(status='absent').count()
         section_cards.append({
+            'id': section.id,
             'name': section.name,
             'year_level': section.year_level,
             'total_students': students.count(),

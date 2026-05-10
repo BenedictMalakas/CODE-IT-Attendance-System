@@ -37,7 +37,7 @@
 
     <div>
       <h2 class="profile-qr-title">Your QR Code</h2>
-      <div class="qr-frame mb-3" style="width:355px;">
+      <div class="qr-frame mb-3" style="width:min(355px, 100%);">
         {% if qr_token and qr_token.qr_path %}
           <img src="{{ qr_token.qr_path }}" alt="Student QR code" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
           <div class="qr-fallback"><i class="fa fa-qrcode"></i></div>

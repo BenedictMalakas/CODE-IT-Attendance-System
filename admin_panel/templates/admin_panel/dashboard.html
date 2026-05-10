@@ -12,28 +12,28 @@
   <div class="figma-stat-strip">
     {% if admin_role == 'representative' %}
       <article class="figma-stat">
-        <div class="figma-stat__icon"><i class="fa fa-terminal"></i></div>
+        <div class="figma-stat__icon"><i class="fa fa-calendar-days"></i></div>
         <div><div class="figma-stat__value">{{ total_events }}</div><div class="figma-stat__label">Total Events</div></div>
       </article>
       <article class="figma-stat">
-        <div class="figma-stat__icon"><i class="fa fa-user-check"></i></div>
+        <div class="figma-stat__icon"><i class="fa fa-user-graduate"></i></div>
         <div><div class="figma-stat__value">{{ total_students }}</div><div class="figma-stat__label">Active Students</div></div>
       </article>
       <article class="figma-stat">
-        <div class="figma-stat__icon"><i class="fa fa-tablet-screen-button"></i></div>
+        <div class="figma-stat__icon"><i class="fa fa-layer-group"></i></div>
         <div><div class="figma-stat__value">{{ total_sections }}</div><div class="figma-stat__label">Sections</div></div>
       </article>
     {% else %}
       <article class="figma-stat">
-        <div class="figma-stat__icon"><i class="fa fa-terminal"></i></div>
+        <div class="figma-stat__icon"><i class="fa fa-calendar-days"></i></div>
         <div><div class="figma-stat__value">{{ total_events }}</div><div class="figma-stat__label">Total Events</div></div>
       </article>
       <article class="figma-stat">
-        <div class="figma-stat__icon"><i class="fa fa-user-check"></i></div>
+        <div class="figma-stat__icon"><i class="fa fa-user-graduate"></i></div>
         <div><div class="figma-stat__value">{{ total_students }}</div><div class="figma-stat__label">Active Students</div></div>
       </article>
       <article class="figma-stat">
-        <div class="figma-stat__icon"><i class="fa fa-tablet-screen-button"></i></div>
+        <div class="figma-stat__icon"><i class="fa fa-layer-group"></i></div>
         <div><div class="figma-stat__value">{{ total_sections }}</div><div class="figma-stat__label">Sections</div></div>
       </article>
     {% endif %}
@@ -66,19 +66,28 @@
 </section>
 {% endif %}
 
-{% if admin_role != 'representative' %}
-<section class="figma-panel figma-add-section">
-  <p class="figma-panel__title mb-0">Add Section</p>
-  <form method="post" action="{% url 'admin_panel:sections_manage' %}" class="d-flex align-items-center gap-3 flex-wrap">
-    {% csrf_token %}
-    <select class="form-select form-select-sm" name="year_level" style="width:200px; min-height:38px !important; font-size:13px !important; padding:6px 14px !important;">
-      <option value="1">1st Year</option>
-      <option value="2">2nd Year</option>
-      <option value="3">3rd Year</option>
-      <option value="4">4th Year</option>
-    </select>
-    <button class="figma-btn figma-btn--sm" type="submit"><i class="fa fa-plus"></i> Add Section</button>
-  </form>
+
+
+{# Attendance Summary Chart — VITS & Chairperson only #}
+{% if admin_role != 'representative' and selected_event %}
+<section class="figma-panel">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="figma-panel__title mb-0" style="font-size:13px;">Attendance Summary</h2>
+    <div class="d-flex gap-1">
+      <button class="figma-btn figma-btn--sm chart-toggle active" data-type="line" type="button">
+        <i class="fa fa-chart-line"></i> Line
+      </button>
+      <button class="figma-btn figma-btn--sm figma-btn--plain chart-toggle" data-type="bar" type="button">
+        <i class="fa fa-chart-bar"></i> Bar
+      </button>
+      <button class="figma-btn figma-btn--sm figma-btn--plain chart-toggle" data-type="pie" type="button">
+        <i class="fa fa-chart-pie"></i> Pie
+      </button>
+    </div>
+  </div>
+  <div style="position:relative; height:320px;">
+    <canvas id="attendanceChart"></canvas>
+  </div>
 </section>
 {% endif %}
 
@@ -110,7 +119,7 @@
 
   <div class="section-card-grid">
     {% for section in section_cards %}
-    <article class="section-card">
+    <article class="section-card" onclick="window.location.href='{% url 'admin_panel:students' %}?section={{ section.id }}'">
       <h3>{{ section.name }}</h3>
       <p class="section-card__year">Year {{ section.year_level }}</p>
       <p class="section-card__students">{{ section.total_students }} students</p>
@@ -133,29 +142,6 @@
     {% endfor %}
   </div>
 </section>
-
-{# Attendance Summary Chart — VITS & Chairperson only #}
-{% if admin_role != 'representative' and selected_event %}
-<section class="figma-panel">
-  <div class="d-flex align-items-center justify-content-between mb-3">
-    <h2 class="figma-panel__title mb-0" style="font-size:13px;">Attendance Summary</h2>
-    <div class="d-flex gap-1">
-      <button class="figma-btn figma-btn--sm chart-toggle active" data-type="line" type="button">
-        <i class="fa fa-chart-line"></i> Line
-      </button>
-      <button class="figma-btn figma-btn--sm figma-btn--plain chart-toggle" data-type="bar" type="button">
-        <i class="fa fa-chart-bar"></i> Bar
-      </button>
-      <button class="figma-btn figma-btn--sm figma-btn--plain chart-toggle" data-type="pie" type="button">
-        <i class="fa fa-chart-pie"></i> Pie
-      </button>
-    </div>
-  </div>
-  <div style="position:relative; height:320px;">
-    <canvas id="attendanceChart"></canvas>
-  </div>
-</section>
-{% endif %}
 {% endblock %}
 
 {% block extra_head %}

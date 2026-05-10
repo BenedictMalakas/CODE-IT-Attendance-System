@@ -74,9 +74,9 @@ class StudentRegisterForm(forms.Form):
         label='Confirm Password',
     )
     id_photo = forms.FileField(
-        required=False,
-        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.png,.jpg,.jpeg,.webp'}),
-        label='ID Photo (optional)',
+        required=True,
+        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.png,.jpg,.jpeg,.webp', 'required': 'required'}),
+        label='ID Photo',
     )
 
     def __init__(self, *args, **kwargs):

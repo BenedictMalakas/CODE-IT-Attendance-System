@@ -149,7 +149,7 @@ def register_view(request):
             else:
                 section = form.cleaned_data['section']
 
-                # Handle optional ID photo upload
+                # Handle ID photo upload (required)
                 id_photo_path = ''
                 if 'id_photo' in request.FILES:
                     photo = request.FILES['id_photo']

@@ -934,6 +934,213 @@
         width: 120px;
         height: 120px;
       }
+
+      /* ====== MOBILE AUTH LAYOUT ====== */
+      body {
+        padding: 16px;
+        display: block;
+      }
+
+      .scene-shell {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 100vh;
+      }
+
+      .scene-frame {
+        position: relative !important;
+        width: 100% !important;
+        height: auto !important;
+        transform: none !important;
+        min-height: 100vh;
+      }
+
+      .scene-frame::before {
+        display: none;
+      }
+
+      .scene-backdrop-logo {
+        display: none;
+      }
+
+      .figma-pill {
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: auto !important;
+        height: auto !important;
+        padding: 12px 28px;
+        margin: 0 auto 16px;
+        max-width: 160px;
+      }
+
+      .figma-pill__label {
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        font-size: 18px !important;
+      }
+
+      .figma-progress {
+        display: none;
+      }
+
+      /* --- Panel: normal flow --- */
+      .figma-panel {
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        width: 100% !important;
+        height: auto !important;
+        max-width: 520px;
+        margin: 0 auto;
+        padding: 32px 24px 36px;
+        border-radius: 32px;
+        transform: none !important;
+        opacity: 1 !important;
+      }
+
+      /* --- Brand group --- */
+      .brand-group {
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        width: 100% !important;
+        height: auto !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 28px;
+      }
+
+      .brand-group__logo {
+        position: static;
+        width: 72px;
+        height: 72px;
+        margin-bottom: 10px;
+      }
+
+      .brand-group__wordmark {
+        position: static;
+        width: auto;
+        height: auto;
+        font-size: 36px;
+        justify-content: center;
+        margin-bottom: 4px;
+      }
+
+      .brand-group__subtitle {
+        position: static;
+        width: auto;
+        height: auto;
+        font-size: 10px;
+        margin-bottom: 2px;
+      }
+
+      .brand-group__description {
+        position: static;
+        width: auto;
+        height: auto;
+        font-size: 11px;
+      }
+
+      /* --- Form: normal flow --- */
+      .figma-panel form {
+        position: relative !important;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .figma-label {
+        position: static !important;
+        font-size: 15px;
+        margin-bottom: 6px;
+        margin-top: 14px;
+      }
+
+      .figma-label--register {
+        font-size: 14px;
+      }
+
+      .figma-field {
+        position: static !important;
+        width: 100% !important;
+        height: 48px !important;
+        border-radius: 24px;
+      }
+
+      .figma-field input,
+      .figma-field select {
+        font-size: 15px;
+        padding: 0 18px;
+      }
+
+      .figma-hint {
+        position: static !important;
+        display: block;
+        margin-top: 4px;
+        margin-bottom: 4px;
+        font-size: 10px;
+      }
+
+      .figma-submit {
+        position: static !important;
+        width: 100% !important;
+        height: 50px !important;
+        margin-top: 22px;
+        border-radius: 26px;
+      }
+
+      .figma-submit__label {
+        font-size: 17px;
+      }
+
+      .figma-footer-copy {
+        position: static !important;
+        text-align: center;
+        margin-top: 20px;
+        font-size: 14px;
+      }
+
+      .figma-footer-link {
+        position: static !important;
+        text-align: center;
+        display: block !important;
+        margin-top: 6px;
+        font-size: 14px;
+      }
+
+      /* Register: two-column pairs → stacked */
+      .figma-field--register {
+        height: 44px !important;
+      }
+
+      .figma-field--register input,
+      .figma-field--register select {
+        font-size: 14px;
+      }
+
+      .figma-submit__label--register {
+        font-size: 16px;
+      }
+
+      /* Floating alerts */
+      .floating-alerts {
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        max-width: none;
+      }
+
+      .floating-alert {
+        border-radius: 14px;
+        padding: 10px 14px;
+        font-size: 13px;
+      }
     }
   </style>
   {% block extra_head %}{% endblock %}
@@ -1112,7 +1319,8 @@
       let scale;
       
       if (window.innerWidth <= 768) {
-        scale = Math.max(0.42, Math.min(1, widthScale));
+        /* On mobile we use CSS flow layout — skip transform scaling */
+        scale = 1;
       } else {
         scale = Math.min(1, widthScale, heightScale);
       }

@@ -7,7 +7,7 @@
   --orange: #fd9b12;
   --purple: #912aff;
   --pink: #ed00be;
-  --green: #60de3a;
+  --green: #2e8b38;
   --late: #f7b15e;
   --red: #e35044;
   --panel: rgba(217, 217, 217, 0.2);
@@ -152,7 +152,6 @@ a {
 }
 
 .content {
-  width: min(1228px, calc(100vw - var(--sidebar-width)));
   padding: 18px 28px 36px;
 }
 
@@ -259,7 +258,7 @@ a {
 }
 
 .figma-stat__value {
-  color: #000;
+  color: var(--text);
   font-size: 24px;
   font-weight: 400;
   line-height: 1;
@@ -267,7 +266,7 @@ a {
 
 .figma-stat__label {
   margin-top: 4px;
-  color: #000;
+  color: var(--text);
   font-size: 12px;
   font-weight: 400;
   line-height: 1.1;
@@ -297,7 +296,7 @@ a {
   width: 100%;
   min-width: 920px;
   border-collapse: collapse;
-  color: #000;
+  color: var(--text);
 }
 
 .figma-table th,
@@ -351,7 +350,7 @@ a {
   border-radius: 0;
   display: inline-grid;
   place-items: center;
-  color: #000;
+  color: var(--text);
   background: #fff;
   font-size: 14px;
   text-decoration: none;
@@ -454,7 +453,7 @@ a {
 
 .figma-btn--plain {
   background: var(--panel);
-  color: #000;
+  color: var(--text);
 }
 
 .figma-btn--danger {
@@ -490,7 +489,7 @@ a {
 .figma-badge.present,
 .badge-present,
 .badge-active {
-  color: #38c830;
+  color: #2e8b38;
 }
 
 .figma-badge.late,
@@ -518,7 +517,7 @@ a {
 .form-label {
   display: block;
   margin: 0 0 14px;
-  color: #000;
+  color: var(--text);
   font-size: 16px;
   font-weight: 400;
   
@@ -534,7 +533,7 @@ textarea {
   border-radius: var(--radius-pill) !important;
   background: var(--panel) !important;
   box-shadow: var(--shadow) !important;
-  color: #000 !important;
+  color: var(--text) !important;
   padding: 14px 20px !important;
   font-family: 'Geist', 'Segoe UI', system-ui, sans-serif;
   font-size: 16px !important;
@@ -604,6 +603,16 @@ textarea::placeholder {
   text-align: center;
 }
 
+.section-card:not(.section-card--sm) {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.section-card:not(.section-card--sm):hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(83, 59, 181, 0.25);
+}
+
 .section-card--sm {
   min-height: 90px;
   padding: 10px 10px;
@@ -611,7 +620,7 @@ textarea::placeholder {
 
 .section-card h3 {
   margin: 0;
-  color: #000;
+  color: var(--text);
   font-size: 20px;
   font-weight: 600;
   line-height: 1;
@@ -746,7 +755,7 @@ textarea::placeholder {
   
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 900px) {
   .figma-stat-strip,
   .figma-stat-strip.four,
   .figma-grid-2,
@@ -836,7 +845,6 @@ textarea::placeholder {
   }
 
   .content {
-    width: min(1168px, calc(100vw - var(--sidebar-width)));
     padding: 18px 24px 34px;
   }
 

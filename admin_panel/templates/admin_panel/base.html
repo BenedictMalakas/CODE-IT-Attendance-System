@@ -37,7 +37,7 @@
     {# Section — Chairperson ONLY #}
     {% if request.session.admin_role == 'chairperson' %}
       <a href="{% url 'admin_panel:sections_manage' %}" class="{% block nav_sections %}{% endblock %}">
-        <i class="fa fa-tablet-screen-button"></i> Section
+        <i class="fa fa-layer-group"></i> Section
       </a>
     {% endif %}
 
@@ -50,7 +50,7 @@
 
     {# Events — All Roles #}
     <a href="{% url 'admin_panel:events' %}" class="{% block nav_events %}{% endblock %}">
-      <i class="fa fa-calendar-plus"></i> Events
+      <i class="fa fa-calendar-days"></i> Events
     </a>
 
     {# Activity Logs removed per user request #}
