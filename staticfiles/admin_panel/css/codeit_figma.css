@@ -541,6 +541,78 @@ textarea {
   
 }
 
+.form-select,
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #5f49ba 50%),
+    linear-gradient(135deg, #5f49ba 50%, transparent 50%) !important;
+  background-position:
+    calc(100% - 20px) 50%,
+    calc(100% - 14px) 50% !important;
+  background-size: 6px 6px, 6px 6px !important;
+  background-repeat: no-repeat !important;
+  padding-right: 42px !important;
+}
+
+.sensitive-blur {
+  display: inline-block;
+  cursor: pointer;
+  filter: blur(5px);
+  transition: filter 0.16s ease;
+  user-select: none;
+}
+
+.sensitive-blur.revealed {
+  filter: none;
+  user-select: text;
+}
+
+.admin-password-field {
+  position: relative !important;
+  display: block;
+  width: 100%;
+}
+
+.admin-password-field .form-control,
+.admin-password-field input[type='password'],
+.admin-password-field input[type='text'] {
+  width: 100% !important;
+  padding-right: 52px !important;
+}
+
+.admin-password-toggle {
+  position: absolute !important;
+  right: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 28px !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #5f49ba !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer;
+  z-index: 10;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.admin-password-toggle i {
+  pointer-events: none;
+  font-size: 15px;
+}
+
 input[type="checkbox"],
 input[type="radio"] {
   all: revert;

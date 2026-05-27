@@ -79,6 +79,13 @@ class StudentRegisterForm(forms.Form):
         widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.png,.jpg,.jpeg,.webp', 'required': 'required'}),
         label='ID Photo',
     )
+    privacy_agreement = forms.BooleanField(
+        required=True,
+        label='Data Privacy Agreement',
+        error_messages={
+            'required': 'You must accept the data privacy agreement before registering.',
+        },
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

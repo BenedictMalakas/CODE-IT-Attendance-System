@@ -1,0 +1,265 @@
+.codeit-select {
+  --codeit-select-bg: rgba(255, 255, 255, 0.72);
+  --codeit-select-border: rgba(83, 59, 181, 0.18);
+  --codeit-select-text: #130257;
+  --codeit-select-muted: rgba(19, 2, 87, 0.58);
+  --codeit-select-accent: #533bb5;
+  --codeit-select-accent-strong: #130257;
+  --codeit-select-shadow: 0 12px 28px rgba(19, 2, 87, 0.12);
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+  color: var(--codeit-select-text);
+  font-family: inherit;
+}
+
+.codeit-select--block,
+.student-auth__field .codeit-select,
+.figma-field .codeit-select {
+  display: block;
+  width: 100%;
+}
+
+.student-auth__field .codeit-select,
+.figma-field .codeit-select {
+  height: 100%;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.codeit-select__native {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+}
+
+.codeit-select__button {
+  position: relative;
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 42px 8px 16px;
+  border: 1px solid var(--codeit-select-border);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(241, 238, 255, 0.72)),
+    var(--codeit-select-bg);
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.12);
+  color: var(--codeit-select-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+.codeit-select__button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 0%, rgba(253, 155, 18, 0.18), transparent 34%);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+.codeit-select__button::after {
+  content: "";
+  position: absolute;
+  right: 17px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--codeit-select-accent);
+  border-bottom: 2px solid var(--codeit-select-accent);
+  transform: translateY(-65%) rotate(45deg);
+  transition: transform 0.2s ease, border-color 0.18s ease;
+}
+
+.codeit-select__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.codeit-select__button:hover,
+.codeit-select__button:focus-visible,
+.codeit-select.is-open .codeit-select__button {
+  border-color: rgba(83, 59, 181, 0.44);
+  box-shadow: var(--codeit-select-shadow);
+  transform: translateY(-1px);
+}
+
+.codeit-select__button:hover::before,
+.codeit-select__button:focus-visible::before,
+.codeit-select.is-open .codeit-select__button::before {
+  opacity: 1;
+}
+
+.codeit-select.is-open .codeit-select__button::after {
+  border-color: var(--codeit-select-accent-strong);
+  transform: translateY(-35%) rotate(225deg);
+}
+
+.codeit-select.is-disabled {
+  opacity: 0.62;
+}
+
+.codeit-select.is-disabled .codeit-select__button {
+  cursor: not-allowed;
+  transform: none;
+}
+
+.codeit-select.is-placeholder .codeit-select__label {
+  color: var(--codeit-select-muted);
+}
+
+.codeit-select.is-invalid .codeit-select__button {
+  border-color: #e35044;
+  box-shadow: 0 0 0 3px rgba(227, 80, 68, 0.16);
+}
+
+.codeit-select--small .codeit-select__button,
+.form-select-sm + .codeit-select__button {
+  min-height: 36px;
+  padding: 6px 38px 6px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+}
+
+.student-auth__field .codeit-select__button,
+.figma-field .codeit-select__button {
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  padding: 0 42px 0 18px;
+  font-size: inherit;
+}
+
+.student-auth__field .codeit-select__button:hover,
+.student-auth__field .codeit-select__button:focus-visible,
+.student-auth__field .codeit-select.is-open .codeit-select__button,
+.figma-field .codeit-select__button:hover,
+.figma-field .codeit-select__button:focus-visible,
+.figma-field .codeit-select.is-open .codeit-select__button {
+  transform: none;
+  box-shadow: none;
+}
+
+.codeit-select__list {
+  position: fixed;
+  z-index: 5000;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid rgba(83, 59, 181, 0.18);
+  border-radius: 16px;
+  background: rgba(252, 249, 254, 0.98);
+  box-shadow: 0 22px 55px rgba(19, 2, 87, 0.22);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transform-origin: top center;
+  animation: codeitSelectIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.codeit-select__list[data-placement="top"] {
+  transform-origin: bottom center;
+}
+
+.codeit-select__option {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #130257;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.codeit-select__option:hover,
+.codeit-select__option:focus-visible {
+  background: rgba(83, 59, 181, 0.1);
+  transform: translateX(2px);
+}
+
+.codeit-select__option.is-selected {
+  background: linear-gradient(135deg, #130257, #533bb5);
+  color: #fff;
+}
+
+.codeit-select__option.is-placeholder:not(.is-selected) {
+  color: rgba(19, 2, 87, 0.54);
+}
+
+.codeit-select__option[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+}
+
+@keyframes codeitSelectIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 520px) {
+  .codeit-select__button {
+    min-height: 38px;
+    font-size: 13px;
+  }
+
+  .codeit-select__list {
+    max-height: 240px;
+    border-radius: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codeit-select__button,
+  .codeit-select__button::before,
+  .codeit-select__button::after,
+  .codeit-select__option {
+    transition: none;
+  }
+
+  .codeit-select__list {
+    animation: none;
+  }
+}

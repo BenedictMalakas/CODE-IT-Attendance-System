@@ -277,6 +277,195 @@
       font-weight: 400;
     }
 
+    .student-auth__agreement {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: clamp(5px, 0.8dvh, 8px);
+      color: #1b1641;
+      font-family: Geist, Poppins, sans-serif;
+      font-size: 11px;
+      line-height: 1.25;
+      text-align: center;
+    }
+
+    .student-auth__agreement input {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      margin-top: 1px;
+      display: grid;
+      place-items: center;
+      border: 1.5px solid #140357;
+      border-radius: 4px;
+      background: #fff;
+      accent-color: #140357;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .student-auth__agreement input:checked {
+      background: #140357;
+      border-color: #140357;
+    }
+
+    .student-auth__agreement input:checked::after {
+      content: "";
+      width: 4px;
+      height: 8px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg) translate(-1px, -1px);
+    }
+
+    .student-auth__agreement input:focus-visible {
+      box-shadow: 0 0 0 3px rgba(95, 73, 186, 0.24);
+    }
+
+    .student-auth__agreement-text {
+      min-width: 0;
+    }
+
+    .student-auth__agreement-button {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #5f49ba;
+      font: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+    }
+
+    .privacy-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(12, 7, 40, 0.55);
+    }
+
+    .privacy-modal.is-open {
+      display: flex;
+    }
+
+    .privacy-modal__dialog {
+      width: min(640px, 100%);
+      max-height: min(720px, calc(100dvh - 40px));
+      display: flex;
+      flex-direction: column;
+      border-radius: 18px;
+      background: #fcf9fe;
+      box-shadow: 0 24px 70px rgba(19, 2, 87, 0.28);
+      overflow: hidden;
+    }
+
+    .privacy-modal__header {
+      padding: 18px 22px 12px;
+      border-bottom: 1px solid rgba(20, 3, 87, 0.08);
+    }
+
+    .privacy-modal__eyebrow {
+      margin: 0 0 5px;
+      color: #5f49ba;
+      font-family: Geist, Poppins, sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.3px;
+    }
+
+    .privacy-modal__title {
+      margin: 0;
+      color: #140357;
+      font-family: Geist, Poppins, sans-serif;
+      font-size: 22px;
+      line-height: 1.15;
+    }
+
+    .privacy-modal__body {
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 16px 22px;
+      overflow-y: auto;
+      color: #1b1641;
+      font-family: Geist, Poppins, sans-serif;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .privacy-modal__body h2 {
+      margin: 18px 0 8px;
+      color: #140357;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .privacy-modal__body h2:first-child {
+      margin-top: 0;
+    }
+
+    .privacy-modal__body p,
+    .privacy-modal__body ul {
+      margin: 0 0 12px;
+    }
+
+    .privacy-modal__body ul {
+      padding-left: 18px;
+    }
+
+    .privacy-modal__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 22px 18px;
+      border-top: 1px solid rgba(20, 3, 87, 0.08);
+    }
+
+    .privacy-modal__status {
+      margin: 0;
+      color: #5f49ba;
+      font-family: Geist, Poppins, sans-serif;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .privacy-modal__actions {
+      display: flex;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .privacy-modal__button {
+      min-width: 92px;
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(20, 3, 87, 0.18);
+      background: #fff;
+      color: #140357;
+      font-family: Geist, Poppins, sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .privacy-modal__button--accept {
+      display: none;
+      border-color: #fde5c6;
+      background: #fde5c6;
+      color: #c66f00;
+    }
+
+    .privacy-modal__button--accept.is-visible {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     @media (max-width: 768px) {
       body {
         padding: 0;
@@ -389,6 +578,19 @@
         margin-top: 4px;
         font-size: 14px;
       }
+
+      .student-auth__agreement {
+        font-size: 10px;
+        gap: 7px;
+      }
+
+      .privacy-modal {
+        padding: 12px;
+      }
+
+      .privacy-modal__dialog {
+        max-height: calc(100dvh - 24px);
+      }
     }
 
     @media (max-width: 420px) {
@@ -485,6 +687,39 @@
       .student-auth__signin {
         margin-top: 3px;
         font-size: 13px;
+      }
+
+      .student-auth__agreement {
+        margin-top: 4px;
+        font-size: 9px;
+      }
+
+      .student-auth__agreement input {
+        width: 14px;
+        height: 14px;
+      }
+
+      .privacy-modal__header {
+        padding: 14px 16px 10px;
+      }
+
+      .privacy-modal__title {
+        font-size: 19px;
+      }
+
+      .privacy-modal__body {
+        padding: 12px 16px;
+        font-size: 12px;
+      }
+
+      .privacy-modal__footer {
+        padding: 10px 16px 14px;
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .privacy-modal__actions {
+        justify-content: flex-end;
       }
     }
   </style>
@@ -591,12 +826,71 @@
           </div>
         </div>
 
+        <div class="student-auth__agreement">
+          <input id="privacyAgreementInput" name="privacy_agreement" type="checkbox" required aria-label="Accept Data Privacy Agreement" aria-describedby="privacyAgreementText" {% if form.privacy_agreement.value %}checked{% endif %} />
+          <span class="student-auth__agreement-text" id="privacyAgreementText">
+            I agree to the
+            <button type="button" class="student-auth__agreement-button" id="openPrivacyAgreement">
+              Data Privacy Agreement
+            </button>
+            for CODE-IT registration.
+          </span>
+        </div>
+
         <button class="student-auth__submit" type="submit">Create Account</button>
       </form>
 
       <a class="student-auth__signin" href="{% url 'student_portal:login' %}">Sign in</a>
     </div>
   </section>
+
+  <div class="privacy-modal" id="privacyAgreementModal" role="dialog" aria-modal="true" aria-labelledby="privacyAgreementTitle" aria-hidden="true">
+    <div class="privacy-modal__dialog">
+      <div class="privacy-modal__header">
+        <p class="privacy-modal__eyebrow">CODE-IT Registration Consent</p>
+        <h1 class="privacy-modal__title" id="privacyAgreementTitle">Data Privacy Agreement</h1>
+      </div>
+      <div class="privacy-modal__body" id="privacyAgreementBody" tabindex="0">
+        <h2>Purpose of Collection</h2>
+        <p>
+          CODE-IT collects and processes the information you submit in this registration form so your student account can be reviewed, approved, secured, and used for attendance services. This includes your name, student ID, year level, section, email address, password credentials, uploaded ID photo, QR token records, login activity needed for security, and attendance records connected to system events.
+        </p>
+
+        <h2>RA 10173 - Data Privacy Act of 2012</h2>
+        <p>
+          Republic Act No. 10173 protects personal information in information and communications systems and requires personal data processing to follow the principles of transparency, legitimate purpose, and proportionality. By accepting this agreement, you give informed electronic consent for CODE-IT to process your submitted data only for registration, identity verification, account administration, attendance recording, system security, audit logs, and official school-related reporting.
+        </p>
+        <p>
+          You understand that CODE-IT must keep your information accurate, relevant, protected against unauthorized access, and retained only for as long as needed for the stated purposes, legal obligations, legitimate school records, or system security review.
+        </p>
+
+        <h2>RA 10175 - Cybercrime Prevention Act of 2012</h2>
+        <p>
+          Republic Act No. 10175 recognizes the need to protect computer systems, networks, databases, and the confidentiality, integrity, and availability of stored information from misuse, abuse, and illegal access. You agree not to submit false information, use another person's credentials, tamper with QR tokens, bypass access controls, attempt unauthorized access, or misuse CODE-IT in a way that may violate system rules or applicable law.
+        </p>
+
+        <h2>Your Responsibilities</h2>
+        <ul>
+          <li>Submit accurate registration details and your own valid ID photo.</li>
+          <li>Keep your password, student ID, and QR credentials confidential.</li>
+          <li>Use the system only for legitimate student attendance and account purposes.</li>
+          <li>Report suspected unauthorized access, account compromise, or incorrect records to an authorized officer.</li>
+        </ul>
+
+        <h2>Your Consent</h2>
+        <p>
+          If you accept, CODE-IT may process your registration and attendance data for the purposes listed above. If you reject, your registration will not be submitted. You may contact authorized school or CODE-IT officers to ask about access, correction, or appropriate handling of your personal information.
+        </p>
+      </div>
+      <div class="privacy-modal__footer">
+        <p class="privacy-modal__status" id="privacyAgreementStatus">Scroll to the bottom to enable Accept.</p>
+        <div class="privacy-modal__actions">
+          <button type="button" class="privacy-modal__button" id="rejectPrivacyAgreement">Reject</button>
+          <button type="button" class="privacy-modal__button privacy-modal__button--accept" id="acceptPrivacyAgreement">Accept</button>
+        </div>
+      </div>
+    </div>
+  </div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -606,6 +900,14 @@
     const sectionSelect = document.getElementById('id_section');
     const passwordRegisterInput = document.getElementById('passwordRegisterInput');
     const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+    const privacyAgreementInput = document.getElementById('privacyAgreementInput');
+    const privacyAgreementModal = document.getElementById('privacyAgreementModal');
+    const privacyAgreementBody = document.getElementById('privacyAgreementBody');
+    const privacyAgreementStatus = document.getElementById('privacyAgreementStatus');
+    const acceptPrivacyAgreement = document.getElementById('acceptPrivacyAgreement');
+    const rejectPrivacyAgreement = document.getElementById('rejectPrivacyAgreement');
+    const openPrivacyAgreement = document.getElementById('openPrivacyAgreement');
+    let privacyAgreementAccepted = Boolean(privacyAgreementInput?.checked);
 
     if (registerSidInput) {
       registerSidInput.addEventListener('input', function() {
@@ -649,12 +951,92 @@
       loadSectionsByYear(yearLevelSelect.value);
     }
 
+    function updatePrivacyAgreementScrollState() {
+      if (!privacyAgreementBody || !acceptPrivacyAgreement || !privacyAgreementStatus) return;
+      const reachedBottom = privacyAgreementBody.scrollTop + privacyAgreementBody.clientHeight >= privacyAgreementBody.scrollHeight - 4;
+      if (reachedBottom) {
+        acceptPrivacyAgreement.classList.add('is-visible');
+        privacyAgreementStatus.textContent = 'You may now accept the agreement.';
+      }
+    }
+
+    function resetPrivacyAgreementScroll() {
+      if (!privacyAgreementBody || !acceptPrivacyAgreement || !privacyAgreementStatus) return;
+      privacyAgreementBody.scrollTop = 0;
+      acceptPrivacyAgreement.classList.remove('is-visible');
+      privacyAgreementStatus.textContent = 'Scroll to the bottom to enable Accept.';
+      setTimeout(updatePrivacyAgreementScrollState, 0);
+    }
+
+    function openPrivacyModal() {
+      if (!privacyAgreementModal || !privacyAgreementBody) return;
+      resetPrivacyAgreementScroll();
+      privacyAgreementModal.classList.add('is-open');
+      privacyAgreementModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => privacyAgreementBody.focus(), 0);
+    }
+
+    function closePrivacyModal() {
+      if (!privacyAgreementModal) return;
+      privacyAgreementModal.classList.remove('is-open');
+      privacyAgreementModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function setPrivacyAgreement(accepted) {
+      privacyAgreementAccepted = accepted;
+      if (privacyAgreementInput) {
+        privacyAgreementInput.checked = accepted;
+      }
+    }
+
+    privacyAgreementBody?.addEventListener('scroll', function() {
+      updatePrivacyAgreementScrollState();
+    });
+
+    privacyAgreementInput?.addEventListener('click', function(event) {
+      event.preventDefault();
+      openPrivacyModal();
+    });
+
+    privacyAgreementInput?.addEventListener('invalid', function(event) {
+      event.preventDefault();
+      window.pushFloatingAlert('Please review and accept the data privacy agreement before registering.', 'error');
+      openPrivacyModal();
+    });
+
+    openPrivacyAgreement?.addEventListener('click', function(event) {
+      event.preventDefault();
+      openPrivacyModal();
+    });
+
+    acceptPrivacyAgreement?.addEventListener('click', function() {
+      setPrivacyAgreement(true);
+      closePrivacyModal();
+    });
+
+    rejectPrivacyAgreement?.addEventListener('click', function() {
+      setPrivacyAgreement(false);
+      closePrivacyModal();
+    });
+
+    privacyAgreementModal?.addEventListener('click', function(event) {
+      if (event.target === privacyAgreementModal) {
+        closePrivacyModal();
+      }
+    });
+
     document.getElementById('registerForm')?.addEventListener('submit', function(event) {
       const passwordValue = passwordRegisterInput ? passwordRegisterInput.value : '';
       const confirmValue = confirmPasswordInput ? confirmPasswordInput.value : '';
       const hasLength = passwordValue.length >= 8;
       const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(passwordValue);
 
+      if (!privacyAgreementAccepted || !privacyAgreementInput?.checked) {
+        event.preventDefault();
+        window.pushFloatingAlert('Please review and accept the data privacy agreement before registering.', 'error');
+        openPrivacyModal();
+        return;
+      }
       if (!hasLength || !hasSpecial) {
         event.preventDefault();
         window.pushFloatingAlert('Password must be at least 8 characters and include one special character.', 'error');

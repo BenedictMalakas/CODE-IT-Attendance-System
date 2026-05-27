@@ -1,0 +1,48 @@
+.codeit-page-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(252, 249, 254, 0.58);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.codeit-page-loading.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.codeit-page-loading__spinner {
+  width: clamp(54px, 8vw, 78px);
+  height: clamp(54px, 8vw, 78px);
+  border-radius: 50%;
+  border: 5px solid rgba(19, 2, 87, 0.16);
+  border-top-color: #130257;
+  border-right-color: #fd9b12;
+  box-shadow:
+    0 18px 44px rgba(19, 2, 87, 0.18),
+    inset 0 0 18px rgba(255, 255, 255, 0.7);
+  animation: codeitLoadingSpin 0.78s linear infinite;
+}
+
+@keyframes codeitLoadingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codeit-page-loading {
+    transition: none;
+  }
+
+  .codeit-page-loading__spinner {
+    animation-duration: 1.8s;
+  }
+}

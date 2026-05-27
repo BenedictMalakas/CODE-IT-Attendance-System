@@ -12,6 +12,7 @@
   <link rel="icon" type="image/png" sizes="48x48" href="{% static 'student_portal/img/codenew (1)-48.png' %}?v=5" />
   <link rel="apple-touch-icon" href="{% static 'student_portal/img/codenew (1).png' %}?v=5" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Special+Gothic+Expanded+One&family=Unbounded:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="{% static 'student_portal/css/custom_select.css' %}?v=20260527-2" rel="stylesheet" />
   <script>document.documentElement.classList.add('js');</script>
   <noscript>
     <style>
@@ -1417,8 +1418,8 @@
 
     const splashEnabled = {% block splash_enabled %}true{% endblock %};
     const splashBrandPopMs = 4300;
-    const splashRevealMs = 6100;
-    const splashCleanupMs = 6850;
+    const splashRevealMs = 7200;
+    const splashCleanupMs = 7950;
 
     /* --- Splash runs only ONCE per browser session --- */
     const SPLASH_KEY = 'codeit_splash_shown';
@@ -1551,12 +1552,11 @@
     window.addEventListener('resize', applySceneScale);
     window.addEventListener('resize', applySplashScale);
 
-    /* Show loading overlay on login form submit */
+    /* Show existing liquid loading overlay on auth form submit */
     const loginLoading = document.getElementById('loginLoading');
     if (loginLoading) {
       document.querySelectorAll('form[method="post"]').forEach(form => {
         form.addEventListener('submit', (e) => {
-          // Only show loader if the submission hasn't been cancelled by validation
           setTimeout(() => {
             if (!e.defaultPrevented) {
               loginLoading.classList.add('active');
@@ -1566,6 +1566,7 @@
       });
     }
   </script>
+  <script src="{% static 'student_portal/js/custom_select.js' %}?v=20260527-2"></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>
