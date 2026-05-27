@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from .models import Admin, Section, Student, Event, QRToken, AttendanceLog
+from .services import sorted_sections
 from .serializers import (
     AdminSerializer, StudentSerializer, EventSerializer,
     QRTokenSerializer, AttendanceLogSerializer
@@ -13,9 +14,9 @@ from .serializers import (
 def sections_by_year_api(request):
     year = request.GET.get('year', '')
     if year:
-        sections = Section.objects.filter(year_level=year).order_by('name')
+        sections = sorted_sections(Section.objects.filter(year_level=year))
     else:
-        sections = Section.objects.all().order_by('year_level', 'name')
+        sections = sorted_sections(Section.objects.all())
     data = [{'id': str(s.id), 'name': s.name} for s in sections]
     return Response({'sections': data})
 

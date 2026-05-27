@@ -120,3 +120,22 @@ class DDoSProtectionMiddleware:
         response['Permissions-Policy'] = 'camera=(self), microphone=(), geolocation=()'
 
         return response
+
+
+class EventStatusAutoUpdateMiddleware:
+    """Keep event statuses fresh outside the admin dashboard."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if not any(request.path.startswith(prefix) for prefix in ('/static/', '/media/', '/favicon.ico')):
+            if cache.add('event_status_auto_update_lock', True, timeout=60):
+                try:
+                    from myapp.services import auto_update_event_statuses
+
+                    auto_update_event_statuses()
+                except Exception:
+                    cache.delete('event_status_auto_update_lock')
+
+        return self.get_response(request)

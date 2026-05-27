@@ -6,7 +6,6 @@
 {% block content %}
 <section class="figma-panel">
   <h1 class="figma-heading">Event Scheduling</h1>
-
   <div class="d-flex align-items-center gap-3 mt-3 mb-3">
     <p class="figma-section-heading">All Events <span class="figma-muted" style="font-size:12px; margin-left:4px;">Event Directory</span></p>
     {% if request.session.admin_role != 'representative' %}
@@ -99,7 +98,7 @@
         </tr>
         {% endfor %}
       </tbody>
-    </table>
+      </table>
   </div>
 </section>
 

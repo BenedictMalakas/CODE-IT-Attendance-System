@@ -4,32 +4,96 @@
 {% block nav_students %}active{% endblock %}
 {% block nav_students_chair %}active{% endblock %}
 
+{% block extra_head %}
+<style>
+  #deleteStudentModal .modal-content,
+  #rejectModal .modal-content,
+  #qrPasswordModal .modal-content,
+  #unblurAllModal .modal-content {
+    background: #fff;
+    opacity: 1;
+  }
+  .figma-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+  .figma-page-btn,
+  .figma-page-ellipsis {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .figma-page-btn {
+    border: 1px solid rgba(95, 73, 186, 0.2);
+    background: #fff;
+    color: var(--violet);
+    text-decoration: none;
+    transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+  }
+  .figma-page-btn:hover {
+    background: rgba(95, 73, 186, 0.08);
+    color: var(--violet);
+  }
+  .figma-page-btn.active {
+    width: 44px;
+    height: 44px;
+    background: var(--violet);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 10px 24px rgba(95, 73, 186, 0.24);
+  }
+  .figma-page-ellipsis {
+    color: var(--muted);
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="figma-panel">
   <h1 class="figma-heading">Student Management</h1>
 
   <div class="d-flex flex-wrap gap-3 align-items-center mt-3 mb-3">
     <div class="filter-tabs">
-      <a href="?status=all&section={{ section_filter }}" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">All</a>
-      <a href="?status=pending&section={{ section_filter }}" class="filter-tab {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
-      <a href="?status=active&section={{ section_filter }}" class="filter-tab {% if status_filter == 'active' %}active{% endif %}">Active</a>
-      <a href="?status=rejected&section={{ section_filter }}" class="filter-tab {% if status_filter == 'rejected' %}active{% endif %}">Rejected</a>
+      <a href="?status=all&year={{ year_filter }}&section={{ section_filter }}" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">All</a>
+      <a href="?status=pending&year={{ year_filter }}&section={{ section_filter }}" class="filter-tab {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
+      <a href="?status=active&year={{ year_filter }}&section={{ section_filter }}" class="filter-tab {% if status_filter == 'active' %}active{% endif %}">Active</a>
+      <a href="?status=rejected&year={{ year_filter }}&section={{ section_filter }}" class="filter-tab {% if status_filter == 'rejected' %}active{% endif %}">Rejected</a>
     </div>
     <form method="get" class="ms-auto d-flex align-items-center gap-2">
       <input type="hidden" name="status" value="{{ status_filter }}">
+      <select name="year" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width:150px;">
+        <option value="all" {% if year_filter == 'all' %}selected{% endif %}>All Year Levels</option>
+        {% for year in year_levels %}
+          <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>Year {{ year }}</option>
+        {% endfor %}
+      </select>
       <select name="section" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width:160px;">
         <option value="all" {% if section_filter == 'all' %}selected{% endif %}>All Sections</option>
-        {% for sec in all_sections %}
+        {% for sec in section_options %}
           <option value="{{ sec.id }}" {% if section_filter == sec.id|stringformat:"s" %}selected{% endif %}>{{ sec.name }}</option>
         {% endfor %}
       </select>
     </form>
+    <button type="button" class="figma-btn figma-btn--plain figma-btn--sm"
+            data-bs-toggle="modal" data-bs-target="#unblurAllModal">
+      <i class="fa fa-eye"></i> Unblur All
+    </button>
   </div>
 
   {# Bulk approve form #}
   <form method="post" id="bulkForm">
     {% csrf_token %}
     <input type="hidden" name="action" value="bulk_approve">
+    <input type="hidden" name="next" value="{{ current_query }}">
 
     {% if status_filter == 'pending' or status_filter == 'all' %}
     <div class="d-flex align-items-center gap-3 mb-3">
@@ -65,8 +129,20 @@
               <input type="checkbox" name="student_ids" value="{{ student.id }}" class="form-check-input bulk-cb mt-0">
               {% endif %}
             </td>
-            <td>{{ student.student_id }}</td>
-            <td>{{ student.name }}</td>
+            <td>
+              {% if student.status == 'pending' %}
+                {{ student.student_id }}
+              {% else %}
+                <span class="sensitive-blur" role="button" tabindex="0" title="Click to reveal column">{{ student.student_id }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if student.status == 'pending' %}
+                {{ student.name }}
+              {% else %}
+                <span class="sensitive-blur" role="button" tabindex="0" title="Click to reveal column">{{ student.name }}</span>
+              {% endif %}
+            </td>
             <td>{{ student.section.name }}</td>
             <td>{{ student.year_level }}</td>
             <td>
@@ -84,21 +160,23 @@
                   <button type="submit" formaction="{% url 'admin_panel:student_approve' student.id %}" class="figma-icon-btn" title="Approve"><i class="fa fa-check"></i></button>
                 {% endif %}
                 {% if student.status == 'active' %}
-                  <button type="submit" formaction="{% url 'admin_panel:generate_qr' student.id %}" class="figma-icon-btn" title="Regenerate QR Code"><i class="fa fa-qrcode"></i></button>
-                  <button type="submit" formaction="{% url 'admin_panel:revoke_qr' student.id %}" class="figma-icon-btn figma-icon-btn--link" title="Revoke & Reissue QR"
-                          onclick="return confirm('Revoke and regenerate QR for {{ student.name }}?')">
+                  <button type="button" class="figma-icon-btn figma-icon-btn--link" title="Revoke & Reissue QR"
+                          data-bs-toggle="modal" data-bs-target="#qrPasswordModal"
+                          data-action-url="{% url 'admin_panel:revoke_qr' student.id %}"
+                          data-action-label="revoke and regenerate QR for"
+                          data-student-name="{{ student.name }}">
                     <i class="fa fa-rotate"></i>
                   </button>
                 {% endif %}
                 {% if student.status == 'pending' or student.status == 'active' %}
-                <button class="figma-icon-btn figma-icon-btn--danger" title="Reject"
+                <button type="button" class="figma-icon-btn figma-icon-btn--danger" title="Reject"
                         data-bs-toggle="modal" data-bs-target="#rejectModal"
                         data-student-id="{{ student.id }}"
                         data-student-name="{{ student.name }}">
                   <i class="fa fa-xmark"></i>
                 </button>
                 {% endif %}
-                <button class="figma-icon-btn figma-icon-btn--delete" title="Delete Student"
+                <button type="button" class="figma-icon-btn figma-icon-btn--delete" title="Delete Student"
                         data-bs-toggle="modal" data-bs-target="#deleteStudentModal"
                         data-student-id="{{ student.id }}"
                         data-student-name="{{ student.name }}">
@@ -118,13 +196,23 @@
   </form>
 
   {% if page_obj.has_other_pages %}
-  <nav class="d-flex justify-content-center align-items-center gap-2 mt-4">
+  <nav class="figma-pagination" aria-label="Student pagination">
     {% if page_obj.has_previous %}
-      <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&section={{ section_filter }}" class="figma-btn figma-btn--plain figma-btn--sm"><i class="fa fa-chevron-left"></i></a>
+      <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&year={{ year_filter }}&section={{ section_filter }}" class="figma-page-btn" aria-label="Previous page"><i class="fa fa-chevron-left"></i></a>
     {% endif %}
-    <span class="figma-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% for page_number in pagination_pages %}
+      {% if page_number %}
+        <a href="?page={{ page_number }}&status={{ status_filter }}&year={{ year_filter }}&section={{ section_filter }}"
+           class="figma-page-btn {% if page_number == page_obj.number %}active{% endif %}"
+           {% if page_number == page_obj.number %}aria-current="page"{% endif %}>
+          {{ page_number }}
+        </a>
+      {% else %}
+        <span class="figma-page-ellipsis">...</span>
+      {% endif %}
+    {% endfor %}
     {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&section={{ section_filter }}" class="figma-btn figma-btn--plain figma-btn--sm"><i class="fa fa-chevron-right"></i></a>
+      <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&year={{ year_filter }}&section={{ section_filter }}" class="figma-page-btn" aria-label="Next page"><i class="fa fa-chevron-right"></i></a>
     {% endif %}
   </nav>
   {% endif %}
@@ -137,14 +225,24 @@
         <h5 class="modal-title text-danger"><i class="fa fa-triangle-exclamation me-2"></i>Delete Student</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">Delete <strong id="deleteStudentName"></strong>? This also deletes their QR token and attendance records.</div>
-      <div class="modal-footer border-0">
-        <button class="figma-btn figma-btn--plain" data-bs-dismiss="modal" type="button">Cancel</button>
-        <form id="deleteStudentForm" method="post">
-          {% csrf_token %}
+      <form id="deleteStudentForm" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ current_query }}">
+        <div class="modal-body">
+          <p>Delete <strong id="deleteStudentName"></strong>? This also deletes their QR token and attendance records.</p>
+          <label class="form-label text-start w-100" for="deleteStudentPassword">Current Password</label>
+          <div class="admin-password-field">
+            <input id="deleteStudentPassword" class="form-control" type="password" name="reauth_password" autocomplete="current-password" required>
+            <button type="button" class="admin-password-toggle" aria-label="Toggle password visibility">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button class="figma-btn figma-btn--plain" data-bs-dismiss="modal" type="button">Cancel</button>
           <button type="submit" class="figma-btn figma-btn--danger">Delete</button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -158,6 +256,7 @@
       </div>
       <form id="rejectForm" method="post">
         {% csrf_token %}
+        <input type="hidden" name="next" value="{{ current_query }}">
         <div class="modal-body">
           <p>Reject <strong id="rejectStudentName"></strong>?</p>
           <label class="form-label">Reason</label>
@@ -171,10 +270,70 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="qrPasswordModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content figma-card">
+      <div class="modal-header border-0">
+        <h5 class="modal-title">Confirm QR Action</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="qrPasswordForm" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ current_query }}">
+        <div class="modal-body">
+          <p><span id="qrActionText"></span> <strong id="qrStudentName"></strong>?</p>
+          <label class="form-label" for="qrActionPassword">Current Password</label>
+          <div class="admin-password-field">
+            <input id="qrActionPassword" class="form-control" type="password" name="reauth_password" autocomplete="current-password" required>
+            <button type="button" class="admin-password-toggle" aria-label="Toggle password visibility">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button class="figma-btn figma-btn--plain" data-bs-dismiss="modal" type="button">Cancel</button>
+          <button type="submit" class="figma-btn">Continue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="unblurAllModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content figma-card">
+      <div class="modal-header border-0">
+        <h5 class="modal-title">Confirm Visibility</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="unblurAllForm" method="post">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p>Enter your current password to reveal all hidden student fields on this page.</p>
+          <label class="form-label" for="unblurAllPassword">Current Password</label>
+          <div class="admin-password-field">
+            <input id="unblurAllPassword" class="form-control" type="password" name="reauth_password" autocomplete="current-password" required>
+            <button type="button" class="admin-password-toggle" aria-label="Toggle password visibility">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+          <p id="unblurAllError" class="text-danger small mt-2 mb-0" hidden>Current password is incorrect.</p>
+        </div>
+        <div class="modal-footer border-0">
+          <button class="figma-btn figma-btn--plain" data-bs-dismiss="modal" type="button">Cancel</button>
+          <button type="submit" class="figma-btn"><i class="fa fa-eye"></i> Reveal All</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+  window.codeitProtectedScope = 'students';
+
   document.getElementById('rejectModal')?.addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     document.getElementById('rejectStudentName').textContent = btn.dataset.studentName;
@@ -189,9 +348,39 @@
       `/admin-panel/students/${btn.dataset.studentId}/delete/`;
   });
 
+  document.getElementById('qrPasswordModal')?.addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    document.getElementById('qrActionText').textContent = btn.dataset.actionLabel || 'update QR for';
+    document.getElementById('qrStudentName').textContent = btn.dataset.studentName;
+    document.getElementById('qrPasswordForm').action = btn.dataset.actionUrl;
+  });
+
   const selectAll = document.getElementById('selectAll');
   selectAll?.addEventListener('change', () => {
     document.querySelectorAll('.bulk-cb').forEach(cb => cb.checked = selectAll.checked);
+  });
+
+  document.getElementById('unblurAllForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const error = document.getElementById('unblurAllError');
+    const formData = new FormData(form);
+    error.hidden = true;
+
+    const response = await fetch("{% url 'admin_panel:verify_password' %}", {
+      method: 'POST',
+      headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') },
+      body: formData,
+    });
+    const result = response.ok ? await response.json() : { ok: false };
+    if (!result.ok) {
+      error.hidden = false;
+      return;
+    }
+
+    document.querySelectorAll('.sensitive-blur').forEach(item => item.classList.add('revealed'));
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('unblurAllModal')).hide();
+    form.reset();
   });
 </script>
 {% endblock %}

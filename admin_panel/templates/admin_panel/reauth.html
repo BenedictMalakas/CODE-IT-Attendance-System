@@ -1,0 +1,24 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Confirm Password{% endblock %}
+
+{% block content %}
+<section class="figma-panel" style="max-width:560px; margin:0 auto;">
+  <h1 class="figma-heading">{{ title }}</h1>
+  <p class="figma-muted mb-4">{{ description }}</p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="reauth_view">
+    <label class="form-label" for="reauthPassword">Current Password</label>
+    <div class="admin-password-field mb-4">
+      <input id="reauthPassword" class="form-control" type="password" name="reauth_password" autocomplete="current-password" required>
+      <button type="button" class="admin-password-toggle" aria-label="Toggle password visibility">
+        <i class="fa-solid fa-eye"></i>
+      </button>
+    </div>
+    <button class="figma-btn w-100" type="submit">
+      <i class="fa fa-lock"></i> Continue
+    </button>
+  </form>
+</section>
+{% endblock %}

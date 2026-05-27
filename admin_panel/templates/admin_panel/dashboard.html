@@ -69,10 +69,15 @@
 
 
 {# Attendance Summary Chart — VITS & Chairperson only #}
-{% if admin_role != 'representative' and selected_event %}
+{% if admin_role != 'representative' %}
 <section class="figma-panel">
   <div class="d-flex align-items-center justify-content-between mb-3">
-    <h2 class="figma-panel__title mb-0" style="font-size:13px;">Attendance Summary</h2>
+    <div>
+      <h2 class="figma-panel__title mb-0" style="font-size:13px;">Attendance Summary</h2>
+      {% if not selected_event %}
+        <p class="figma-muted small mb-0 mt-1">No event selected</p>
+      {% endif %}
+    </div>
     <div class="d-flex gap-1">
       <button class="figma-btn figma-btn--sm chart-toggle active" data-type="line" type="button">
         <i class="fa fa-chart-line"></i> Line
@@ -95,7 +100,18 @@
 <section class="figma-panel">
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
     <p class="figma-panel__title mb-0">Sections Overview</p>
-    <form method="get" class="d-flex align-items-center gap-2">
+    <form method="get" class="d-flex align-items-center gap-2 flex-wrap">
+      {% if admin_role != 'representative' %}
+      <label class="form-label mb-0 figma-muted small">Year:</label>
+      <select name="year" class="form-select form-select-sm" style="width:150px;" onchange="this.form.submit()">
+        <option value="all" {% if selected_year == 'all' %}selected{% endif %}>All</option>
+        {% for yl in dashboard_year_levels %}
+          <option value="{{ yl }}" {% if selected_year == yl|stringformat:"d" %}selected{% endif %}>
+            {{ yl }}{% if yl == 1 %}st{% elif yl == 2 %}nd{% elif yl == 3 %}rd{% else %}th{% endif %} Year
+          </option>
+        {% endfor %}
+      </select>
+      {% endif %}
       <label class="form-label mb-0 figma-muted small">Event:</label>
       <select name="event" class="form-select form-select-sm" style="width:220px;" onchange="this.form.submit()">
         <option value="">— Select Event —</option>
@@ -145,13 +161,13 @@
 {% endblock %}
 
 {% block extra_head %}
-{% if admin_role != 'representative' and selected_event %}
+{% if admin_role != 'representative' %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 {% endif %}
 {% endblock %}
 
 {% block extra_js %}
-{% if admin_role != 'representative' and selected_event %}
+{% if admin_role != 'representative' %}
 <script>
 (function() {
   const labels = [{% for s in section_cards %}'{{ s.name }}'{% if not forloop.last %},{% endif %}{% endfor %}];

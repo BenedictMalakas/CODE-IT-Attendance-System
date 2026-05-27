@@ -1,17 +1,18 @@
 import re
 from django import forms
 from myapp.models import Section, Student
+from myapp.services import sorted_sections
 
 
 class StudentLoginForm(forms.Form):
     student_id = forms.CharField(
-        max_length=50,
+        max_length=150,
         widget=forms.TextInput(attrs={
             'class':        'form-control',
-            'placeholder':  'e.g. 24-0001',
+            'placeholder':  'Student ID or email',
             'autocomplete': 'username',
         }),
-        label='Student ID',
+        label='Student ID / Email',
     )
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={
@@ -81,7 +82,11 @@ class StudentRegisterForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['section'].queryset = Section.objects.all().order_by('year_level', 'name')
+        sections = sorted_sections(Section.objects.all())
+        self.fields['section'].queryset = Section.objects.filter(id__in=[section.id for section in sections])
+        self.fields['section'].choices = [('', self.fields['section'].empty_label)] + [
+            (section.id, section.name) for section in sections
+        ]
 
     def clean_first_name(self):
         val = self.cleaned_data.get('first_name', '').strip()

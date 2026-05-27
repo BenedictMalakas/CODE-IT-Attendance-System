@@ -5,10 +5,10 @@ app_name = 'admin_panel'
 
 urlpatterns = [
     # Auth
-    path('login/',                  views.login_view,                 name='login'),
-    path('register/',               views.register_view,              name='register'),
     path('logout/',                 views.logout_view,                name='logout'),
     path('force-password-change/',  views.force_password_change_view, name='force_password_change'),
+    path('verify-password/',        views.verify_admin_password_api,  name='verify_password'),
+    path('mark-reauth-leave/',      views.mark_reauth_leave_api,      name='mark_reauth_leave'),
 
     # Dashboard
     path('',          views.dashboard_view,       name='dashboard'),
@@ -48,6 +48,5 @@ urlpatterns = [
     path('students/<uuid:pk>/approve/',        views.student_approve_view, name='student_approve'),
     path('students/<uuid:pk>/reject/',         views.student_reject_view,  name='student_reject'),
     path('students/<uuid:pk>/delete/',         views.student_delete_view,  name='student_delete'),
-    path('students/<uuid:pk>/generate-qr/',   views.generate_qr_view,     name='generate_qr'),
     path('students/<uuid:pk>/revoke-qr/',     views.revoke_qr_view,       name='revoke_qr'),
 ]

@@ -259,10 +259,16 @@
       sessionCount++;
       document.getElementById('sessionCount').textContent = sessionCount;
       const label = data.checkout ? 'CHECKED OUT' : data.status.toUpperCase();
-      item.innerHTML = `<i class="fa fa-check"></i> ${data.student_name} — ${label}`;
+      const icon = document.createElement('i');
+      icon.className = 'fa fa-check';
+      item.appendChild(icon);
+      item.appendChild(document.createTextNode(` ${data.student_name} - ${label}`));
     } else {
       item.classList.add('absent');
-      item.innerHTML = `<i class="fa fa-xmark"></i> ${data.message}`;
+      const icon = document.createElement('i');
+      icon.className = 'fa fa-xmark';
+      item.appendChild(icon);
+      item.appendChild(document.createTextNode(` ${data.message}`));
     }
     list.prepend(item);
   }

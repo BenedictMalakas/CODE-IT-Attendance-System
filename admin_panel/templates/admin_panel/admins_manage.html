@@ -3,15 +3,64 @@
 {% block title %}Officers{% endblock %}
 {% block nav_admins %}active{% endblock %}
 
+{% block extra_head %}
+<style>
+  .figma-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+  .figma-page-btn,
+  .figma-page-ellipsis {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .figma-page-btn {
+    border: 1px solid rgba(95, 73, 186, 0.2);
+    background: #fff;
+    color: var(--violet);
+    text-decoration: none;
+    transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+  }
+  .figma-page-btn:hover {
+    background: rgba(95, 73, 186, 0.08);
+    color: var(--violet);
+  }
+  .figma-page-btn.active {
+    width: 44px;
+    height: 44px;
+    background: var(--violet);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 10px 24px rgba(95, 73, 186, 0.24);
+  }
+  .figma-page-ellipsis {
+    color: var(--muted);
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="figma-panel mb-4" style="min-height:596px;">
   <h1 class="figma-panel__title mb-3">Officers & Representatives</h1>
-
   <div class="figma-card">
     <div class="figma-card__header">
       <p class="figma-panel__title" style="color:var(--orange);">Current Officers & Representatives</p>
+      {% if page_obj %}
+      <span class="figma-muted small">
+        Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_admins }}
+      </span>
+      {% endif %}
     </div>
-
     <div class="figma-table-wrap">
       <table class="figma-table">
         <thead>
@@ -20,15 +69,14 @@
             <th>Email</th>
             <th>Role</th>
             <th>Sections Assigned</th>
-            <th>Force PW Change</th>
             <th class="text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for item in admins_with_sections %}
           <tr>
-            <td>{{ item.admin.name }}</td>
-            <td>{{ item.admin.email }}</td>
+            <td><span class="sensitive-blur" role="button" tabindex="0" title="Click to reveal">{{ item.admin.name }}</span></td>
+            <td><span class="sensitive-blur" role="button" tabindex="0" title="Click to reveal">{{ item.admin.email }}</span></td>
             <td>{{ item.admin.get_role_display }}</td>
             <td>
               {% if item.sections %}
@@ -39,25 +87,17 @@
                 <span class="figma-muted">—</span>
               {% endif %}
             </td>
-            <td>
-              {% if item.admin.force_password_change %}
-                <span class="figma-badge late">Pending</span>
-              {% else %}
-                <span class="figma-muted">Done</span>
-              {% endif %}
-            </td>
             <td class="text-center">
               {% if item.admin.role != 'chairperson' %}
                 {% if request.session.admin_role == 'chairperson' %}
-                <form method="post" class="figma-action-row">
-                  {% csrf_token %}
-                  <input type="hidden" name="action" value="delete">
-                  <input type="hidden" name="admin_id" value="{{ item.admin.id }}">
-                  <button type="submit" class="figma-icon-btn figma-icon-btn--delete" title="Delete"
-                          onclick="return confirm('Remove {{ item.admin.name }}?')">
+                <div class="figma-action-row">
+                  <button type="button" class="figma-icon-btn figma-icon-btn--delete"
+                          data-bs-toggle="modal" data-bs-target="#deleteOfficerModal"
+                          data-admin-id="{{ item.admin.id }}" data-admin-name="{{ item.admin.name }}"
+                          title="Delete">
                     <i class="fa fa-trash"></i>
                   </button>
-                </form>
+                </div>
                 {% else %}
                   <span class="figma-muted small">Access Denied</span>
                 {% endif %}
@@ -68,12 +108,37 @@
           </tr>
           {% empty %}
           <tr class="figma-empty-row">
-            <td colspan="6">No officers or representatives yet</td>
+            <td colspan="5">No officers or representatives yet</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    {% if page_obj.has_other_pages %}
+    <nav class="figma-pagination" aria-label="Officer pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="figma-page-btn" aria-label="Previous page">
+          <i class="fa fa-chevron-left"></i>
+        </a>
+      {% endif %}
+      {% for page_number in pagination_pages %}
+        {% if page_number %}
+          <a href="?page={{ page_number }}"
+             class="figma-page-btn {% if page_number == page_obj.number %}active{% endif %}"
+             {% if page_number == page_obj.number %}aria-current="page"{% endif %}>
+            {{ page_number }}
+          </a>
+        {% else %}
+          <span class="figma-page-ellipsis">...</span>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="figma-page-btn" aria-label="Next page">
+          <i class="fa fa-chevron-right"></i>
+        </a>
+      {% endif %}
+    </nav>
+    {% endif %}
   </div>
 </section>
 
@@ -120,10 +185,42 @@
     </div>
   </form>
 </section>
+
+<div class="modal fade" id="deleteOfficerModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content figma-card">
+      <div class="modal-header border-0">
+        <h5 class="modal-title text-danger"><i class="fa fa-triangle-exclamation me-2"></i>Delete Officer</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="admin_id" id="deleteOfficerId">
+        <div class="modal-body">
+          <p>Remove <strong id="deleteOfficerName"></strong>?</p>
+          <label class="form-label" for="deleteOfficerPassword">Current Password</label>
+          <div class="admin-password-field">
+            <input id="deleteOfficerPassword" class="form-control" type="password" name="reauth_password" autocomplete="current-password" required>
+            <button type="button" class="admin-password-toggle" aria-label="Toggle password visibility">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button class="figma-btn figma-btn--plain" data-bs-dismiss="modal" type="button">Cancel</button>
+          <button type="submit" class="figma-btn figma-btn--danger">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+  window.codeitProtectedScope = 'officers';
+
   const roleSelect    = document.getElementById('roleSelect');
   const sectionAssign = document.getElementById('sectionAssign');
 
@@ -132,5 +229,11 @@
   }
   roleSelect?.addEventListener('change', toggleSections);
   toggleSections();
+
+  document.getElementById('deleteOfficerModal')?.addEventListener('show.bs.modal', event => {
+    const button = event.relatedTarget;
+    document.getElementById('deleteOfficerId').value = button.dataset.adminId;
+    document.getElementById('deleteOfficerName').textContent = button.dataset.adminName;
+  });
 </script>
 {% endblock %}

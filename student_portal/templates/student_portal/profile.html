@@ -4,6 +4,32 @@
 {% block nav_profile %}active{% endblock %}
 {% block page_title %}Profile{% endblock %}
 
+{% block extra_head %}
+<style>
+  .password-field {
+    position: relative;
+  }
+  .password-field .form-control {
+    padding-right: 44px;
+  }
+  .password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="portal-panel profile-shell" style="margin-top:60px;">
   <div class="portal-card__header">
@@ -76,14 +102,40 @@
       {% csrf_token %}
       <div class="mb-3">
         <label class="form-label">New Password</label>
-        <input type="password" name="new_password" class="form-control" placeholder="Min 8 chars, 1 special char" required minlength="8" />
+        <div class="password-field">
+          <input type="password" name="new_password" class="form-control" placeholder="Min 8 chars, 1 special char" required minlength="8" />
+          <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+            <i class="fa fa-eye"></i>
+          </button>
+        </div>
       </div>
       <div class="mb-4">
         <label class="form-label">Confirm New Password</label>
-        <input type="password" name="confirm_password" class="form-control" placeholder="Re-enter new password" required />
+        <div class="password-field">
+          <input type="password" name="confirm_password" class="form-control" placeholder="Re-enter new password" required />
+          <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+            <i class="fa fa-eye"></i>
+          </button>
+        </div>
       </div>
       <button type="submit" class="portal-btn"><i class="fa fa-key"></i> Update Password</button>
     </form>
   </article>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.password-toggle').forEach(button => {
+    button.addEventListener('click', () => {
+      const input = button.parentElement.querySelector('input');
+      const icon = button.querySelector('i');
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      button.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      button.setAttribute('aria-pressed', String(!showing));
+      icon.className = showing ? 'fa fa-eye' : 'fa fa-eye-slash';
+    });
+  });
+</script>
 {% endblock %}

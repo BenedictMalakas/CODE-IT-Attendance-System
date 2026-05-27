@@ -8,7 +8,6 @@
 
 <div class="figma-grid-2" style="gap:24px; align-items:start;">
 
-  {# ── Left: Add Section ── #}
   {% if admin_role == 'chairperson' %}
   <section class="figma-panel">
     <p class="figma-section-heading mb-1">Add Section</p>
@@ -36,15 +35,9 @@
   </section>
   {% endif %}
 
-  {# ── Right: All Sections Table ── #}
   <section class="figma-panel">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
-      <p class="figma-section-heading mb-0">
-        All Sections
-        <span class="figma-badge ms-2">{{ total_sections }}</span>
-      </p>
-
-      {# Year filter #}
+      <p class="figma-section-heading mb-0">All Sections <span class="figma-badge ms-2">{{ total_sections }}</span></p>
       <form method="get" class="d-flex align-items-center gap-2">
         <select name="year" class="form-select form-select-sm" style="width:160px; min-height:36px !important; font-size:13px !important; padding:4px 12px !important;" onchange="this.form.submit()">
           <option value="all" {% if year_filter == 'all' %}selected{% endif %}>All Year Levels</option>
@@ -58,7 +51,7 @@
 
     {% if page_obj.has_other_pages or sections %}
     <p class="figma-muted small mb-2">
-      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_sections }}
+      Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_sections }}
     </p>
     {% endif %}
 
@@ -91,7 +84,7 @@
             </td>
             <td class="text-center">
               <form method="post" action="{% url 'admin_panel:delete_section' section.id %}"
-                    onsubmit="return confirm('Delete {{ section.name }}? This cannot be undone.');">
+                    onsubmit="return confirm('Delete {{ section.name|escapejs }}? This cannot be undone.');">
                 {% csrf_token %}
                 <button type="submit" class="figma-icon-btn figma-icon-btn--delete" title="Delete section">
                   <i class="fa fa-trash"></i>
@@ -108,7 +101,6 @@
       </table>
     </div>
 
-    {# Pagination #}
     {% if page_obj.has_other_pages %}
     <div class="d-flex align-items-center justify-content-end gap-3 mt-3">
       <span class="figma-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>

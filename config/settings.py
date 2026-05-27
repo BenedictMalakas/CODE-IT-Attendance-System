@@ -35,7 +35,20 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-default-key-for-dev
 # Reads DJANGO_DEBUG from .env, defaults to False for safety
 DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['codeit-attendancesystem.me', 'www.codeit-attendancesystem.me', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = [
+    'codeit-attendancesystem.me',
+    'www.codeit-attendancesystem.me',
+    '104.43.88.93',
+    '127.0.0.1',
+    'localhost',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://codeit-attendancesystem.me',
+    'https://www.codeit-attendancesystem.me',
+    'http://codeit-attendancesystem.me',
+    'http://www.codeit-attendancesystem.me',
+]
 
 
 # Application definition
@@ -60,6 +73,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'config.middleware.DDoSProtectionMiddleware',
+    'config.middleware.EventStatusAutoUpdateMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',

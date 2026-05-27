@@ -5,6 +5,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block page_title %}CODE-IT{% endblock %}</title>
+  <link rel="shortcut icon" href="/favicon.ico?v=5" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=5" sizes="any" />
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'student_portal/img/codenew (1)-16.png' %}?v=5" />
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'student_portal/img/codenew (1)-32.png' %}?v=5" />
+  <link rel="icon" type="image/png" sizes="48x48" href="{% static 'student_portal/img/codenew (1)-48.png' %}?v=5" />
+  <link rel="apple-touch-icon" href="{% static 'student_portal/img/codenew (1).png' %}?v=5" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Special+Gothic+Expanded+One&family=Unbounded:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script>document.documentElement.classList.add('js');</script>
   <noscript>
@@ -37,6 +43,10 @@
       --figma-progress-height: 8px;
       --scene-runtime-scale: 1;
       --splash-stage-scale: 1;
+      --splash-stage-inverse-scale: 1;
+      --splash-mobile-logo-size-scaled: 658px;
+      --splash-mobile-text-width-scaled: 314px;
+      --splash-mobile-progress-width-scaled: 404px;
       --splash-gradient: linear-gradient(180deg, #533bb5 0%, #6f4e91 18%, #8b616d 52%, #c48725 100%);
     }
 
@@ -182,7 +192,7 @@
       top: 20px;
       font-family: var(--heading-font);
       font-size: 24px;
-      font-weight: 700;
+      font-weight: 400;
       line-height: normal;
     }
 
@@ -247,7 +257,7 @@
       height: 46px;
       font-family: 'Poppins', sans-serif;
       font-size: 64px;
-      font-weight: 800;
+      font-weight: 700;
       line-height: normal;
       text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
       -webkit-text-stroke: 1.5px #000;
@@ -292,7 +302,7 @@
       color: #fff;
       font-family: 'Poppins', sans-serif;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 700;
       line-height: normal;
       text-align: center;
       white-space: nowrap;
@@ -303,7 +313,7 @@
       color: #1a0a3e;
       font-family: var(--body-font);
       font-size: 22px;
-      font-weight: 500;
+      font-weight: 400;
       line-height: normal;
       white-space: nowrap;
       text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
@@ -334,6 +344,21 @@
       font-size: 18px;
       font-weight: 400;
       line-height: normal;
+    }
+
+    .figma-field select,
+    select.form-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, #5f49ba 50%),
+        linear-gradient(135deg, #5f49ba 50%, transparent 50%) !important;
+      background-position:
+        calc(100% - 22px) 50%,
+        calc(100% - 16px) 50% !important;
+      background-size: 6px 6px, 6px 6px !important;
+      background-repeat: no-repeat !important;
+      padding-right: 46px !important;
     }
 
     .figma-field input::placeholder,
@@ -438,7 +463,7 @@
       color: #1a0a3e;
       font-family: var(--body-font);
       font-size: 16px;
-      font-weight: 500;
+      font-weight: 400;
       line-height: normal;
       white-space: nowrap;
     }
@@ -448,7 +473,7 @@
       color: #1a0a3e;
       font-family: var(--body-font);
       font-size: 11px;
-      font-weight: 500;
+      font-weight: 400;
       line-height: normal;
       white-space: nowrap;
     }
@@ -703,7 +728,7 @@
       height: 43px;
       font-family: 'Poppins', sans-serif;
       font-size: 40px;
-      font-weight: 800;
+      font-weight: 400;
       line-height: normal;
       text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
       -webkit-text-stroke: 1px #000;
@@ -733,7 +758,7 @@
       color: #fff;
       font-family: 'Poppins', sans-serif;
       font-size: 10px;
-      font-weight: 500;
+      font-weight: 400;
       line-height: normal;
       white-space: nowrap;
       opacity: 0;
@@ -801,6 +826,12 @@
 
     .splash-overlay.show-brand .splash-purple__logo {
       animation: splashLogoPop 0.88s cubic-bezier(0.18, 1.32, 0.32, 1) forwards;
+    }
+
+    @media (max-width: 768px) {
+      .splash-overlay.show-brand .splash-purple__logo {
+        animation: splashMobileLogoPop 0.88s cubic-bezier(0.18, 1.32, 0.32, 1) forwards;
+      }
     }
 
     .splash-overlay.show-brand .splash-purple__progress::after {
@@ -917,6 +948,21 @@
       }
     }
 
+    @keyframes splashMobileLogoPop {
+      0% {
+        transform: translateX(-50%) scale(0.74);
+        opacity: 0;
+      }
+      68% {
+        transform: translateX(-50%) scale(1.08);
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(-50%) scale(1);
+        opacity: 1;
+      }
+    }
+
 
 
     @media (max-width: 960px) {
@@ -931,8 +977,84 @@
       }
 
       .splash-vessel {
-        width: 120px;
-        height: 120px;
+        width: calc(min(54vw, 220px) * var(--splash-stage-inverse-scale));
+        height: calc(min(54vw, 220px) * var(--splash-stage-inverse-scale));
+        border-width: calc(3px * var(--splash-stage-inverse-scale));
+        box-shadow:
+          0 0 calc(42px * var(--splash-stage-inverse-scale)) rgba(83, 59, 181, 0.34),
+          inset 0 0 calc(18px * var(--splash-stage-inverse-scale)) rgba(83, 59, 181, 0.14);
+      }
+
+      .splash-vessel__liquid::before {
+        top: calc(-16px * var(--splash-stage-inverse-scale));
+        height: calc(32px * var(--splash-stage-inverse-scale));
+      }
+
+      .splash-vessel__liquid::after {
+        top: calc(-12px * var(--splash-stage-inverse-scale));
+        height: calc(24px * var(--splash-stage-inverse-scale));
+      }
+
+      .splash-vessel__glow {
+        inset: calc(-52px * var(--splash-stage-inverse-scale));
+      }
+
+      .splash-overlay.show-brand .splash-vessel {
+        opacity: 0;
+      }
+
+      .splash-purple__logo {
+        left: 50%;
+        top: calc(42px * var(--splash-stage-inverse-scale));
+        width: var(--splash-mobile-logo-size-scaled);
+        height: var(--splash-mobile-logo-size-scaled);
+        aspect-ratio: 1 / 1;
+        border-width: calc(7px * var(--splash-stage-inverse-scale));
+        border-radius: 50%;
+      }
+
+      .splash-purple__subtitle,
+      .splash-purple__wordmark,
+      .splash-purple__portal {
+        left: 50%;
+        width: var(--splash-mobile-text-width-scaled);
+        justify-content: center;
+        text-align: center;
+        transform: translateX(-50%) translateY(8px);
+      }
+
+      .splash-purple__subtitle {
+        top: calc((42px * var(--splash-stage-inverse-scale)) + var(--splash-mobile-logo-size-scaled) + (16px * var(--splash-stage-inverse-scale)));
+        height: calc(14px * var(--splash-stage-inverse-scale));
+        font-size: calc(8px * var(--splash-stage-inverse-scale));
+      }
+
+      .splash-purple__wordmark {
+        top: calc((42px * var(--splash-stage-inverse-scale)) + var(--splash-mobile-logo-size-scaled) + (31px * var(--splash-stage-inverse-scale)));
+        height: calc(34px * var(--splash-stage-inverse-scale));
+        font-size: calc(31px * var(--splash-stage-inverse-scale));
+        -webkit-text-stroke-width: calc(0.8px * var(--splash-stage-inverse-scale));
+      }
+
+      .splash-purple__portal {
+        top: calc((42px * var(--splash-stage-inverse-scale)) + var(--splash-mobile-logo-size-scaled) + (70px * var(--splash-stage-inverse-scale)));
+        height: calc(14px * var(--splash-stage-inverse-scale));
+        font-size: calc(8px * var(--splash-stage-inverse-scale));
+      }
+
+      .splash-purple__progress {
+        left: 50%;
+        top: calc((42px * var(--splash-stage-inverse-scale)) + var(--splash-mobile-logo-size-scaled) + (102px * var(--splash-stage-inverse-scale)));
+        width: var(--splash-mobile-progress-width-scaled);
+        height: calc(9px * var(--splash-stage-inverse-scale));
+        transform: translateX(-50%) translateY(8px);
+      }
+
+      .splash-overlay.show-brand .splash-purple__subtitle,
+      .splash-overlay.show-brand .splash-purple__wordmark,
+      .splash-overlay.show-brand .splash-purple__portal,
+      .splash-overlay.show-brand .splash-purple__progress {
+        transform: translateX(-50%) translateY(0) scale(1);
       }
 
       /* ====== MOBILE AUTH LAYOUT ====== */
@@ -1176,7 +1298,7 @@
           <div class="splash-vessel__glow"></div>
         </div>
         <div class="splash-brand">
-          <img class="splash-purple__logo" src="{% static 'student_portal/img/codeit_logo.png' %}" alt="" aria-hidden="true" />
+          <img class="splash-purple__logo" src="{% static 'student_portal/img/codenew (1).jpg' %}?v=5" alt="" aria-hidden="true" />
           <div class="splash-purple__subtitle">VALENZUELA INFORMATION TECHNOLOGY SOCIETY</div>
           <div class="splash-purple__wordmark">
             <span class="splash-purple__wordmark-code">CODE</span>
@@ -1294,9 +1416,9 @@
     const floatingAlerts = document.getElementById('floatingAlerts');
 
     const splashEnabled = {% block splash_enabled %}true{% endblock %};
-    const splashBrandPopMs = 800;
-    const splashRevealMs = 1800;
-    const splashCleanupMs = 2400;
+    const splashBrandPopMs = 4300;
+    const splashRevealMs = 6100;
+    const splashCleanupMs = 6850;
 
     /* --- Splash runs only ONCE per browser session --- */
     const SPLASH_KEY = 'codeit_splash_shown';
@@ -1340,8 +1462,16 @@
       const usableWidth = Math.max(window.innerWidth - (stagePad * 2), 320);
       const usableHeight = Math.max(window.innerHeight - (stagePad * 2), 320);
       const scale = Math.min(1, usableWidth / 1440, usableHeight / 1024);
+      const inverseScale = 1 / Math.max(scale, 0.2);
+      const mobileLogoSize = Math.min(window.innerWidth * 0.82, 360);
+      const mobileTextWidth = Math.min(window.innerWidth * 0.88, 380);
+      const mobileProgressWidth = Math.min(window.innerWidth * 0.74, 300);
 
       document.body.style.setProperty('--splash-stage-scale', scale);
+      document.body.style.setProperty('--splash-stage-inverse-scale', inverseScale);
+      document.body.style.setProperty('--splash-mobile-logo-size-scaled', (mobileLogoSize * inverseScale) + 'px');
+      document.body.style.setProperty('--splash-mobile-text-width-scaled', (mobileTextWidth * inverseScale) + 'px');
+      document.body.style.setProperty('--splash-mobile-progress-width-scaled', (mobileProgressWidth * inverseScale) + 'px');
       splashStageShell.style.width = (1440 * scale) + 'px';
       splashStageShell.style.height = (1024 * scale) + 'px';
     }

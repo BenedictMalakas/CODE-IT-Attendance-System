@@ -5,18 +5,77 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Admin Panel{% endblock %} | CODE-IT</title>
+  <link rel="shortcut icon" href="/favicon.ico?v=5" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=5" sizes="any" />
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'student_portal/img/codenew (1)-16.png' %}?v=5" />
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'student_portal/img/codenew (1)-32.png' %}?v=5" />
+  <link rel="icon" type="image/png" sizes="48x48" href="{% static 'student_portal/img/codenew (1)-48.png' %}?v=5" />
+  <link rel="apple-touch-icon" href="{% static 'student_portal/img/codenew (1).png' %}?v=5" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
-  <link href="{% static 'admin_panel/css/codeit_figma.css' %}" rel="stylesheet" />
+  <link href="{% static 'admin_panel/css/codeit_figma.css' %}?v=ui-20260525-2" rel="stylesheet" />
   <style>
-    #sidebar { --sidebar-logo-url: url("{% static 'student_portal/img/codeit_logo.png' %}"); }
+    #sidebar { --sidebar-logo-url: url("{% static 'student_portal/img/codenew (1).jpg' %}?v=5"); }
+    .sensitive-blur:not(.revealed) {
+      display: inline-block !important;
+      cursor: pointer;
+      filter: blur(6px) !important;
+      -webkit-filter: blur(6px) !important;
+      transition: filter 0.16s ease, -webkit-filter 0.16s ease;
+      user-select: none;
+    }
+    .sensitive-blur.revealed {
+      filter: none !important;
+      -webkit-filter: none !important;
+      user-select: text;
+    }
+    .admin-password-field {
+      position: relative !important;
+      display: block;
+      width: 100%;
+    }
+    .admin-password-field .form-control,
+    .admin-password-field input[type="password"],
+    .admin-password-field input[type="text"] {
+      width: 100% !important;
+      padding-right: 52px !important;
+    }
+    .admin-password-toggle {
+      position: absolute !important;
+      right: 16px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 28px !important;
+      min-width: 0 !important;
+      height: 28px !important;
+      min-height: 0 !important;
+      display: grid !important;
+      place-items: center !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      outline: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      color: #5f49ba !important;
+      line-height: 1 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      cursor: pointer;
+      z-index: 10;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .admin-password-toggle i {
+      pointer-events: none;
+      font-size: 15px;
+    }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="admin-role-{{ request.session.admin_role|default:'vits' }}">
 <aside id="sidebar" aria-label="Main navigation">
   <div class="sidebar-brand">
-    <img src="{% static 'student_portal/img/codeit_logo.png' %}" alt="CODE-IT logo" />
+    <img src="{% static 'student_portal/img/codenew (1).jpg' %}?v=5" alt="CODE-IT logo" />
   </div>
   <nav class="sidebar-nav">
     <a href="{% url 'admin_panel:dashboard' %}" class="{% block nav_dashboard %}{% endblock %}">
@@ -122,6 +181,73 @@
       a.addEventListener('click', () => {
         if (window.innerWidth <= 768) closeSidebar();
       });
+    });
+
+    function revealSensitiveRow(blurred) {
+      document.querySelectorAll('.sensitive-blur.revealed').forEach(item => {
+        item.classList.remove('revealed');
+      });
+      const row = blurred.closest('tr');
+      if (!row) {
+        blurred.classList.add('revealed');
+        return;
+      }
+      row.querySelectorAll('.sensitive-blur').forEach(item => {
+        item.classList.add('revealed');
+      });
+    }
+
+    document.addEventListener('click', event => {
+      const toggle = event.target.closest('.admin-password-toggle');
+      if (toggle) {
+        const field = toggle.closest('.admin-password-field');
+        const input = field ? field.querySelector('input') : null;
+        const icon = toggle.querySelector('i');
+        if (!input || !icon) return;
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.classList.remove('fa-eye');
+          icon.classList.add('fa-eye-slash');
+        } else {
+          input.type = 'password';
+          icon.classList.remove('fa-eye-slash');
+          icon.classList.add('fa-eye');
+        }
+        return;
+      }
+
+      const blurred = event.target.closest('.sensitive-blur');
+      if (blurred) {
+        revealSensitiveRow(blurred);
+      }
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const blurred = event.target.closest('.sensitive-blur');
+      if (blurred) {
+        event.preventDefault();
+        revealSensitiveRow(blurred);
+      }
+    });
+
+    window.addEventListener('pagehide', () => {
+      if (!window.codeitProtectedScope) return;
+      const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      const token = csrfInput ? csrfInput.value : '';
+      const body = new URLSearchParams({
+        scope: window.codeitProtectedScope,
+        csrfmiddlewaretoken: token,
+      });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon("{% url 'admin_panel:mark_reauth_leave' %}", body);
+        return;
+      }
+      fetch("{% url 'admin_panel:mark_reauth_leave' %}", {
+        method: 'POST',
+        body,
+        keepalive: true,
+      }).catch(() => {});
     });
   })();
 </script>

@@ -6,11 +6,10 @@
 {% block content %}
 <section class="figma-panel">
   <h1 class="figma-panel__title mb-3">Events</h1>
-
   <div class="figma-event-form-card">
     <div class="d-flex align-items-center gap-3 mb-4" style="color:var(--orange);">
       <i class="fa fa-calendar-plus" style="font-size:22px;"></i>
-      <span style="font-size:16px; ">Create Event</span>
+      <span style="font-size:16px; ">{{ action }} Event</span>
     </div>
 
     <form method="post">

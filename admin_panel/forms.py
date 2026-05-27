@@ -1,5 +1,6 @@
 from django import forms
-from myapp.models import Admin, Event
+from myapp.models import Event
+from myapp.services import sorted_sections
 
 
 class LoginForm(forms.Form):
@@ -32,7 +33,7 @@ class EventForm(forms.ModelForm):
         choices.append(('By Year Level', year_choices))
 
         # Individual section choices
-        sections = Section.objects.all().order_by('year_level', 'name')
+        sections = sorted_sections(Section.objects.all())
         section_choices = [(f'section_{s.id}', s.name) for s in sections]
         if section_choices:
             choices.append(('By Section', section_choices))
@@ -106,37 +107,4 @@ class EventForm(forms.ModelForm):
 
         return cleaned_data
 
-
-class AdminRegisterForm(forms.Form):
-    name = forms.CharField(
-        max_length=100,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Juan Dela Cruz'}),
-        label='Full Name',
-    )
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'e.g. admin@school.edu'}),
-    )
-    role = forms.ChoiceField(
-        choices=[
-            (Admin.Role.VITS, 'VITS Officer'),
-            (Admin.Role.REPRESENTATIVE, 'Representative'),
-        ],
-        widget=forms.Select(attrs={'class': 'form-control'}),
-    )
-    password = forms.CharField(
-        min_length=6,
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Min 6 characters'}),
-    )
-    confirm_password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Re-enter password'}),
-        label='Confirm Password',
-    )
-
-    def clean(self):
-        cleaned = super().clean()
-        pw  = cleaned.get('password')
-        cpw = cleaned.get('confirm_password')
-        if pw and cpw and pw != cpw:
-            self.add_error('confirm_password', 'Passwords do not match.')
-        return cleaned
 

@@ -11,8 +11,24 @@ from django.utils import timezone as dj_timezone
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.paginator import Paginator
 from django.core.cache import cache
+from django.views.decorators.cache import never_cache
 
-from myapp.models import Student, Section, Event, QRToken, AttendanceLog
+from myapp.models import Admin, Student, Section, Event, QRToken, AttendanceLog
+from myapp.password_reset import (
+    clear_reset_state,
+    generate_otp,
+    get_reset_state,
+    is_reset_locked,
+    is_reset_request_limited,
+    normalize_email,
+    normalize_otp,
+    record_reset_request,
+    record_bad_otp,
+    send_password_reset_otp,
+    store_reset_otp,
+    validate_new_password,
+)
+from myapp.services import sorted_sections
 from .forms import StudentLoginForm, StudentRegisterForm
 from .file_security import validate_upload
 
@@ -60,6 +76,12 @@ def student_required(view_func):
         if not request.session.get('student_id'):
             messages.warning(request, 'Your session has expired. Please log in again.')
             return redirect('student_portal:login')
+        student = get_current_student(request)
+        if not student or student.status != Student.Status.ACTIVE:
+            request.session.flush()
+            messages.warning(request, 'Your student account is no longer active. Please contact an officer.')
+            return redirect('student_portal:login')
+        request.session['student_name'] = student.name
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -74,16 +96,32 @@ def get_current_student(request):
     return None
 
 
+def start_student_session(request, student):
+    request.session.flush()
+    request.session['student_id'] = str(student.id)
+    request.session['student_name'] = student.name
+    request.session.cycle_key()
+
+
+def start_admin_session(request, admin):
+    request.session.flush()
+    request.session['admin_id'] = str(admin.id)
+    request.session['admin_name'] = admin.name
+    request.session['admin_role'] = admin.role
+    request.session['force_password_change'] = admin.force_password_change
+    request.session.cycle_key()
+
+
+def normalize_student_login_identifier(identifier):
+    value = (identifier or '').strip()
+    digits = re.sub(r'\D', '', value)
+    if '@' not in value and len(digits) == 6:
+        return f'{digits[:2]}-{digits[2:]}'
+    return value
+
+
 def get_sorted_sections():
-    sections = list(Section.objects.all())
-    def sort_key(s):
-        try:
-            parts = s.name.replace('BSIT ', '').split('-')
-            return (s.year_level, int(parts[-1]) if parts else 0)
-        except (ValueError, IndexError):
-            return (s.year_level, 0)
-    sections.sort(key=sort_key)
-    return sections
+    return sorted_sections()
 
 
 # ---------------------------------------------------------------------------
@@ -91,8 +129,26 @@ def get_sorted_sections():
 # ---------------------------------------------------------------------------
 
 def login_view(request):
+    if request.method == 'GET' and request.GET.get('clear_reset') == '1':
+        request.session.pop('student_reset_email', None)
+        request.session.pop('student_reset_verified', None)
+        request.session.pop('student_reset_account_type', None)
+
+    if request.session.get('admin_id'):
+        try:
+            admin = Admin.objects.get(id=request.session.get('admin_id'), is_active=True)
+            request.session['admin_name'] = admin.name
+            request.session['admin_role'] = admin.role
+            request.session['force_password_change'] = admin.force_password_change
+            return redirect('admin_panel:dashboard')
+        except Admin.DoesNotExist:
+            request.session.flush()
+
     if request.session.get('student_id'):
-        return redirect('student_portal:dashboard')
+        student = get_current_student(request)
+        if student and student.status == Student.Status.ACTIVE:
+            return redirect('student_portal:dashboard')
+        request.session.flush()
 
     form = StudentLoginForm()
     if request.method == 'POST':
@@ -103,12 +159,16 @@ def login_view(request):
 
         form = StudentLoginForm(request.POST)
         if form.is_valid():
-            student_id_val = form.cleaned_data['student_id']
-            password       = form.cleaned_data['password']
+            identifier = form.cleaned_data['student_id'].strip()
+            student_identifier = normalize_student_login_identifier(identifier)
+            password   = form.cleaned_data['password']
+            authenticated = False
+
             try:
-                student = Student.objects.get(student_id=student_id_val)
+                student = Student.objects.get(student_id__iexact=student_identifier)
                 if not verify_password(password, student.password_hash):
                     raise Student.DoesNotExist
+                authenticated = True
                 # Hash migration
                 if student.password_hash and not student.password_hash.startswith('pbkdf2_'):
                     student.password_hash = make_password(password)
@@ -120,18 +180,172 @@ def login_view(request):
                     messages.error(request, f'Your registration was rejected: {note}')
                 else:
                     clear_login_failures(ip)
-                    request.session['student_id']   = str(student.id)
-                    request.session['student_name'] = student.name
-                    request.session.cycle_key()
+                    start_student_session(request, student)
                     return redirect('student_portal:dashboard')
             except Student.DoesNotExist:
-                messages.error(request, 'Invalid Student ID or password.')
-                track_login_failure(ip)
+                pass
+
+            if not authenticated:
+                try:
+                    admin = (
+                        Admin.objects
+                        .exclude(role=Admin.Role.CHAIRPERSON)
+                        .get(email__iexact=identifier, is_active=True)
+                    )
+                    if not verify_password(password, admin.password_hash):
+                        raise Admin.DoesNotExist
+                    if not admin.password_hash.startswith('pbkdf2_'):
+                        admin.password_hash = make_password(password)
+                        admin.email = admin.email.strip().lower()
+                        admin.save(update_fields=['password_hash', 'email'])
+                    clear_login_failures(ip)
+                    start_admin_session(request, admin)
+                    return redirect('admin_panel:dashboard')
+                except Admin.DoesNotExist:
+                    messages.error(request, 'Invalid credentials.')
+                    track_login_failure(ip)
 
     return render(request, 'student_portal/login.html', {'form': form})
 
 
+@never_cache
+def forgot_password_view(request):
+    reset_kind = 'portal'
+    ip = get_client_ip(request)
+    if request.method == 'GET' and request.GET.get('start') == '1':
+        request.session.pop('student_reset_email', None)
+        request.session.pop('student_reset_verified', None)
+        request.session.pop('student_reset_account_type', None)
+        if is_reset_request_limited(reset_kind, ip):
+            messages.error(request, 'Too many request please try again later.')
+
+    reset_email = request.session.get('student_reset_email', '')
+    reset_verified = bool(request.session.get('student_reset_verified'))
+    reset_account_type = request.session.get('student_reset_account_type', '')
+
+    if request.method == 'POST':
+        step = request.POST.get('step', 'email')
+
+        if step == 'email':
+            if is_reset_request_limited(reset_kind, ip):
+                request.session.pop('student_reset_email', None)
+                request.session.pop('student_reset_verified', None)
+                request.session.pop('student_reset_account_type', None)
+                messages.error(request, 'Too many request please try again later.')
+                return redirect('student_portal:forgot_password')
+
+            email = normalize_email(request.POST.get('email', ''))
+            request.session['student_reset_email'] = email
+            request.session['student_reset_verified'] = False
+            request.session['student_reset_account_type'] = ''
+            record_reset_request(reset_kind, ip)
+
+            if is_reset_locked(reset_kind, email, ip):
+                messages.error(request, 'Something went wrong please try again later.')
+                return redirect('student_portal:forgot_password')
+
+            otp = generate_otp()
+            student = Student.objects.filter(email__iexact=email).first()
+            admin = None if student else (
+                Admin.objects
+                .exclude(role=Admin.Role.CHAIRPERSON)
+                .filter(email__iexact=email, is_active=True)
+                .first()
+            )
+            account = student or admin
+            account_type = 'student' if student else ('admin' if admin else '')
+            request.session['student_reset_account_type'] = account_type
+            store_reset_otp(reset_kind, email, ip, otp, account.id if account else '')
+            if student:
+                send_password_reset_otp(student.email, otp, 'Student')
+            elif admin:
+                send_password_reset_otp(admin.email, otp, 'Admin')
+
+            messages.success(request, 'If that email can receive resets, an OTP has been sent.')
+            return redirect('student_portal:forgot_password')
+
+        if step == 'otp':
+            email = normalize_email(reset_email)
+            if not email or is_reset_locked(reset_kind, email, ip):
+                messages.error(request, 'Something went wrong please try again later.')
+                return redirect('student_portal:forgot_password')
+
+            submitted = normalize_otp(request.POST.get('otp', '') or ''.join(request.POST.getlist('otp_digit')))
+            state = get_reset_state(reset_kind, email, ip)
+            if (
+                state
+                and submitted == state.get('otp')
+                and state.get('account_id')
+                and reset_account_type in ('student', 'admin')
+            ):
+                request.session['student_reset_verified'] = True
+                messages.success(request, 'OTP confirmed. Enter a new password.')
+                return redirect('student_portal:forgot_password')
+
+            locked = record_bad_otp(reset_kind, email, ip)
+            messages.error(
+                request,
+                'Something went wrong please try again later.' if locked else 'Invalid OTP.'
+            )
+            return redirect('student_portal:forgot_password')
+
+        if step == 'password':
+            email = normalize_email(reset_email)
+            if (
+                not email
+                or not reset_verified
+                or reset_account_type not in ('student', 'admin')
+                or is_reset_locked(reset_kind, email, ip)
+            ):
+                messages.error(request, 'Something went wrong please try again later.')
+                return redirect('student_portal:forgot_password')
+
+            new_pw = request.POST.get('new_password', '').strip()
+            confirm = request.POST.get('confirm_password', '').strip()
+            validation_error = validate_new_password(new_pw, confirm)
+            if validation_error:
+                messages.error(request, validation_error)
+                return redirect('student_portal:forgot_password')
+
+            state = get_reset_state(reset_kind, email, ip)
+            account_id = state.get('account_id')
+            student = None
+            if reset_account_type == 'student':
+                student = Student.objects.filter(id=account_id, email__iexact=email).first()
+            if student:
+                student.password_hash = hash_password(new_pw)
+                student.email = normalize_email(student.email)
+                student.save(update_fields=['password_hash', 'email'])
+            elif reset_account_type == 'admin':
+                admin = (
+                    Admin.objects
+                    .exclude(role=Admin.Role.CHAIRPERSON)
+                    .filter(id=account_id, email__iexact=email, is_active=True)
+                    .first()
+                )
+                if admin:
+                    admin.password_hash = hash_password(new_pw)
+                    admin.force_password_change = False
+                    admin.email = normalize_email(admin.email)
+                    admin.save(update_fields=['password_hash', 'force_password_change', 'email'])
+
+            clear_reset_state(reset_kind, email, ip)
+            request.session.pop('student_reset_email', None)
+            request.session.pop('student_reset_verified', None)
+            request.session.pop('student_reset_account_type', None)
+            messages.success(request, 'Password changed successfully. Please sign in.')
+            return redirect('student_portal:login')
+
+    return render(request, 'student_portal/password_reset.html', {
+        'reset_email': reset_email,
+        'reset_verified': reset_verified,
+        'has_reset_email': bool(reset_email),
+    })
+
+
 def register_view(request):
+    if request.session.get('admin_id'):
+        return redirect('admin_panel:dashboard')
     if request.session.get('student_id'):
         return redirect('student_portal:dashboard')
 
